@@ -1,0 +1,20 @@
+{
+  "name": "civicgo",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Root scripts for running the CivicGO frontend and backend.",
+  "scripts": {
+    "dev": "concurrently -n backend,frontend -c green,cyan \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:frontend": "npm --prefix frontend run dev -- --host 127.0.0.1 --port 5173",
+    "dev:backend": "dotnet run --project backend/CivicGo.Api.csproj --urls http://127.0.0.1:5051",
+    "build": "npm run build:backend && npm run build:frontend",
+    "build:frontend": "npm --prefix frontend run build",
+    "build:backend": "dotnet build backend/CivicGo.Api.csproj",
+    "lint": "npm --prefix frontend run lint",
+    "check": "npm run lint && npm run build",
+    "restore": "dotnet restore backend/CivicGo.Api.csproj && npm --prefix frontend install"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

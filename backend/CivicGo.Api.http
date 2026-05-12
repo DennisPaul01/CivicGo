@@ -1,0 +1,48 @@
+@CivicGo.Api_HostAddress = http://localhost:5051
+
+GET {{CivicGo.Api_HostAddress}}/health
+Accept: application/json
+
+###
+
+GET {{CivicGo.Api_HostAddress}}/api/me
+Accept: application/json
+Authorization: Bearer {{$dotenv SUPABASE_ACCESS_TOKEN}}
+
+###
+
+GET {{CivicGo.Api_HostAddress}}/api/issues
+Accept: application/json
+
+###
+
+POST {{CivicGo.Api_HostAddress}}/api/issues/{{issueId}}/analyze
+Accept: application/json
+Authorization: Bearer {{$dotenv SUPABASE_ACCESS_TOKEN}}
+
+###
+
+GET {{CivicGo.Api_HostAddress}}/api/issues/{{issueId}}/agent-run
+Accept: application/json
+
+###
+
+GET {{CivicGo.Api_HostAddress}}/api/agent-runs/{{agentRunId}}
+Accept: application/json
+
+###
+
+GET {{CivicGo.Api_HostAddress}}/api/agent-runs/{{agentRunId}}/steps
+Accept: application/json
+
+###
+
+GET {{CivicGo.Api_HostAddress}}/api/dashboard/overview
+Accept: application/json
+
+###
+
+GET {{CivicGo.Api_HostAddress}}/api/dashboard/ai-summary
+Accept: application/json
+
+###

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="CiviTm">
+  <rect width="64" height="64" rx="14" fill="#FFF5E6"/>
+  <rect x="1.5" y="1.5" width="61" height="61" rx="12.5" fill="none" stroke="#EDDCCA" stroke-width="3"/>
+  <text x="12" y="31" fill="#344767" font-family="Poppins, Arial, sans-serif" font-size="18" font-weight="700">Civi</text>
+  <text x="17" y="48" fill="#FF7A6E" font-family="Poppins, Arial, sans-serif" font-size="18" font-weight="700">Tm</text>
+  <path d="M45.7 36.1c-3.6-3.2-9.1-.6-9.1 4.1 0 6.1 9.1 11.1 9.1 11.1s9.1-5 9.1-11.1c0-4.7-5.5-7.3-9.1-4.1Z" fill="none" stroke="#FFD166" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
