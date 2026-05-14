@@ -70,7 +70,7 @@ export function PartnerDashboardPage() {
             icon={Store}
             label="Partner rewards"
             value={partnerRewards.length}
-            detail="Seeded local offers ready for demo."
+            detail="Local offers ready for citizens."
           />
           <MetricCard
             icon={PackageCheck}
@@ -92,7 +92,7 @@ export function PartnerDashboardPage() {
           <DemoState
             icon={Gift}
             tone="amber"
-            eyebrow="Demo fallback"
+            eyebrow="Temporary fallback"
             title="Partner rewards are using seeded context"
             description="The protected partner area is available; live reward data will reappear when the API responds."
           />

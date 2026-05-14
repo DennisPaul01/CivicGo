@@ -26,6 +26,7 @@ Flow complet după `POST /api/issues`:
 
 - [x] Primește image URL, descriere și locație.
 - [x] Returnează category, severity, summary, confidence și isUrgent.
+- [x] Folosește taxonomia oficială Timisoara pentru sesizări: animale, apă/canalizare/termoficare, iluminat public, mediu/spații verzi, salubrizare, străzi/trotuare, trafic, transport, urbanism, șantiere și celelalte categorii publice.
 - [x] Fallback: clasifică după descriere sau folosește `Other`, `medium`, confidence `0.72`.
 
 ### Triage Agent

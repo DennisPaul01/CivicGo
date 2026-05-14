@@ -3,6 +3,7 @@ import { AuthSessionProvider } from '@/components/auth/AuthSessionProvider'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { RoleProtectedRoute } from '@/components/auth/RoleProtectedRoute'
 import { CivicLiveEvents } from '@/components/live/CivicLiveEvents'
+import { PublicActivityPage } from '@/pages/activity/PublicActivityPage'
 import { AdminDashboardPage } from '@/pages/admin/AdminDashboardPage'
 import { AdminIssuesPage } from '@/pages/admin/AdminIssuesPage'
 import { LoginPage } from '@/pages/auth/LoginPage'
@@ -24,6 +25,7 @@ function App() {
         <CivicLiveEvents />
         <Routes>
           <Route path="/" element={<LiveMapLandingPage />} />
+          <Route path="/activity" element={<PublicActivityPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/zones" element={<ZoneLeaderboardPage />} />

@@ -173,6 +173,18 @@ export type IssueResponse = {
   createdAt: string
 }
 
+export type PublicActivityResponse = {
+  id: string
+  type: string
+  title: string
+  message: string
+  relatedIssueId: string | null
+  relatedMissionId: string | null
+  relatedRewardId: string | null
+  relatedZoneId: string | null
+  createdAt: string
+}
+
 export type ZoneLeaderboardItemResponse = {
   id: string
   rank: number
@@ -268,6 +280,24 @@ export async function fetchIssues() {
   }
 
   return (await response.json()) as IssueResponse[]
+}
+
+export async function fetchPublicActivity(hours = 48, limit = 50) {
+  if (!isApiConfigured) {
+    return [] satisfies PublicActivityResponse[]
+  }
+
+  const searchParams = new URLSearchParams({
+    hours: String(hours),
+    limit: String(limit),
+  })
+  const response = await fetch(`${apiBaseUrl}/api/activity?${searchParams}`)
+
+  if (!response.ok) {
+    throw new Error('Unable to fetch CiviTm activity.')
+  }
+
+  return (await response.json()) as PublicActivityResponse[]
 }
 
 export async function fetchIssueById(id: string) {

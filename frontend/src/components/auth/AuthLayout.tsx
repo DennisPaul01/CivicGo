@@ -24,14 +24,14 @@ export function AuthLayout({ title, subtitle, children }: AuthLayoutProps) {
 
             <div className="mt-16 max-w-xl">
               <p className="text-sm font-semibold uppercase tracking-wide text-emerald-700">
-                Care. Act. Together.
+                Observa. Actioneaza. Impreuna.
               </p>
               <h1 className="mt-3 text-3xl font-semibold leading-tight text-emerald-950 sm:text-5xl">
-                Keep your civic impact connected.
+                Pastreaza impactul civic conectat.
               </h1>
               <p className="mt-4 text-base leading-7 text-slate-600">
-                Sign in to report issues, join missions, earn points and track
-                how your city changes over time.
+                Autentifica-te ca sa raportezi probleme, sa intri in misiuni,
+                sa castigi puncte si sa vezi cum se schimba orasul in timp.
               </p>
             </div>
           </div>
@@ -40,19 +40,19 @@ export function AuthLayout({ title, subtitle, children }: AuthLayoutProps) {
             <div className="rounded-lg border border-emerald-100 bg-emerald-50 p-4">
               <MapPinned className="size-5 text-emerald-600" aria-hidden="true" />
               <p className="mt-3 text-sm font-semibold text-emerald-950">
-                Map-first action
+                Actiune pe harta
               </p>
               <p className="mt-1 text-sm text-slate-600">
-                Your reports become visible civic missions.
+                Rapoartele tale devin misiuni civice vizibile.
               </p>
             </div>
             <div className="rounded-lg border border-yellow-100 bg-yellow-50 p-4">
               <HeartHandshake className="size-5 text-yellow-700" aria-hidden="true" />
               <p className="mt-3 text-sm font-semibold text-emerald-950">
-                Warm civic rewards
+                Recompense civice prietenoase
               </p>
               <p className="mt-1 text-sm text-slate-600">
-                Helpful actions unlock points, badges and local thank-yous.
+                Actiunile utile deblocheaza puncte, badge-uri si multumiri locale.
               </p>
             </div>
           </div>

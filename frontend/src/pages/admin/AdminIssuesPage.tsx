@@ -5,6 +5,7 @@ import { motion } from 'motion/react'
 import { Button } from '@/components/ui/button'
 import { DemoSkeletonGrid, DemoState } from '@/components/ui/demo-state'
 import { fetchIssues, isApiConfigured } from '@/lib/api'
+import { roCategory, roStatus } from '@/lib/locale'
 import { issuesQueryKey } from '@/lib/queryClient'
 
 export function AdminIssuesPage() {
@@ -14,6 +15,12 @@ export function AdminIssuesPage() {
   })
   const issues = issuesQuery.data ?? []
   const duplicateIssues = issues.filter((issue) => issue.duplicateCount > 0)
+  const municipalIssues = issues.filter(
+    (issue) =>
+      issue.responsibleActor === 'city_hall' &&
+      issue.status !== 'new' &&
+      issue.status !== 'resolved',
+  )
 
   return (
     <main className="min-h-svh overflow-x-hidden bg-orange-50 px-4 py-5 text-slate-950 sm:px-6 lg:px-8">
@@ -33,7 +40,7 @@ export function AdminIssuesPage() {
                 CiviTm admin
               </p>
               <h1 className="text-2xl font-semibold leading-tight text-emerald-950">
-                Issue management
+                Control probleme primarie
               </h1>
             </div>
           </div>
@@ -55,10 +62,11 @@ export function AdminIssuesPage() {
         </div>
 
         <div className="grid gap-3 md:grid-cols-3">
-          <SummaryCard label="Visible issues" value={issues.length} />
-          <SummaryCard label="Duplicate signals" value={duplicateIssues.length} />
+          <SummaryCard label="Probleme vizibile" value={issues.length} />
+          <SummaryCard label="Catre primarie" value={municipalIssues.length} />
+          <SummaryCard label="Semnale duplicate" value={duplicateIssues.length} />
           <SummaryCard
-            label="Needs attention"
+            label="Necesita atentie"
             value={issues.filter((issue) => issue.status !== 'resolved').length}
           />
         </div>
@@ -69,7 +77,7 @@ export function AdminIssuesPage() {
           <DemoState
             icon={ClipboardList}
             tone="amber"
-            eyebrow="Demo fallback"
+            eyebrow="Temporary fallback"
             title="Issue list is temporarily unavailable"
             description="The admin route is protected and ready; live issue data will return with the API."
           />
@@ -83,10 +91,15 @@ export function AdminIssuesPage() {
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="rounded-md bg-orange-50 px-2 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
-                      {issue.status.replaceAll('_', ' ')}
+                      {roStatus(issue.status)}
                     </span>
+                    {issue.responsibleActor === 'city_hall' && (
+                      <span className="rounded-md bg-sky-50 px-2 py-1 text-xs font-semibold text-sky-700 ring-1 ring-sky-200">
+                        Catre primarie
+                      </span>
+                    )}
                     <span className="rounded-md bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">
-                      {issue.category.replaceAll('_', ' ')}
+                      {roCategory(issue.category)}
                     </span>
                     {issue.duplicateCount > 0 && (
                       <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">

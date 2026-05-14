@@ -24,7 +24,7 @@ export function RoleProtectedRoute({
           <span className="flex size-9 items-center justify-center rounded-lg bg-emerald-500 text-white">
             <Leaf className="size-4 animate-pulse" aria-hidden="true" />
           </span>
-          <span className="text-sm font-semibold">Checking access</span>
+          <span className="text-sm font-semibold">Verificam accesul</span>
         </div>
       </main>
     )

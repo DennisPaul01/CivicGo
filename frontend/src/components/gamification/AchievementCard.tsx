@@ -1,6 +1,7 @@
 import { Award, Sparkles, TrendingUp, Trophy } from 'lucide-react'
 import { motion } from 'motion/react'
 import type { GamificationAwardResponse } from '@/lib/api'
+import { roBadge, roPointReason, roRank } from '@/lib/locale'
 
 type AchievementCardProps = {
   gamification: GamificationAwardResponse
@@ -9,8 +10,8 @@ type AchievementCardProps = {
 export function AchievementCard({ gamification }: AchievementCardProps) {
   const hasBadges = gamification.unlockedBadges.length > 0
   const nextRankLabel = gamification.nextRank
-    ? `${gamification.currentRank.pointsToNext} points to ${gamification.nextRank.name}`
-    : 'Top rank reached'
+    ? `${gamification.currentRank.pointsToNext} puncte pana la ${roRank(gamification.nextRank.name)}`
+    : 'Rank maxim atins'
 
   return (
     <motion.section
@@ -18,7 +19,7 @@ export function AchievementCard({ gamification }: AchievementCardProps) {
       initial={{ opacity: 0, y: 12, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.26, ease: 'easeOut', delay: 0.06 }}
-      aria-label="Civic achievement"
+      aria-label="Reusita civica"
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3">
@@ -27,13 +28,13 @@ export function AchievementCard({ gamification }: AchievementCardProps) {
           </span>
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-lime-800">
-              Civic progress
+              Progres civic
             </p>
             <h3 className="mt-1 text-lg font-semibold text-emerald-950">
-              +{gamification.pointsAwarded} Civic Points
+              +{gamification.pointsAwarded} puncte civice
             </h3>
             <p className="mt-1 text-sm text-slate-600">
-              Total: {gamification.totalPoints} points · {gamification.currentRank.name}
+              Total: {gamification.totalPoints} puncte · {roRank(gamification.currentRank.name)}
             </p>
           </div>
         </div>
@@ -42,7 +43,7 @@ export function AchievementCard({ gamification }: AchievementCardProps) {
           <div className="rounded-md border border-emerald-100 bg-white/80 px-3 py-2">
             <div className="flex items-center gap-2 text-sm font-semibold text-emerald-900">
               <Award className="size-4 text-emerald-700" aria-hidden="true" />
-              {gamification.unlockedBadges[0].name}
+              {roBadge(gamification.unlockedBadges[0].name)}
             </div>
             <p className="mt-1 max-w-56 text-xs leading-5 text-slate-600">
               {gamification.unlockedBadges[0].description}
@@ -55,7 +56,7 @@ export function AchievementCard({ gamification }: AchievementCardProps) {
         <div className="flex items-center justify-between gap-3 text-sm">
           <span className="inline-flex items-center gap-2 font-semibold text-emerald-950">
             <TrendingUp className="size-4 text-emerald-700" aria-hidden="true" />
-            Rank progress
+            Progres rank
           </span>
           <span className="text-xs font-medium text-slate-500">
             {nextRankLabel}
@@ -79,7 +80,7 @@ export function AchievementCard({ gamification }: AchievementCardProps) {
               className="inline-flex items-center gap-1 rounded-md bg-white/80 px-2 py-1 text-xs font-medium text-lime-900 ring-1 ring-lime-100"
             >
               <Sparkles className="size-3.5" aria-hidden="true" />
-              {award.reason}: +{award.points}
+              {roPointReason(award.reason)}: +{award.points}
             </span>
           ))}
         </div>

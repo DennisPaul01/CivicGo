@@ -5,7 +5,7 @@ import {
   Clock3,
   Flag,
   Gift,
-  MapPin,
+  MessageSquareText,
   Sparkles,
   Target,
   TriangleAlert,
@@ -32,19 +32,14 @@ const itemStyles: Record<
   }
 > = {
   new: {
-    icon: MapPin,
-    className: 'bg-teal-50 text-teal-700',
-    badgeClassName: 'bg-teal-50 text-teal-700 ring-teal-200',
-  },
-  ai_checked: {
-    icon: Sparkles,
-    className: 'bg-purple-50 text-purple-700',
-    badgeClassName: 'bg-purple-50 text-purple-700 ring-purple-200',
+    icon: TriangleAlert,
+    className: 'bg-rose-50 text-rose-700',
+    badgeClassName: 'bg-rose-50 text-rose-700 ring-rose-200',
   },
   in_progress: {
     icon: Clock3,
-    className: 'bg-amber-50 text-amber-700',
-    badgeClassName: 'bg-amber-50 text-amber-800 ring-amber-200',
+    className: 'bg-yellow-50 text-yellow-700',
+    badgeClassName: 'bg-yellow-50 text-yellow-800 ring-yellow-200',
   },
   resolved: {
     icon: CheckCircle2,
@@ -60,11 +55,6 @@ const itemStyles: Record<
     icon: Gift,
     className: 'bg-yellow-50 text-yellow-700',
     badgeClassName: 'bg-yellow-50 text-yellow-800 ring-yellow-200',
-  },
-  urgent: {
-    icon: TriangleAlert,
-    className: 'bg-rose-50 text-rose-700',
-    badgeClassName: 'bg-rose-50 text-rose-700 ring-rose-200',
   },
 }
 
@@ -87,108 +77,123 @@ export function SelectedIssuePanel({
       <motion.aside
         key={item.id}
         className={cn(
-          'relative rounded-lg border border-emerald-200/80 bg-white/94 p-3 text-slate-950 shadow-sm backdrop-blur-md',
-          onClose && 'pr-10',
+          'relative rounded-lg border border-emerald-200/80 bg-white/94 p-2.5 text-slate-950 shadow-sm backdrop-blur-md',
           className,
         )}
         initial={{ opacity: 0, y: 12, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 8, scale: 0.98 }}
         transition={{ duration: 0.24, ease: 'easeOut' }}
-        aria-label="Selected civic item"
+        aria-label="Element civic selectat"
       >
-        {onClose && (
-          <Button
-            type="button"
-            size="icon-sm"
-            variant="ghost"
-            className="absolute right-2 top-2 z-10 bg-white/80 text-slate-500 hover:bg-emerald-50 hover:text-emerald-800"
-            aria-label="Close selected item"
-            onClick={onClose}
-          >
-            <X className="size-4" aria-hidden="true" />
-          </Button>
-        )}
-        <div className="flex items-start gap-3">
+        <div className="grid grid-cols-[2rem_minmax(0,1fr)_1.75rem] items-start gap-2">
           <span
             className={cn(
-              'flex size-9 shrink-0 items-center justify-center rounded-lg',
+              'flex size-8 shrink-0 items-center justify-center rounded-lg',
               style.className,
             )}
           >
-            <Icon className="size-4.5" aria-hidden="true" />
+            <Icon className="size-4" aria-hidden="true" />
           </span>
 
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-1.5">
               <span
                 className={cn(
-                  'inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold ring-1',
+                  'inline-flex items-center rounded-md px-2 py-0.5 text-[0.7rem] font-semibold leading-5 ring-1',
                   style.badgeClassName,
                 )}
               >
                 {item.statusLabel}
               </span>
-              <span className="text-xs font-medium text-slate-500">
+              <span className="text-[0.7rem] font-medium leading-5 text-slate-500">
                 {item.zone}
               </span>
             </div>
 
-            <h2 className="mt-2 text-base font-semibold leading-tight text-emerald-950">
+            <div
+              className="mt-1 text-[0.78rem] font-semibold leading-[1.18] text-emerald-950"
+              role="heading"
+              aria-level={2}
+            >
               {item.title}
-            </h2>
-            <p className="mt-1 text-sm leading-snug text-slate-600">
+            </div>
+            <p className="mt-1 text-[0.82rem] leading-snug text-slate-600">
               {item.description}
             </p>
           </div>
+
+          {onClose && (
+            <Button
+              type="button"
+              size="icon-sm"
+              variant="ghost"
+              className="-mt-1 bg-white/80 text-slate-500 hover:bg-emerald-50 hover:text-emerald-800"
+              aria-label="Inchide elementul selectat"
+              onClick={onClose}
+            >
+              <X className="size-4" aria-hidden="true" />
+            </Button>
+          )}
         </div>
 
-        <div className="mt-3 grid gap-2 text-sm">
-          <div className="flex items-start gap-2 rounded-md border border-slate-200 bg-slate-50/80 p-2">
-            <Users className="mt-0.5 size-4 shrink-0 text-slate-500" aria-hidden="true" />
+        {item.imageUrl && (
+          <div className="mt-2 overflow-hidden rounded-md border border-emerald-100 bg-emerald-50">
+            <img
+              src={item.imageUrl}
+              alt=""
+              className="h-24 w-full object-cover"
+              loading="lazy"
+            />
+          </div>
+        )}
+
+        <div className="mt-2 grid gap-1.5 text-[0.78rem] leading-snug">
+          <div className="flex items-start gap-1.5 rounded-md border border-slate-200 bg-slate-50/80 p-1.5">
+            <Users className="mt-0.5 size-3.5 shrink-0 text-slate-500" aria-hidden="true" />
             <span className="text-slate-700">{item.meta}</span>
           </div>
 
-          <div className="flex items-start gap-2 rounded-md border border-emerald-100 bg-emerald-50/80 p-2">
-            <Target className="mt-0.5 size-4 shrink-0 text-emerald-600" aria-hidden="true" />
+          <div className="flex items-start gap-1.5 rounded-md border border-emerald-100 bg-emerald-50/80 p-1.5">
+            <Target className="mt-0.5 size-3.5 shrink-0 text-emerald-600" aria-hidden="true" />
             <span className="font-medium text-emerald-800">{item.impact}</span>
           </div>
 
           {item.pointsEarned !== undefined && (
-            <div className="flex items-start gap-2 rounded-md border border-lime-100 bg-lime-50/80 p-2">
-              <Sparkles className="mt-0.5 size-4 shrink-0 text-lime-700" aria-hidden="true" />
+            <div className="flex items-start gap-1.5 rounded-md border border-lime-100 bg-lime-50/80 p-1.5">
+              <Sparkles className="mt-0.5 size-3.5 shrink-0 text-lime-700" aria-hidden="true" />
               <span className="font-medium text-lime-800">
-                Points shown for map demo: +{item.pointsEarned}
+                Puncte civice: +{item.pointsEarned}
               </span>
             </div>
           )}
 
           {item.aiSummary && (
-            <div className="flex items-start gap-2 rounded-md border border-purple-100 bg-purple-50/80 p-2">
-              <Sparkles className="mt-0.5 size-4 shrink-0 text-purple-700" aria-hidden="true" />
-              <span className="text-purple-900">{item.aiSummary}</span>
+            <div className="flex items-start gap-1.5 rounded-md border border-slate-200 bg-white p-1.5">
+              <MessageSquareText className="mt-0.5 size-3.5 shrink-0 text-slate-500" aria-hidden="true" />
+              <span className="text-slate-700">{item.aiSummary}</span>
             </div>
           )}
 
           {item.missionId && (
-            <div className="flex items-start gap-2 rounded-md border border-lime-100 bg-lime-50/80 p-2">
-              <Flag className="mt-0.5 size-4 shrink-0 text-lime-700" aria-hidden="true" />
+            <div className="flex items-start gap-1.5 rounded-md border border-lime-100 bg-lime-50/80 p-1.5">
+              <Flag className="mt-0.5 size-3.5 shrink-0 text-lime-700" aria-hidden="true" />
               <span className="font-medium text-lime-900">
-                Mission linked
+                Task comunitar conectat
                 {item.participantsNeeded !== undefined &&
-                  ` · ${item.participantsJoined ?? 0}/${item.participantsNeeded} joined`}
+                  ` · ${item.participantsJoined ?? 0}/${item.participantsNeeded} inscrisi`}
               </span>
             </div>
           )}
 
           {item.duplicateCount !== undefined && item.duplicateCount > 0 && (
-            <div className="flex items-start gap-2 rounded-md border border-amber-100 bg-amber-50/80 p-2">
-              <TriangleAlert className="mt-0.5 size-4 shrink-0 text-amber-700" aria-hidden="true" />
+            <div className="flex items-start gap-1.5 rounded-md border border-amber-100 bg-amber-50/80 p-1.5">
+              <TriangleAlert className="mt-0.5 size-3.5 shrink-0 text-amber-700" aria-hidden="true" />
               <span className="font-medium text-amber-900">
-                {item.duplicateCount} nearby duplicate signal
-                {item.duplicateCount === 1 ? '' : 's'}
+                {item.duplicateCount} semnal duplicat in apropiere
+                {item.duplicateCount === 1 ? '' : 'e'}
                 {item.nearestDuplicateTitle &&
-                  ` · nearest ${item.nearestDuplicateTitle}${
+                  ` · cel mai apropiat: ${item.nearestDuplicateTitle}${
                     item.nearestDuplicateDistanceMeters
                       ? ` (${item.nearestDuplicateDistanceMeters}m)`
                       : ''
@@ -202,19 +207,19 @@ export function SelectedIssuePanel({
           <div className="mt-3 grid gap-2 text-xs text-slate-600">
             {item.responsibleActor && (
               <p>
-                <span className="font-semibold text-slate-800">Owner:</span>{' '}
+                <span className="font-semibold text-slate-800">Responsabil:</span>{' '}
                 {item.responsibleActor}
               </p>
             )}
             {item.relatedMission && (
               <p>
-                <span className="font-semibold text-slate-800">Mission:</span>{' '}
+                <span className="font-semibold text-slate-800">Task:</span>{' '}
                 {item.relatedMission}
               </p>
             )}
             {item.reward && (
               <p>
-                <span className="font-semibold text-slate-800">Reward:</span>{' '}
+                <span className="font-semibold text-slate-800">Recompensa:</span>{' '}
                 {item.reward}
               </p>
             )}
@@ -224,11 +229,11 @@ export function SelectedIssuePanel({
         {detailsHref && (
           <div className="mt-3 flex flex-col gap-2 sm:flex-row">
             <Button asChild size="sm" className="bg-emerald-600 text-white hover:bg-emerald-700">
-              <Link to={detailsHref}>View details</Link>
+              <Link to={detailsHref}>Vezi detalii</Link>
             </Button>
             {item.missionId && item.kind !== 'mission' && (
               <Button asChild size="sm" variant="outline">
-                <Link to={`/missions/${item.missionId}`}>Open mission</Link>
+                <Link to={`/missions/${item.missionId}`}>Deschide misiunea</Link>
               </Button>
             )}
           </div>
@@ -247,7 +252,7 @@ export function SelectedIssuePanel({
               )}
               <div className="p-2">
                 <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-rose-700">
-                  Before
+                  Inainte
                 </p>
                 <p className="mt-1 text-xs leading-snug text-slate-700">
                   {item.beforeAfter.before}
@@ -265,7 +270,7 @@ export function SelectedIssuePanel({
               )}
               <div className="p-2">
                 <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-emerald-700">
-                  After
+                  Dupa
                 </p>
                 <p className="mt-1 text-xs leading-snug text-slate-700">
                   {item.beforeAfter.after}

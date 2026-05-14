@@ -1,6 +1,7 @@
 using System.Text.Json;
 using CivicGo.Api.Data;
 using CivicGo.Api.Data.Entities;
+using CivicGo.Api.Issues;
 using Microsoft.EntityFrameworkCore;
 
 namespace CivicGo.Api.Missions;
@@ -17,9 +18,18 @@ public sealed class MissionGenerationService(
 
     private static readonly HashSet<string> MissionFriendlyCategories = new(StringComparer.OrdinalIgnoreCase)
     {
+        IssueCategories.SanitationPestSnow,
+        IssueCategories.EnvironmentPlaygroundsGreenSpaces,
+        IssueCategories.GaragesCemeteriesPublicToilets,
+        IssueCategories.PublicOrder,
+        IssueCategories.StreetsSidewalks,
+        IssueCategories.PublicLighting,
+        IssueCategories.RoadTrafficSigns,
+        IssueCategories.PublicTransport,
         "waste",
         "graffiti",
         "green_space_issue",
+        "green_space",
         "blocked_sidewalk",
         "accessibility_issue",
         "broken_lighting",
@@ -121,8 +131,8 @@ public sealed class MissionGenerationService(
         {
             Id = Guid.NewGuid(),
             Type = "mission_created",
-            Title = "Mission created",
-            Message = $"{mission.Title} is now active in {issue.Zone?.Name ?? "Timisoara"}.",
+            Title = "Misiune creata",
+            Message = $"{mission.Title} este acum activa in {issue.Zone?.Name ?? "Timisoara"}.",
             RelatedIssueId = issue.Id,
             RelatedMissionId = mission.Id,
             RelatedZoneId = issue.ZoneId,
@@ -185,27 +195,39 @@ public sealed class MissionGenerationService(
         var zoneName = issue.Zone?.Name ?? "Timisoara";
         var title = issue.Category switch
         {
-            "waste" => $"Clean-up {zoneName}",
-            "graffiti" => $"Graffiti cleanup {zoneName}",
-            "green_space_issue" => $"Green space check {zoneName}",
-            "blocked_sidewalk" or "accessibility_issue" => $"Accessibility check {zoneName}",
-            "broken_lighting" => $"Safety walk {zoneName}",
-            "road_damage" => $"Road safety check {zoneName}",
-            "damaged_public_furniture" => $"Public furniture check {zoneName}",
-            _ => $"Civic check {zoneName}"
+            "waste" => $"Curatenie comunitara in {zoneName}",
+            "graffiti" => $"Curatare graffiti in {zoneName}",
+            "green_space_issue" or "green_space" or IssueCategories.EnvironmentPlaygroundsGreenSpaces =>
+                $"Verificare spatiu verde in {zoneName}",
+            "blocked_sidewalk" or "accessibility_issue" => $"Verificare accesibilitate in {zoneName}",
+            "broken_lighting" or IssueCategories.PublicLighting => $"Tur de siguranta in {zoneName}",
+            "road_damage" or IssueCategories.StreetsSidewalks or IssueCategories.RoadTrafficSigns =>
+                $"Verificare siguranta drum in {zoneName}",
+            "damaged_public_furniture" => $"Verificare mobilier urban in {zoneName}",
+            IssueCategories.SanitationPestSnow =>
+                $"Curatenie comunitara in {zoneName}",
+            IssueCategories.PublicOrder =>
+                $"Verificare ordine publica in {zoneName}",
+            IssueCategories.GaragesCemeteriesPublicToilets =>
+                $"Verificare toalete publice in {zoneName}",
+            IssueCategories.PublicTransport =>
+                $"Verificare transport public in {zoneName}",
+            _ => $"Verificare civica in {zoneName}"
         };
         var description = issue.Category switch
         {
-            "waste" =>
-                $"A community cleanup mission generated from the reported waste issue in {zoneName}. Volunteers can document the area, collect visible litter where safe and prepare the issue for city follow-up.",
-            "broken_lighting" =>
-                $"A safety walk generated from a lighting report in {zoneName}. Participants can verify nearby lights, document dark spots and help prioritize the city service request.",
-            "road_damage" =>
-                $"A road safety check generated from the report in {zoneName}. Citizens can collect supporting photos and map the affected segment for city hall review.",
+            "waste" or IssueCategories.SanitationPestSnow =>
+                $"Misiune comunitara de curatenie generata din raportul de deseuri din {zoneName}. Voluntarii pot documenta zona, strange deseuri vizibile unde este sigur si pregati cazul pentru primarie.",
+            "broken_lighting" or IssueCategories.PublicLighting =>
+                $"Tur de siguranta generat dintr-un raport de iluminat in {zoneName}. Participantii pot verifica luminile din apropiere, documenta zonele intunecate si ajuta la prioritizarea solicitarii.",
+            "road_damage" or IssueCategories.StreetsSidewalks or IssueCategories.RoadTrafficSigns =>
+                $"Verificare de siguranta rutiera generata din raportul din {zoneName}. Cetatenii pot strange fotografii suplimentare si marca segmentul afectat pentru primarie.",
             "blocked_sidewalk" or "accessibility_issue" =>
-                $"An accessibility check generated from the report in {zoneName}. The mission focuses on documenting the obstruction and confirming pedestrian impact.",
+                $"Verificare de accesibilitate generata din raportul din {zoneName}. Misiunea se concentreaza pe documentarea obstacolului si confirmarea impactului asupra pietonilor.",
+            IssueCategories.EnvironmentPlaygroundsGreenSpaces =>
+                $"Misiune comunitara pentru spatii verzi si locuri de joaca in {zoneName}. Participantii pot documenta problema si confirma ce interventie este necesara.",
             _ =>
-                $"A lightweight civic mission generated from the issue reported in {zoneName}. Participants can verify the location, add context and help move the problem toward resolution."
+                $"Misiune civica usoara generata din problema raportata in {zoneName}. Participantii pot verifica locatia, adauga context si ajuta problema sa avanseze spre rezolvare."
         };
         var startsAt = NextSaturdayAtTen(DateTimeOffset.UtcNow);
 
@@ -224,7 +246,7 @@ public sealed class MissionGenerationService(
         return issue.Severity switch
         {
             "high" => 10,
-            "medium" => issue.Category is "waste" or "graffiti" ? 8 : 6,
+            "medium" => issue.Category is "waste" or "graffiti" or IssueCategories.SanitationPestSnow ? 8 : 6,
             _ => 4
         };
     }
@@ -296,7 +318,7 @@ public sealed class MissionGenerationService(
                 mission.ImpactPoints,
                 plan.StartsAt
             }, JsonOptions),
-            Message = $"Created {mission.Title}.",
+            Message = $"A creat misiunea {mission.Title}.",
             StartedAt = now.AddMilliseconds(-180),
             CompletedAt = now,
             Order = nextOrder

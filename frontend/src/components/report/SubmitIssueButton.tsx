@@ -22,7 +22,7 @@ export function SubmitIssueButton({
       ) : (
         <Send data-icon="inline-start" aria-hidden="true" />
       )}
-      {isSubmitting ? 'Preparing signal' : 'Send signal'}
+      {isSubmitting ? 'Pregatim semnalul' : 'Trimite semnalul'}
     </Button>
   )
 }

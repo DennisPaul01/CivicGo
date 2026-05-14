@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using CivicGo.Api.Agents;
 using CivicGo.Api.Ai;
 using CivicGo.Api.Auth;
@@ -12,7 +13,6 @@ using CivicGo.Api.Rewards;
 using CivicGo.Api.Storage;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.SignalR;
 
 namespace CivicGo.Api.Issues;
 
@@ -66,6 +66,51 @@ public static class IssueEndpoints
         })
         .WithName("GetIssueById");
 
+        group.MapGet("/{id:guid}/events", async (
+            Guid id,
+            HttpContext httpContext,
+            IssueEventStreamService eventStream,
+            CancellationToken cancellationToken
+        ) =>
+        {
+            httpContext.Response.Headers.CacheControl = "no-cache";
+            httpContext.Response.Headers.Connection = "keep-alive";
+            httpContext.Response.ContentType = "text/event-stream";
+
+            await WriteServerSentEventAsync(
+                httpContext,
+                0,
+                "stream.connected",
+                JsonSerializer.Serialize(
+                    new
+                    {
+                        type = "stream.connected",
+                        data = new
+                        {
+                            issueId = id,
+                            connectedAt = DateTimeOffset.UtcNow
+                        }
+                    },
+                    new JsonSerializerOptions(JsonSerializerDefaults.Web)
+                ),
+                cancellationToken
+            );
+
+            using var subscription = eventStream.Subscribe(id);
+
+            await foreach (var item in subscription.Reader.ReadAllAsync(cancellationToken))
+            {
+                await WriteServerSentEventAsync(
+                    httpContext,
+                    item.Id,
+                    item.Type,
+                    IssueEventStreamService.SerializeData(item),
+                    cancellationToken
+                );
+            }
+        })
+        .WithName("StreamIssueEvents");
+
         group.MapPost("/", async (
             [FromForm] IFormFile image,
             [FromForm] string? description,
@@ -77,12 +122,7 @@ public static class IssueEndpoints
             CivicGoDbContext dbContext,
             UserProfileService userProfileService,
             SupabaseStorageService storageService,
-            IssueAiAnalysisService aiAnalysisService,
-            DuplicateDetectionService duplicateDetectionService,
-            MissionGenerationService missionGenerationService,
-            RewardMatchingService rewardMatchingService,
-            GamificationService gamificationService,
-            IHubContext<CivicHub> civicHub,
+            IssueAgentPipelineService agentPipeline,
             CancellationToken cancellationToken
         ) =>
         {
@@ -133,6 +173,7 @@ public static class IssueEndpoints
                 Longitude = request.Longitude,
                 LocationPoint = $"POINT({request.Longitude} {request.Latitude})",
                 ZoneId = zone.Id,
+                Zone = zone,
                 CreatedByUserId = profile.Id,
                 ConfirmedCount = 0,
                 DuplicateCount = 0,
@@ -153,111 +194,9 @@ public static class IssueEndpoints
             });
 
             await dbContext.SaveChangesAsync(cancellationToken);
-            await civicHub.Clients.All.SendAsync(
-                "IssueCreated",
-                new
-                {
-                    issueId = issue.Id,
-                    status = issue.Status,
-                    zoneId = issue.ZoneId,
-                    zoneName = zone.Name,
-                    issue.CreatedAt
-                },
-                cancellationToken
-            );
+            agentPipeline.Enqueue(issue.Id);
 
-            var analysis = await aiAnalysisService.AnalyzeIssueAsync(issue.Id, cancellationToken);
-            await civicHub.Clients.All.SendAsync(
-                "IssueAnalyzed",
-                new
-                {
-                    issueId = issue.Id,
-                    analysis.Category,
-                    analysis.Severity,
-                    analysis.IsUrgent,
-                    analysis.CreatedAt
-                },
-                cancellationToken
-            );
-
-            await duplicateDetectionService.CheckIssueAsync(issue.Id, cancellationToken);
-            var mission = await missionGenerationService.EnsureMissionForIssueAsync(
-                issue.Id,
-                cancellationToken
-            );
-
-            if (mission is not null)
-            {
-                await civicHub.Clients.All.SendAsync(
-                    "MissionCreated",
-                    new
-                    {
-                        issueId = issue.Id,
-                        missionId = mission.Id,
-                        mission.Title,
-                        mission.ZoneId,
-                        mission.ImpactPoints
-                    },
-                    cancellationToken
-                );
-
-                var reward = await rewardMatchingService.MatchRewardForMissionAsync(
-                    mission.Id,
-                    cancellationToken
-                );
-
-                if (reward is not null)
-                {
-                    await civicHub.Clients.All.SendAsync(
-                        "RewardMatched",
-                        new
-                        {
-                            issueId = issue.Id,
-                            missionId = mission.Id,
-                            rewardId = reward.Id,
-                            reward.Title,
-                            reward.PartnerName
-                        },
-                        cancellationToken
-                    );
-                }
-            }
-
-            var gamification = await gamificationService.ApplyReportRewardsAsync(
-                issue.Id,
-                cancellationToken
-            );
-
-            var analyzedIssue = await dbContext.Issues
-                .AsNoTracking()
-                .Include(item => item.Zone)
-                .Include(item => item.AiAnalyses)
-                .Include(item => item.AgentRuns)
-                    .ThenInclude(run => run.AgentSteps)
-                .Include(item => item.MissionIssues)
-                    .ThenInclude(link => link.Mission)
-                        .ThenInclude(mission => mission!.Participants)
-                .Include(item => item.MissionIssues)
-                    .ThenInclude(link => link.Mission)
-                        .ThenInclude(mission => mission!.Reward)
-                            .ThenInclude(reward => reward!.Partner)
-                .FirstAsync(item => item.Id == issue.Id, cancellationToken);
-
-            if (analyzedIssue.ZoneId is not null)
-            {
-                await civicHub.Clients.All.SendAsync(
-                    "ZoneScoreUpdated",
-                    new
-                    {
-                        zoneId = analyzedIssue.ZoneId,
-                        zoneName = analyzedIssue.Zone?.Name,
-                        score = analyzedIssue.Zone?.Score
-                    },
-                    cancellationToken
-                );
-            }
-
-            return Results.Created($"/api/issues/{issue.Id}", ToResponse(analyzedIssue, gamification));
+            return Results.Created($"/api/issues/{issue.Id}", ToResponse(issue));
         })
         .RequireAuthorization()
         .DisableAntiforgery()
@@ -333,6 +272,20 @@ public static class IssueEndpoints
     private static string CreateTitle(string zoneName)
     {
         return $"Reported issue in {zoneName.Trim()}";
+    }
+
+    private static async Task WriteServerSentEventAsync(
+        HttpContext httpContext,
+        long id,
+        string eventType,
+        string data,
+        CancellationToken cancellationToken
+    )
+    {
+        await httpContext.Response.WriteAsync($"id: {id}\n", cancellationToken);
+        await httpContext.Response.WriteAsync($"event: {eventType}\n", cancellationToken);
+        await httpContext.Response.WriteAsync($"data: {data}\n\n", cancellationToken);
+        await httpContext.Response.Body.FlushAsync(cancellationToken);
     }
 
     private static IssueResponse ToResponse(

@@ -18,7 +18,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
           <span className="flex size-9 items-center justify-center rounded-lg bg-emerald-500 text-white">
             <Leaf className="size-4 animate-pulse" aria-hidden="true" />
           </span>
-          <span className="text-sm font-semibold">Checking session</span>
+          <span className="text-sm font-semibold">Verificam sesiunea</span>
         </div>
       </main>
     )

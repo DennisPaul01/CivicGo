@@ -1,5 +1,6 @@
 import type { MapMarkerKind } from '@/components/map/MapMarker'
 import type { IssueResponse, MissionResponse } from '@/lib/api'
+import { roActor, roCategory, roReward, roStatus } from '@/lib/locale'
 
 export type CivicMapItem = {
   id: string
@@ -12,6 +13,7 @@ export type CivicMapItem = {
   statusLabel: string
   zone: string
   coordinates: [number, number]
+  imageUrl?: string
   meta: string
   impact: string
   pointsEarned?: number
@@ -52,72 +54,74 @@ export const civicMapItems: CivicMapItem[] = [
     kind: 'new',
     source: 'demo',
     createdAt: minutesAgo(18),
-    label: 'New issue: blocked sidewalk near Complex',
-    title: 'Blocked sidewalk near Complex',
+    label: 'Problema noua: trotuar blocat langa Complex',
+    title: 'Trotuar blocat langa Complex',
     description:
-      'A sidewalk segment is blocked by abandoned objects near a busy student area.',
-    statusLabel: 'New',
+      'Un segment de trotuar este blocat de obiecte abandonate langa o zona studenteasca aglomerata.',
+    statusLabel: 'Nou',
     zone: 'Complex',
     coordinates: [21.2325, 45.7531],
-    meta: '2 citizens reported similar context',
-    impact: '+20 potential civic points',
-    responsibleActor: 'Community and city hall',
-    relatedMission: 'Accessibility check Complex',
+    meta: '2 cetateni au raportat un context similar',
+    impact: 'Actiune comunitara posibila',
+    pointsEarned: 20,
+    responsibleActor: 'Comunitate si primarie',
+    relatedMission: 'Verificare accesibilitate Complex',
   },
   {
     id: 'issue-ai-fabric',
-    kind: 'ai_checked',
+    kind: 'in_progress',
     source: 'demo',
     createdAt: minutesAgo(52),
-    label: 'AI checked: broken street light in Fabric',
-    title: 'Broken street light in Fabric',
+    label: 'Problema activa: bec stradal defect in Fabric',
+    title: 'Bec stradal defect in Fabric',
     description:
-      'AI classified the report as a public lighting issue with medium severity.',
-    statusLabel: 'AI checked',
+      'Raportul este pregatit pentru echipa de iluminat public.',
+    statusLabel: 'Problema activa',
     zone: 'Fabric',
     coordinates: [21.2422, 45.7603],
-    meta: 'Confidence 87% - medium severity',
-    impact: '+35 zone safety score if resolved',
-    responsibleActor: 'City hall',
-    relatedMission: 'Safety Walk Fabric',
+    meta: 'Iluminat public',
+    impact: 'Trimis catre primarie pentru inspectie',
+    responsibleActor: 'Primarie',
+    relatedMission: 'Tur de siguranta Fabric',
   },
   {
     id: 'issue-progress-girocului',
     kind: 'in_progress',
     source: 'demo',
     createdAt: minutesAgo(140),
-    label: 'In progress: road damage in Girocului',
-    title: 'Road damage in Girocului',
+    label: 'In lucru: drum deteriorat in Girocului',
+    title: 'Drum deteriorat in Girocului',
     description:
-      'The issue is being reviewed and linked to a local road safety mission.',
-    statusLabel: 'In progress',
+      'Problema este verificata si legata de o misiune locala de siguranta rutiera.',
+    statusLabel: 'In lucru',
     zone: 'Girocului',
     coordinates: [21.2114, 45.7339],
-    meta: 'Assigned to city hall - 2 duplicates nearby',
-    impact: '+80 civic impact points in progress',
-    responsibleActor: 'City hall',
-    relatedMission: 'Road Safety Girocului',
+    meta: 'Alocat primariei - 2 duplicate in apropiere',
+    impact: '+80 puncte de impact civic in lucru',
+    responsibleActor: 'Primarie',
+    relatedMission: 'Siguranta rutiera Girocului',
   },
   {
     id: 'issue-resolved-central',
     kind: 'resolved',
     source: 'demo',
     createdAt: minutesAgo(210),
-    label: 'Resolved: illegal waste near Central Park',
-    title: 'Illegal waste near Central Park',
+    label: 'Rezolvat: deseuri abandonate langa Parcul Central',
+    title: 'Deseuri abandonate langa Parcul Central',
     description:
-      'A reported waste pile was cleaned through a community mission and partner reward.',
-    statusLabel: 'Resolved',
-    zone: 'Central Park',
+      'O gramada de deseuri raportata a fost curatata printr-o misiune comunitara si o recompensa de la partener.',
+    statusLabel: 'Rezolvat',
+    zone: 'Parcul Central',
     coordinates: [21.2201, 45.7578],
-    meta: 'Reported by 4 citizens - resolved 12 min ago',
-    impact: '+120 Civic Points awarded',
-    responsibleActor: 'Community and sanitation team',
-    relatedMission: 'Clean-up Central Park',
-    reward: 'CoffeeLab reward matched',
+    meta: 'Raportat de 4 cetateni - rezolvat acum 12 min',
+    impact: 'Rezolvat prin actiune comunitara',
+    pointsEarned: 120,
+    responsibleActor: 'Comunitate si echipa de salubritate',
+    relatedMission: 'Curatenie Parcul Central',
+    reward: 'Recompensa CoffeeLab potrivita',
     beforeAfter: {
-      before: 'Before: visible waste pile near the green area',
-      after: 'After: cleaned walkway and restored public space',
+      before: 'Inainte: deseuri vizibile langa zona verde',
+      after: 'Dupa: alee curatata si spatiu public redat comunitatii',
     },
   },
   {
@@ -125,62 +129,46 @@ export const civicMapItems: CivicMapItem[] = [
     kind: 'mission',
     source: 'demo',
     createdAt: minutesAgo(460),
-    label: 'Mission active: green space check in Soarelui',
-    title: 'Green space check in Soarelui',
+    label: 'Misiune activa: verificare spatiu verde in Soarelui',
+    title: 'Verificare spatiu verde in Soarelui',
     description:
-      'A community mission is active for checking damaged benches and green areas.',
-    statusLabel: 'Mission active',
+      'O misiune comunitara este activa pentru verificarea bancilor deteriorate si a zonelor verzi.',
+    statusLabel: 'Misiune activa',
     zone: 'Soarelui',
     coordinates: [21.2468, 45.7366],
-    meta: '5 joined - 8 participants needed',
-    impact: '+95 mission impact points',
-    reward: 'Local Gym day pass preview',
+    meta: '5 inscrisi - sunt necesari 8 participanti',
+    impact: '+95 puncte de impact pentru misiune',
+    reward: 'Abonament de o zi Local Gym disponibil',
   },
   {
     id: 'reward-unirii',
     kind: 'reward',
     source: 'demo',
     createdAt: minutesAgo(1_680),
-    label: 'Reward available: CoffeeLab near Unirii',
-    title: 'CoffeeLab reward near Unirii',
+    label: 'Recompensa disponibila: CoffeeLab langa Unirii',
+    title: 'Recompensa CoffeeLab langa Unirii',
     description:
-      'A partner reward is available for citizens who complete eligible clean-up missions.',
-    statusLabel: 'Reward available',
+      'O recompensa de la partener este disponibila pentru cetatenii care finalizeaza misiuni eligibile de curatenie.',
+    statusLabel: 'Recompensa disponibila',
     zone: 'Unirii',
     coordinates: [21.2289, 45.757],
-    meta: 'Requires mission completion and 300 Civic Points',
-    impact: 'Partner reward ready for demo',
-    reward: 'Free cappuccino',
-  },
-  {
-    id: 'issue-urgent-mehala',
-    kind: 'urgent',
-    source: 'demo',
-    createdAt: minutesAgo(34),
-    label: 'Urgent issue: public safety concern in Mehala',
-    title: 'Public safety concern in Mehala',
-    description:
-      'A high-priority public safety report is visible for civic follow-up.',
-    statusLabel: 'Urgent',
-    zone: 'Mehala',
-    coordinates: [21.1947, 45.7672],
-    meta: 'High severity - needs review',
-    impact: '+150 potential civic priority score',
-    responsibleActor: 'City organizer',
+    meta: 'Necesita misiune finalizata si 300 puncte civice',
+    impact: 'Recompensa de partener disponibila',
+    reward: 'Cappuccino gratuit',
   },
 ]
 
 export const defaultSelectedMapItemId = 'issue-resolved-central'
 
 const issueStatusLabels: Record<string, string> = {
-  new: 'New',
-  ai_analyzed: 'AI checked',
-  duplicate_detected: 'Possible duplicate',
-  in_review: 'Being reviewed',
-  in_progress: 'In progress',
-  mission_created: 'Community mission active',
-  resolved: 'Resolved',
-  rejected: 'Rejected',
+  new: 'Problema raportata',
+  ai_analyzed: 'Problema activa',
+  duplicate_detected: 'Semnale similare',
+  in_review: 'Problema activa',
+  in_progress: 'In lucru',
+  mission_created: 'Problema activa',
+  resolved: 'Rezolvat',
+  rejected: 'Respins',
 }
 
 function getIssueKind(issue: IssueResponse): MapMarkerKind {
@@ -188,23 +176,8 @@ function getIssueKind(issue: IssueResponse): MapMarkerKind {
     return 'resolved'
   }
 
-  if (issue.isUrgent) {
-    return 'urgent'
-  }
-
-  if (issue.status === 'in_progress' || issue.status === 'in_review') {
+  if (issue.status === 'in_progress') {
     return 'in_progress'
-  }
-
-  if (issue.status === 'mission_created') {
-    return 'mission'
-  }
-
-  if (
-    issue.status === 'ai_analyzed' ||
-    issue.status === 'duplicate_detected'
-  ) {
-    return 'ai_checked'
   }
 
   return 'new'
@@ -215,12 +188,43 @@ function formatApiValue(value: string | null | undefined, fallback: string) {
     return fallback
   }
 
-  return value
-    .replaceAll('_', ' ')
-    .replace(/\b\w/g, (character) => character.toUpperCase())
+  return roStatus(value, fallback)
+}
+
+function isCitizenActionIssue(issue: IssueResponse) {
+  return (
+    issue.rewardEligible ||
+    issue.responsibleActor === 'community' ||
+    issue.responsibleActor === 'community_and_city_hall' ||
+    Boolean(issue.relatedMission)
+  )
+}
+
+function isCityHallIssue(issue: IssueResponse) {
+  return issue.responsibleActor === 'city_hall'
+}
+
+function getAgentRoutingLabel(issue: IssueResponse) {
+  if (issue.status === 'resolved') {
+    return issueStatusLabels.resolved
+  }
+
+  if (issue.status === 'in_progress') {
+    return issueStatusLabels.in_progress
+  }
+
+  if (issue.status === 'new') {
+    return issueStatusLabels.new
+  }
+
+  return issueStatusLabels[issue.status] ?? formatApiValue(issue.status, 'Problema activa')
 }
 
 function getIssuePointsPreview(issue: IssueResponse) {
+  if (!isCitizenActionIssue(issue)) {
+    return undefined
+  }
+
   if (issue.relatedMission) {
     return issue.relatedMission.impactPoints
   }
@@ -237,72 +241,120 @@ function getIssuePointsPreview(issue: IssueResponse) {
 }
 
 function getIssueMeta(issue: IssueResponse) {
-  const category = formatApiValue(issue.category, 'Issue')
-  const severity = formatApiValue(issue.severity, 'Medium')
+  return roCategory(issue.category, 'problema')
+}
 
-  if (issue.aiConfidence !== null) {
-    return `${category} · ${severity} · AI confidence ${Math.round(
-      issue.aiConfidence * 100,
-    )}%`
+function createIssueTitle(issue: IssueResponse) {
+  const zone = issue.zoneName ?? 'Timisoara'
+  const title = issue.title.trim()
+
+  if (title && !title.toLowerCase().startsWith('reported issue in')) {
+    return title
   }
 
-  return `${category} · ${severity} · reported on ${new Intl.DateTimeFormat(
-    'en',
-    {
-      month: 'short',
-      day: 'numeric',
-    },
-  ).format(new Date(issue.createdAt))}`
+  switch (issue.category) {
+    case 'sanitation_pest_snow':
+    case 'waste':
+      return `Deseuri si salubrizare in ${zone}`
+    case 'streets_sidewalks':
+    case 'road_damage':
+    case 'blocked_sidewalk':
+      return `Problema pe strada sau trotuar in ${zone}`
+    case 'public_lighting':
+    case 'broken_lighting':
+    case 'lighting':
+      return `Iluminat public defect in ${zone}`
+    case 'environment_playgrounds_green_spaces':
+    case 'green_space_issue':
+    case 'green_space':
+      return `Spatiu verde sau loc de joaca in ${zone}`
+    case 'public_transport':
+    case 'public_transport_issue':
+      return `Transport in comun in ${zone}`
+    case 'road_traffic_signs':
+      return `Trafic rutier si semnalizare in ${zone}`
+    case 'water_sewer_heating':
+    case 'water_issue':
+      return `Apa, canalizare sau termoficare in ${zone}`
+    case 'animals':
+      return `Problema cu animale in ${zone}`
+    case 'construction_sites':
+      return `Santier raportat in ${zone}`
+    case 'public_order':
+    case 'public_safety_concern':
+      return `Ordine publica in ${zone}`
+    default:
+      return `${roCategory(issue.category, 'Problema')} in ${zone}`
+  }
+}
+
+function getIssueImpact(issue: IssueResponse, pointsEarned?: number) {
+  if (issue.relatedMission) {
+    return 'Task comunitar conectat pe harta'
+  }
+
+  if (pointsEarned !== undefined) {
+    return 'Task comunitar in generare'
+  }
+
+  if (isCityHallIssue(issue)) {
+    return 'Adaugat in dashboardul primariei'
+  }
+
+  const actor = roActor(issue.responsibleActor, '')
+
+  return actor ? `Rutare agent: ${actor}` : 'Rutare agent pregatita'
 }
 
 export function mapIssueResponseToCivicMapItem(
   issue: IssueResponse,
 ): CivicMapItem {
   const kind = getIssueKind(issue)
-  const statusLabel =
-    issueStatusLabels[issue.status] ?? formatApiValue(issue.status, 'New')
+  const statusLabel = getAgentRoutingLabel(issue)
   const pointsEarned = getIssuePointsPreview(issue)
   const relatedMission = issue.relatedMission
+  const title = createIssueTitle(issue)
   const description =
     issue.aiSummary ??
     issue.description ??
-    'A citizen reported this issue through CiviTm.'
+    'Un cetatean a raportat aceasta problema prin CiviTm.'
 
   return {
     id: issue.id,
     kind,
     source: 'api',
-    label: `${statusLabel}: ${issue.title}`,
+    label: `${statusLabel}: ${title}`,
     createdAt: issue.createdAt,
-    title: issue.title,
+    title,
     description,
     statusLabel,
     zone: issue.zoneName ?? 'Timisoara',
     coordinates: [issue.longitude, issue.latitude],
+    imageUrl: issue.imageUrl,
     meta: getIssueMeta(issue),
-    impact: relatedMission
-      ? `Mission impact: +${relatedMission.impactPoints} Civic Points`
-      : `Demo points preview: +${pointsEarned} Civic Points`,
+    impact: getIssueImpact(issue, pointsEarned),
     pointsEarned,
     aiSummary: issue.aiSummary ?? undefined,
     missionId: relatedMission?.id,
     participantsNeeded: relatedMission?.participantsNeeded,
     participantsJoined: relatedMission?.participantsJoined,
-    responsibleActor: formatApiValue(issue.responsibleActor, 'Unknown'),
-    relatedMission: relatedMission?.title,
+    responsibleActor: roActor(issue.responsibleActor, 'neclar'),
+    relatedMission:
+      relatedMission?.title ??
+      (isCitizenActionIssue(issue) && !isCityHallIssue(issue)
+        ? 'Task comunitar in generare'
+        : undefined),
     reward: issue.relatedReward
       ? formatRewardLabel(issue.relatedReward.title, issue.relatedReward.partnerName)
-      : issue.rewardEligible && !relatedMission
-        ? 'Reward eligible after mission generation'
-        : undefined,
+      : undefined,
     duplicateCount: issue.duplicateCount,
     nearestDuplicateTitle: issue.nearestDuplicate?.title,
     nearestDuplicateDistanceMeters: issue.nearestDuplicate?.distanceMeters,
     beforeAfter:
       issue.afterImageUrl && kind === 'resolved'
         ? {
-            before: 'Before: citizen report photo captured the issue.',
-            after: 'After: resolved state documented for demo.',
+            before: 'Inainte: fotografia cetateanului a surprins problema.',
+            after: 'Dupa: starea rezolvata este documentata.',
             beforeImage: issue.imageUrl,
             afterImage: issue.afterImageUrl,
           }
@@ -311,15 +363,17 @@ export function mapIssueResponseToCivicMapItem(
 }
 
 function formatRewardLabel(title: string, partnerName: string | null) {
-  return partnerName ? `${partnerName}: ${title}` : title
+  const rewardTitle = roReward(title)
+
+  return partnerName ? `${partnerName}: ${rewardTitle}` : rewardTitle
 }
 
 function formatMissionDate(value: string | null) {
   if (!value) {
-    return 'Suggested date ready'
+    return 'Data propusa este pregatita'
   }
 
-  return new Intl.DateTimeFormat('en', {
+  return new Intl.DateTimeFormat('ro-RO', {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
@@ -336,17 +390,17 @@ export function mapMissionResponseToCivicMapItem(
     kind: 'mission',
     source: 'api',
     createdAt: mission.createdAt,
-    label: `Mission active: ${mission.title}`,
+    label: `Misiune activa: ${mission.title}`,
     title: mission.title,
     description: mission.description,
     statusLabel:
       mission.status === 'active'
-        ? 'Mission active'
-        : formatApiValue(mission.status, 'Mission'),
+        ? 'Misiune activa'
+        : roStatus(mission.status, 'Misiune'),
     zone: mission.zoneName ?? 'Timisoara',
     coordinates: [mission.longitude + 0.0012, mission.latitude + 0.0012],
-    meta: `${mission.participantsJoined}/${mission.participantsNeeded} joined · ${formatMissionDate(mission.startsAt)}`,
-    impact: `+${mission.impactPoints} mission impact points`,
+    meta: `${mission.participantsJoined}/${mission.participantsNeeded} inscrisi · ${formatMissionDate(mission.startsAt)}`,
+    impact: `+${mission.impactPoints} puncte de impact pentru misiune`,
     missionId: mission.id,
     participantsNeeded: mission.participantsNeeded,
     participantsJoined: mission.participantsJoined,

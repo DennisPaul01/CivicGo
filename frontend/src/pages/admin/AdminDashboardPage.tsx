@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   BarChart3,
   Brain,
+  Building2,
   CheckCircle2,
   Flag,
   Gift,
@@ -32,6 +33,7 @@ import {
   missionsQueryKey,
   rewardsQueryKey,
 } from '@/lib/queryClient'
+import { roActor, roCategory } from '@/lib/locale'
 
 type DashboardMetric = {
   id: string
@@ -62,80 +64,110 @@ type AiCitySummary = {
 const demoMetrics: DashboardMetric[] = [
   {
     id: 'total-issues',
-    label: 'Total issues',
+    label: 'Total probleme',
     value: 28,
-    detail: 'Across live map and demo data.',
+    detail: 'Pe harta live si in datele demo ale orasului.',
     icon: MapPinned,
     tone: 'emerald',
   },
   {
     id: 'new-issues',
-    label: 'New issues',
+    label: 'Probleme noi',
     value: 7,
-    detail: 'Fresh reports waiting for triage.',
+    detail: 'Rapoarte noi care asteapta triere.',
     icon: Sparkles,
     tone: 'sky',
   },
   {
     id: 'in-progress',
-    label: 'In progress',
+    label: 'In lucru',
     value: 9,
-    detail: 'AI checked, reviewed or mission-backed.',
+    detail: 'Probleme active, revizuite sau legate de misiuni.',
     icon: Flag,
     tone: 'amber',
   },
   {
     id: 'resolved',
-    label: 'Resolved',
+    label: 'Rezolvate',
     value: 6,
-    detail: 'Visible civic fixes.',
+    detail: 'Rezolvari civice vizibile.',
     icon: CheckCircle2,
     tone: 'lime',
   },
   {
     id: 'active-missions',
-    label: 'Active missions',
+    label: 'Misiuni active',
     value: 5,
-    detail: 'Community actions currently open.',
+    detail: 'Actiuni comunitare deschise acum.',
     icon: Trophy,
     tone: 'teal',
   },
   {
     id: 'rewards-claimed',
-    label: 'Rewards claimed',
+    label: 'Recompense revendicate',
     value: 11,
-    detail: 'System and partner claims.',
+    detail: 'Revendicari de sistem si parteneri.',
     icon: Gift,
     tone: 'rose',
   },
 ]
 
 const demoStatusChart: DashboardChartItem[] = [
-  { label: 'New', value: 7, tone: 'sky' },
-  { label: 'In progress', value: 9, tone: 'amber' },
-  { label: 'Resolved', value: 6, tone: 'lime' },
-  { label: 'AI checked', value: 4, tone: 'teal' },
-  { label: 'Mission active', value: 2, tone: 'emerald' },
+  { label: 'Noi', value: 7, tone: 'sky' },
+  { label: 'In lucru', value: 9, tone: 'amber' },
+  { label: 'Rezolvate', value: 6, tone: 'lime' },
+  { label: 'Probleme active', value: 4, tone: 'teal' },
+  { label: 'Misiune activa', value: 2, tone: 'emerald' },
 ]
 
 const demoCategoryChart: DashboardChartItem[] = [
-  { label: 'Waste', value: 8, tone: 'emerald' },
-  { label: 'Lighting', value: 6, tone: 'amber' },
-  { label: 'Road damage', value: 5, tone: 'rose' },
-  { label: 'Green space', value: 5, tone: 'lime' },
-  { label: 'Blocked sidewalk', value: 4, tone: 'sky' },
+  { label: 'Deseuri', value: 8, tone: 'emerald' },
+  { label: 'Iluminat', value: 6, tone: 'amber' },
+  { label: 'Drum deteriorat', value: 5, tone: 'rose' },
+  { label: 'Spatiu verde', value: 5, tone: 'lime' },
+  { label: 'Trotuar blocat', value: 4, tone: 'sky' },
+]
+
+const demoMunicipalQueue: IssueResponse[] = [
+  {
+    id: 'demo-city-hall-lighting',
+    title: 'Bec stradal defect in Fabric',
+    description: 'Agentul a trimis cazul catre echipa de iluminat public.',
+    category: 'public_lighting',
+    severity: 'high',
+    status: 'ai_analyzed',
+    responsibleActor: 'city_hall',
+    imageUrl: '',
+    afterImageUrl: null,
+    latitude: 45.7603,
+    longitude: 21.2422,
+    zoneName: 'Fabric',
+    aiSummary: 'Necesita inspectie pentru iluminat public.',
+    aiConfidence: 0.91,
+    isUrgent: true,
+    rewardEligible: false,
+    aiAnalyzedAt: new Date().toISOString(),
+    duplicateCount: 0,
+    nearestDuplicate: null,
+    agentRun: null,
+    relatedMission: null,
+    relatedReward: null,
+    gamification: null,
+    createdByUserId: 'demo-admin-local',
+    createdAt: new Date().toISOString(),
+  },
 ]
 
 const demoAiCitySummary: AiCitySummary = {
-  headline: 'AI city read: Complex and Fabric need the next civic push.',
+  headline: 'Citire agent oras: Complex si Fabric au nevoie de urmatorul impuls civic.',
   summary:
-    'Mock fallback highlights waste, lighting and blocked sidewalk reports as the clearest demo pattern. Active missions and reward claims keep the impact story visible even without live dashboard endpoints.',
-  focusLabel: 'Priority area',
-  focusValue: 'Complex + Fabric cleanup and lighting checks',
-  actionLabel: 'Suggested action',
+    'Datele fallback ale orasului evidentiaza deseurile, iluminatul si trotuarele blocate ca tipar principal. Misiunile active si recompensele revendicate pastreaza povestea de impact vizibila fara endpointuri live.',
+  focusLabel: 'Zona prioritara',
+  focusValue: 'Curatenie Complex + verificari iluminat Fabric',
+  actionLabel: 'Actiune sugerata',
   actionValue:
-    'Turn the newest open reports into one visible weekend mission and keep rewards attached for volunteers.',
-  confidenceLabel: 'Mock fallback summary',
+    'Transforma cele mai noi rapoarte deschise intr-o misiune vizibila de weekend si pastreaza recompensele atasate pentru voluntari.',
+  confidenceLabel: 'Rezumat fallback demo',
   tone: 'emerald',
 }
 
@@ -169,6 +201,14 @@ function isInProgressIssue(issue: IssueResponse) {
     'in_progress',
     'mission_created',
   ].includes(issue.status)
+}
+
+function isMunicipalIssue(issue: IssueResponse) {
+  return (
+    issue.responsibleActor === 'city_hall' &&
+    !isResolvedIssue(issue) &&
+    issue.status !== 'new'
+  )
 }
 
 function formatLabel(value: string) {
@@ -207,6 +247,14 @@ function createStatusChart(issues: IssueResponse[]): DashboardChartItem[] {
     mission_created: 'emerald',
     resolved: 'lime',
   }
+  const labels: Record<string, string> = {
+    new: 'Noi',
+    in_progress: 'In lucru',
+    in_review: 'Probleme active',
+    ai_analyzed: 'Probleme active',
+    mission_created: 'Task comunitar',
+    resolved: 'Rezolvate',
+  }
   const grouped = issues.reduce<Record<string, number>>((accumulator, issue) => {
     accumulator[issue.status] = (accumulator[issue.status] ?? 0) + 1
 
@@ -215,7 +263,7 @@ function createStatusChart(issues: IssueResponse[]): DashboardChartItem[] {
   const knownItems = order
     .filter((status) => grouped[status])
     .map((status) => ({
-      label: status === 'mission_created' ? 'Mission active' : formatLabel(status),
+      label: labels[status] ?? formatLabel(status),
       value: grouped[status],
       tone: tones[status],
     }))
@@ -251,7 +299,7 @@ function createCategoryChart(issues: IssueResponse[]): DashboardChartItem[] {
     .sort(([, firstValue], [, secondValue]) => secondValue - firstValue)
     .slice(0, 6)
     .map(([category, value], index) => ({
-      label: formatLabel(category),
+      label: roCategory(category, formatLabel(category)),
       value,
       tone: tones[index % tones.length],
     }))
@@ -283,9 +331,17 @@ function createDashboardMetrics(
       id: 'in-progress',
       label: 'In progress',
       value: issues.filter(isInProgressIssue).length,
-      detail: 'AI checked, reviewed or mission-backed.',
+      detail: 'Agent-routed, reviewed or mission-backed.',
       icon: Flag,
       tone: 'amber',
+    },
+    {
+      id: 'municipal-queue',
+      label: 'Catre primarie',
+      value: issues.filter(isMunicipalIssue).length,
+      detail: 'Probleme active rutate catre controlul primariei.',
+      icon: Building2,
+      tone: 'sky',
     },
     {
       id: 'resolved',
@@ -346,7 +402,7 @@ function createAiCitySummary(
 
   if (urgentIssues.length > 0) {
     return {
-      headline: `AI city read: ${urgentIssues.length} urgent report${urgentIssues.length === 1 ? '' : 's'} need review.`,
+      headline: `Citire agent: ${urgentIssues.length} raport urgent are nevoie de review.`,
       summary: `${topCategory} is the strongest live signal around ${topZone}. The dashboard shows ${openIssues.length} open issues, ${activeMissions.length} active missions and ${rewardClaims} reward claims.`,
       focusLabel: 'Focus now',
       focusValue: `${urgentIssues.length} urgent issue${urgentIssues.length === 1 ? '' : 's'} in the current queue`,
@@ -360,10 +416,10 @@ function createAiCitySummary(
 
   if (resolvedIssues.length >= openIssues.length && resolvedIssues.length > 0) {
     return {
-      headline: 'AI city read: resolved work is leading the city story.',
-      summary: `${resolvedIssues.length} fixed issues outweigh ${openIssues.length} open issues. ${topZone} is the clearest place to show before-after impact and keep the Friday demo concrete.`,
+      headline: 'Citire agent: rezolvarile conduc povestea orasului.',
+      summary: `${resolvedIssues.length} fixed issues outweigh ${openIssues.length} open issues. ${topZone} is the clearest place to show before-after impact.`,
       focusLabel: 'Impact signal',
-      focusValue: `${resolvedIssues.length} resolved issue${resolvedIssues.length === 1 ? '' : 's'} ready for demo`,
+      focusValue: `${resolvedIssues.length} resolved issue${resolvedIssues.length === 1 ? '' : 's'} ready to review`,
       actionLabel: 'Suggested action',
       actionValue:
         'Surface the strongest resolved issue on the map and pair it with the zone leaderboard.',
@@ -373,15 +429,15 @@ function createAiCitySummary(
   }
 
   return {
-    headline: `AI city read: ${topCategory} is the strongest pattern in ${topZone}.`,
+    headline: `Citire agent: ${topCategory} este tiparul principal in ${topZone}.`,
     summary: `${openIssues.length} open issues, ${activeMissions.length} active missions and ${rewardClaims} reward claims point to a practical next move for city coordination.`,
     focusLabel: 'Pattern detected',
     focusValue: `${topCategory} reports around ${topZone}`,
     actionLabel: 'Suggested action',
-    actionValue:
-      activeMissions.length > 0
+      actionValue:
+        activeMissions.length > 0
         ? 'Boost the active missions already attached to reported issues.'
-        : 'Create a mission from the most visible open issue and attach a demo reward.',
+        : 'Create a mission from the most visible open issue and attach a reward.',
     confidenceLabel: 'Live data summary',
     tone: activeMissions.length > 0 ? 'teal' : 'emerald',
   }
@@ -498,6 +554,70 @@ function DashboardCharts({
   )
 }
 
+function MunicipalQueue({ issues }: { issues: IssueResponse[] }) {
+  return (
+    <section className="rounded-lg border border-emerald-200 bg-white p-4 shadow-sm">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex min-w-0 items-start gap-3">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-sky-50 text-sky-700">
+            <Building2 className="size-4" aria-hidden="true" />
+          </span>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+              Dashboard primarie
+            </p>
+            <h2 className="!m-0 !text-lg font-semibold text-emerald-950">
+              Probleme active rutate catre primarie
+            </h2>
+          </div>
+        </div>
+        <Button asChild variant="outline" size="sm">
+          <Link to="/admin/issues">Deschide lista</Link>
+        </Button>
+      </div>
+
+      {issues.length === 0 ? (
+        <div className="mt-4 flex items-start gap-2 rounded-md bg-slate-50 p-3 text-sm text-slate-600">
+          <SearchX className="mt-0.5 size-4 shrink-0 text-slate-500" aria-hidden="true" />
+          <span>Nu exista inca probleme rutate catre primarie.</span>
+        </div>
+      ) : (
+        <div className="mt-4 grid gap-2">
+          {issues.slice(0, 5).map((issue) => (
+            <article
+              key={issue.id}
+              className="grid gap-3 rounded-md border border-slate-200 bg-slate-50/70 p-3 sm:grid-cols-[1fr_auto]"
+            >
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-md bg-white px-2 py-1 text-xs font-semibold text-sky-700 ring-1 ring-sky-200">
+                    Problema activa
+                  </span>
+                  <span className="rounded-md bg-white px-2 py-1 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">
+                    {roCategory(issue.category)}
+                  </span>
+                  <span className="rounded-md bg-white px-2 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                    {roActor(issue.responsibleActor)}
+                  </span>
+                </div>
+                <h3 className="mt-2 text-sm font-semibold text-emerald-950">
+                  {issue.title}
+                </h3>
+                <p className="mt-1 text-sm leading-6 text-slate-600">
+                  {issue.aiSummary ?? issue.description ?? 'Caz pregatit pentru inspectie.'}
+                </p>
+              </div>
+              <Button asChild variant="outline" size="sm" className="self-start">
+                <Link to={`/issues/${issue.id}`}>Detalii</Link>
+              </Button>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
+  )
+}
+
 function AiCitySummaryCard({ summary }: { summary: AiCitySummary }) {
   return (
     <motion.section
@@ -515,7 +635,7 @@ function AiCitySummaryCard({ summary }: { summary: AiCitySummary }) {
           </span>
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
-              AI city summary
+              Rezumat agent oras
             </p>
             <h2 className="!m-0 mt-1 !text-xl font-semibold leading-tight text-emerald-950">
               {summary.headline}
@@ -618,6 +738,13 @@ export function AdminDashboardPage() {
     missionsQuery.data,
     rewardsQuery.data,
   ])
+  const municipalQueue = useMemo(() => {
+    if (!isApiConfigured || hasDataError) {
+      return demoMunicipalQueue
+    }
+
+    return (issuesQuery.data ?? []).filter(isMunicipalIssue)
+  }, [hasDataError, issuesQuery.data])
   const hasEmptyLiveDashboard =
     isApiConfigured &&
     !isLoading &&
@@ -667,9 +794,9 @@ export function AdminDashboardPage() {
           <DemoState
             icon={TriangleAlert}
             tone="amber"
-            eyebrow="Demo fallback"
+            eyebrow="Temporary fallback"
             title="Using seeded dashboard overview"
-            description="One of the live overview calls failed, so the admin dashboard keeps the demo readable with seeded metrics."
+            description="One of the live overview calls failed, so the admin dashboard is using seeded metrics."
           />
         )}
 
@@ -679,7 +806,7 @@ export function AdminDashboardPage() {
             tone="slate"
             eyebrow="No live data"
             title="No dashboard activity yet"
-            description="Issues, missions and reward claims will populate these cards after the demo seed or live flow runs."
+            description="Issues, missions and reward claims will populate these cards after seeded or live activity is available."
           />
         )}
 
@@ -688,6 +815,8 @@ export function AdminDashboardPage() {
         ) : (
           <DashboardStats metrics={metrics} />
         )}
+
+        <MunicipalQueue issues={municipalQueue} />
 
         <DashboardCharts
           statusItems={charts.statusItems}

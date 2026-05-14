@@ -1,18 +1,26 @@
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
 export function FloatingReportButton() {
   return (
-    <div className="fixed right-4 bottom-20 z-40 sm:right-6 sm:bottom-6">
+    <div className="fixed bottom-8 right-8 z-50 hidden justify-center sm:flex">
       <Button
         asChild
         size="lg"
-        className="size-12 rounded-full bg-emerald-600 px-0 text-sm font-semibold text-white shadow-lg shadow-slate-900/15 hover:bg-emerald-700 focus-visible:ring-3 focus-visible:ring-emerald-500/30 sm:h-12 sm:w-auto sm:rounded-lg sm:px-4"
+        className="h-16 max-w-full bg-emerald-600 px-5 text-white shadow-xl shadow-emerald-900/24 hover:bg-emerald-700 focus-visible:ring-3 focus-visible:ring-emerald-500/30 sm:h-16 sm:min-w-80"
       >
-        <a href="/report" aria-label="Report an issue">
-          <Plus data-icon="inline-start" aria-hidden="true" />
-          <span className="hidden sm:inline">Share a report</span>
-        </a>
+        <Link to="/report" aria-label="Raportează o problemă">
+          <Plus data-icon="inline-start" className="size-6" aria-hidden="true" />
+          <span className="min-w-0 text-left">
+            <span className="block truncate text-base font-bold">
+              Raportează o problemă
+            </span>
+            <span className="block text-sm font-medium text-emerald-50">
+              Alege locul pe hartă pentru raportare
+            </span>
+          </span>
+        </Link>
       </Button>
     </div>
   )

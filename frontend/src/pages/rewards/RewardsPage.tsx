@@ -32,6 +32,7 @@ import {
   rewardClaimsQueryKey,
   rewardsQueryKey,
 } from '@/lib/queryClient'
+import { roBadge, roRank, roReward } from '@/lib/locale'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -43,53 +44,53 @@ const rewardTabs: Array<{
   label: string
   icon: typeof Gift
 }> = [
-  { id: 'system', label: 'System Rewards', icon: Sparkles },
-  { id: 'partner', label: 'Partner Rewards', icon: Store },
-  { id: 'badges', label: 'Badges', icon: BadgeCheck },
-  { id: 'ranks', label: 'Ranks', icon: Trophy },
-  { id: 'claimed', label: 'Claimed', icon: CheckCircle2 },
+  { id: 'system', label: 'Recompense sistem', icon: Sparkles },
+  { id: 'partner', label: 'Recompense parteneri', icon: Store },
+  { id: 'badges', label: 'Badge-uri', icon: BadgeCheck },
+  { id: 'ranks', label: 'Rankuri', icon: Trophy },
+  { id: 'claimed', label: 'Revendicate', icon: CheckCircle2 },
 ]
 
 const badgeItems = [
   {
     name: 'First Reporter',
-    description: 'Unlocked after the first valid report.',
+    description: 'Se deblocheaza dupa primul raport valid.',
     icon: BadgeCheck,
     unlockedAtPoints: 1,
   },
   {
     name: 'AI Scout',
-    description: 'Unlocked after the first AI-analyzed report.',
+    description: 'Se deblocheaza dupa primul raport analizat de AI.',
     icon: Sparkles,
     unlockedAtPoints: 100,
   },
   {
     name: 'Clean-up Hero',
-    description: 'Unlocked after joining the first clean-up mission.',
+    description: 'Se deblocheaza dupa prima misiune de curatenie.',
     icon: Leaf,
     unlockedAtPoints: 300,
   },
   {
     name: 'Before/After Hero',
-    description: 'Unlocked after uploading the first after photo.',
+    description: 'Se deblocheaza dupa prima fotografie de dupa.',
     icon: Award,
     unlockedAtPoints: 700,
   },
   {
     name: 'Problem Solver',
-    description: 'Unlocked after helping close the first resolved issue.',
+    description: 'Se deblocheaza dupa prima problema rezolvata cu ajutorul tau.',
     icon: CheckCircle2,
     unlockedAtPoints: 120,
   },
   {
     name: 'Trusted Reporter',
-    description: 'Unlocked after three valid reports in the same zone.',
+    description: 'Se deblocheaza dupa trei rapoarte valide in aceeasi zona.',
     icon: BadgeCheck,
     unlockedAtPoints: 300,
   },
   {
     name: 'Zone Champion',
-    description: 'Unlocked after leading weekly points in one zone.',
+    description: 'Se deblocheaza cand conduci punctajul saptamanal intr-o zona.',
     icon: Trophy,
     unlockedAtPoints: 700,
   },
@@ -139,10 +140,10 @@ function getNextRank(points: number) {
 
 function formatDate(value: string | null) {
   if (!value) {
-    return 'No expiry'
+    return 'Fara expirare'
   }
 
-  return new Intl.DateTimeFormat('en', {
+  return new Intl.DateTimeFormat('ro-RO', {
     month: 'short',
     day: 'numeric',
   }).format(new Date(value))
@@ -165,9 +166,9 @@ function RewardsGrid({
     return (
       <DemoState
         icon={PackageOpen}
-        eyebrow="No rewards"
-        title="No rewards in this tab"
-        description="Seeded system and partner rewards will appear here as soon as the API returns them."
+        eyebrow="Fara recompense"
+        title="Nu exista recompense in acest tab"
+        description="Recompensele de sistem si partener vor aparea aici cand API-ul le returneaza."
       />
     )
   }
@@ -203,8 +204,8 @@ function RewardCard({
 }) {
   const missingPoints = Math.max(0, reward.requiredPoints - points)
   const remaining = reward.quantity <= 0
-    ? 'Unlimited'
-    : `${Math.max(0, reward.quantity - reward.claimedCount)} left`
+    ? 'Nelimitat'
+    : `${Math.max(0, reward.quantity - reward.claimedCount)} ramase`
   const canClaim = state === 'available' && !isClaiming
 
   return (
@@ -239,19 +240,19 @@ function RewardCard({
             state === 'sold_out' && 'bg-rose-50 text-rose-700 ring-rose-200',
           )}
         >
-          {state === 'available' && 'Available'}
-          {state === 'claimed' && 'Claimed'}
-          {state === 'locked' && 'Locked'}
-          {state === 'sold_out' && 'Sold out'}
+          {state === 'available' && 'Disponibil'}
+          {state === 'claimed' && 'Revendicat'}
+          {state === 'locked' && 'Blocat'}
+          {state === 'sold_out' && 'Epuizat'}
         </span>
       </div>
 
       <div className="mt-4 min-w-0 flex-1">
         <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
-          {reward.partner?.name ?? 'CiviTm system'}
+          {reward.partner?.name ?? 'Sistem CiviTm'}
         </p>
         <h2 className="mt-1 text-lg font-semibold leading-tight text-emerald-950">
-          {reward.title}
+          {roReward(reward.title)}
         </h2>
         <p className="mt-2 text-sm leading-6 text-slate-600">
           {reward.description}
@@ -260,17 +261,17 @@ function RewardCard({
 
       <div className="mt-4 grid gap-2 text-sm text-slate-600">
         <div className="flex items-center justify-between rounded-md bg-orange-50 px-3 py-2">
-          <span>Required</span>
+          <span>Necesare</span>
           <span className="font-semibold text-emerald-800">
-            {reward.requiredPoints} pts
+            {reward.requiredPoints} pct
           </span>
         </div>
         <div className="flex items-center justify-between rounded-md bg-slate-50 px-3 py-2">
-          <span>{reward.zoneName ?? 'All zones'}</span>
+          <span>{reward.zoneName ?? 'Toate zonele'}</span>
           <span>{formatDate(reward.expiresAt)}</span>
         </div>
         <div className="flex items-center justify-between rounded-md bg-slate-50 px-3 py-2">
-          <span>Availability</span>
+          <span>Disponibilitate</span>
           <span>{remaining}</span>
         </div>
       </div>
@@ -291,25 +292,25 @@ function RewardCard({
             ) : (
               <Gift data-icon="inline-start" aria-hidden="true" />
             )}
-            {isClaiming ? 'Claiming' : 'Claim reward'}
+            {isClaiming ? 'Se revendica' : 'Revendica recompensa'}
           </>
         )}
         {state === 'claimed' && (
           <>
             <CheckCircle2 data-icon="inline-start" aria-hidden="true" />
-            Claimed
+            Revendicat
           </>
         )}
         {state === 'locked' && (
           <>
             <LockKeyhole data-icon="inline-start" aria-hidden="true" />
-            {missingPoints > 0 ? `${missingPoints} pts needed` : 'Locked'}
+            {missingPoints > 0 ? `${missingPoints} pct necesare` : 'Blocat'}
           </>
         )}
         {state === 'sold_out' && (
           <>
             <LockKeyhole data-icon="inline-start" aria-hidden="true" />
-            Sold out
+            Epuizat
           </>
         )}
       </Button>
@@ -322,9 +323,9 @@ function ClaimedRewardsList({ claims }: { claims: RewardClaimResponse[] }) {
     return (
       <DemoState
         icon={CheckCircle2}
-        eyebrow="Claimed rewards"
-        title="No claimed rewards yet"
-        description="The first eligible claim will show its code here for the demo flow."
+        eyebrow="Recompense revendicate"
+        title="Nu ai revendicat recompense inca"
+        description="Prima revendicare eligibila isi va afisa codul aici."
       />
     )
   }
@@ -342,13 +343,13 @@ function ClaimedRewardsList({ claims }: { claims: RewardClaimResponse[] }) {
             </span>
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-lime-700">
-                Claimed reward
+                Recompensa revendicata
               </p>
               <h2 className="mt-1 text-lg font-semibold text-emerald-950">
-                {claim.rewardTitle}
+                {roReward(claim.rewardTitle)}
               </h2>
               <p className="mt-1 text-sm text-slate-600">
-                {claim.partnerName ?? 'CiviTm system'} · code {claim.code}
+                {claim.partnerName ?? 'Sistem CiviTm'} · cod {claim.code}
               </p>
             </div>
           </div>
@@ -379,7 +380,7 @@ export function RewardsPage() {
   const claimMutation = useMutation({
     mutationFn: (rewardId: string) => {
       if (!session?.access_token) {
-        throw new Error('Please login again before claiming a reward.')
+        throw new Error('Autentifica-te din nou inainte sa revendici o recompensa.')
       }
 
       return claimReward(rewardId, session.access_token)
@@ -423,10 +424,10 @@ export function RewardsPage() {
             </span>
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
-                CiviTm rewards
+                Recompense CiviTm
               </p>
               <h1 className="text-2xl font-semibold text-emerald-950">
-                Rewards marketplace
+                Marketplace de recompense
               </h1>
             </div>
           </div>
@@ -435,13 +436,13 @@ export function RewardsPage() {
             <Button asChild variant="outline" size="sm">
               <Link to="/">
                 <ArrowLeft data-icon="inline-start" aria-hidden="true" />
-                Live map
+                Harta live
               </Link>
             </Button>
             <Button asChild className="bg-emerald-600 text-white hover:bg-emerald-700" size="sm">
               <Link to="/report">
                 <Leaf data-icon="inline-start" aria-hidden="true" />
-                Report
+                Raporteaza
               </Link>
             </Button>
           </div>
@@ -450,20 +451,20 @@ export function RewardsPage() {
         <div className="grid gap-3 md:grid-cols-3">
           <section className="rounded-lg border border-emerald-200 bg-white p-4 shadow-sm">
             <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
-              Current points
+              Puncte curente
             </p>
             <p className="mt-2 text-3xl font-semibold text-emerald-950">
               {points}
             </p>
-            <p className="mt-1 text-sm text-slate-600">Civic Points ready to use.</p>
+            <p className="mt-1 text-sm text-slate-600">Puncte civice gata de folosit.</p>
           </section>
 
           <section className="rounded-lg border border-emerald-200 bg-white p-4 shadow-sm">
             <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
-              Current rank
+              Rank curent
             </p>
             <p className="mt-2 text-xl font-semibold text-emerald-950">
-              {profile?.rankName ?? currentRank.name}
+              {roRank(profile?.rankName ?? currentRank.name)}
             </p>
             <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
               <motion.div
@@ -477,12 +478,12 @@ export function RewardsPage() {
 
           <section className="rounded-lg border border-emerald-200 bg-white p-4 shadow-sm">
             <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
-              Claimed
+              Revendicate
             </p>
             <p className="mt-2 text-3xl font-semibold text-emerald-950">
               {claims.length}
             </p>
-            <p className="mt-1 text-sm text-slate-600">System and partner rewards.</p>
+            <p className="mt-1 text-sm text-slate-600">Recompense de sistem si parteneri.</p>
           </section>
         </div>
 
@@ -511,12 +512,12 @@ export function RewardsPage() {
           <DemoState
             icon={TriangleAlert}
             tone="rose"
-            eyebrow="Rewards error"
-            title="Rewards data needs a refresh"
+            eyebrow="Eroare recompense"
+            title="Datele despre recompense trebuie reincarcate"
             description={
               claimMutation.error instanceof Error
                 ? claimMutation.error.message
-                : 'Rewards data could not be loaded right now.'
+                : 'Datele despre recompense nu au putut fi incarcate acum.'
             }
           />
         )}
@@ -567,13 +568,13 @@ export function RewardsPage() {
                     <BadgeIcon className="size-5" aria-hidden="true" />
                   </span>
                   <h2 className="mt-4 text-lg font-semibold text-emerald-950">
-                    {badge.name}
+                    {roBadge(badge.name)}
                   </h2>
                   <p className="mt-2 text-sm leading-6 text-slate-600">
                     {badge.description}
                   </p>
                   <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-emerald-700">
-                    {unlocked ? 'Unlocked' : `${badge.unlockedAtPoints} pts`}
+                    {unlocked ? 'Deblocat' : `${badge.unlockedAtPoints} pct`}
                   </p>
                 </article>
               )
@@ -606,10 +607,10 @@ export function RewardsPage() {
                     <RankIcon className="size-5" aria-hidden="true" />
                   </span>
                   <h2 className="mt-4 text-lg font-semibold text-emerald-950">
-                    {rank.name}
+                    {roRank(rank.name)}
                   </h2>
                   <p className="mt-2 text-sm text-slate-600">
-                    Starts at {rank.minPoints} Civic Points.
+                    Incepe de la {rank.minPoints} puncte civice.
                   </p>
                 </article>
               )

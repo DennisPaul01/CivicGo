@@ -37,19 +37,11 @@
   --heading: 'Poppins', system-ui, 'Segoe UI', Roboto, sans-serif;
   --mono: ui-monospace, Consolas, monospace;
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0;
   color-scheme: light;
-  color: var(--text);
-  background: var(--bg);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
 
   --background: #ffffff;
 
@@ -127,81 +119,6 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100svh;
-}
-
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
-}
-
-h1 {
-  font-size: 56px;
-  letter-spacing: 0;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: 0;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
-}
-p {
-  margin: 0;
-}
-
-* {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(58, 169, 156, 0.42) transparent;
-}
-
-*::-webkit-scrollbar {
-  width: 0.65rem;
-  height: 0.65rem;
-}
-
-*::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-*::-webkit-scrollbar-thumb {
-  min-height: 2.5rem;
-  border: 0.18rem solid transparent;
-  border-radius: 999px;
-  background: linear-gradient(180deg, rgba(126, 209, 198, 0.75), rgba(58, 169, 156, 0.58)) border-box;
-  background-clip: padding-box;
-}
-
-*::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, rgba(103, 201, 189, 0.95), rgba(47, 143, 133, 0.8)) border-box;
-  background-clip: padding-box;
-}
-
-*::-webkit-scrollbar-corner {
-  background: transparent;
-}
-
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
-}
-
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
 }
 
 @theme inline {
@@ -395,14 +312,6 @@ code {
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
-}
-
-@layer utilities {
-  .tracking-wide,
-  .tracking-wider,
-  .tracking-widest {
-    letter-spacing: 0;
-  }
 }
 
 .dark {

@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using CivicGo.Api.Activity;
 using CivicGo.Api.Agents;
 using CivicGo.Api.Ai;
 using CivicGo.Api.Auth;
@@ -80,6 +81,8 @@ builder.Services.AddScoped<MissionGenerationService>();
 builder.Services.AddScoped<RewardMatchingService>();
 builder.Services.AddScoped<GamificationService>();
 builder.Services.AddScoped<DuplicateDetectionService>();
+builder.Services.AddSingleton<IssueAgentPipelineService>();
+builder.Services.AddSingleton<IssueEventStreamService>();
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -141,6 +144,7 @@ app.MapGet("/api/me", async (ClaimsPrincipal user, UserProfileService profiles) 
 
 app.MapIssueEndpoints();
 app.MapAgentRunEndpoints();
+app.MapActivityEndpoints();
 app.MapMissionEndpoints();
 app.MapRewardEndpoints();
 app.MapZoneEndpoints();

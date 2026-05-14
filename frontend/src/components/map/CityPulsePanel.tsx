@@ -9,7 +9,7 @@ type CityPulsePanelProps = {
 export function CityPulsePanel({ items = civicMapItems }: CityPulsePanelProps) {
   const pulseStats = [
     {
-      label: 'Live reports',
+      label: 'Rapoarte live',
       value: String(
         items.filter((item) => item.kind !== 'mission' && item.kind !== 'reward')
           .length,
@@ -18,19 +18,19 @@ export function CityPulsePanel({ items = civicMapItems }: CityPulsePanelProps) {
       className: 'text-teal-600',
     },
     {
-      label: 'In progress',
+      label: 'In lucru',
       value: String(items.filter((item) => item.kind === 'in_progress').length),
       icon: Clock3,
       className: 'text-amber-600',
     },
     {
-      label: 'Resolved',
+      label: 'Rezolvate',
       value: String(items.filter((item) => item.kind === 'resolved').length),
       icon: CheckCircle2,
       className: 'text-emerald-600',
     },
     {
-      label: 'Active zones',
+      label: 'Zone active',
       value: String(new Set(items.map((item) => item.zone)).size),
       icon: MapPinned,
       className: 'text-lime-700',
@@ -43,15 +43,15 @@ export function CityPulsePanel({ items = civicMapItems }: CityPulsePanelProps) {
       initial={{ opacity: 0, x: -12 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.3, ease: 'easeOut' }}
-      aria-label="City pulse"
+      aria-label="Pulsul orasului"
     >
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
-            City pulse
+            Pulsul orasului
           </p>
           <h2 className="mt-1 text-base font-semibold text-emerald-950">
-            Timisoara is active
+            Snapshot Timisoara
           </h2>
         </div>
         <div className="flex items-center gap-1 rounded-md bg-orange-50 px-2 py-1 text-xs font-semibold text-emerald-700">

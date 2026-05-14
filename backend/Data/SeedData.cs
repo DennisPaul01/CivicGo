@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CivicGo.Api.Data.Entities;
+using CivicGo.Api.Issues;
 using Microsoft.EntityFrameworkCore;
 
 namespace CivicGo.Api.Data;
@@ -155,7 +156,7 @@ public static class SeedData
             new DemoIssueSeed(
                 "Demo issue: overflowing bins near Complex tram stop",
                 "Overflowing public bins are blocking the tram stop edge and need a quick pickup.",
-                "other",
+                IssueCategories.SanitationPestSnow,
                 "medium",
                 "new",
                 "unknown",
@@ -177,7 +178,7 @@ public static class SeedData
             new DemoIssueSeed(
                 "Demo issue: broken streetlight in Fabric courtyard",
                 "A broken streetlight leaves the entrance to a shared courtyard dark after sunset.",
-                "lighting",
+                IssueCategories.PublicLighting,
                 "high",
                 "ai_analyzed",
                 "city_hall",
@@ -199,7 +200,7 @@ public static class SeedData
             new DemoIssueSeed(
                 "Demo issue: duplicate sidewalk reports in Girocului",
                 "Several citizens reported the same uneven sidewalk segment near the market crossing.",
-                "road_damage",
+                IssueCategories.StreetsSidewalks,
                 "medium",
                 "duplicate_detected",
                 "city_hall",
@@ -221,7 +222,7 @@ public static class SeedData
             new DemoIssueSeed(
                 "Demo issue: loose paving stones under review",
                 "Loose paving stones on a pedestrian route are being checked by the civic team.",
-                "road_damage",
+                IssueCategories.StreetsSidewalks,
                 "medium",
                 "in_review",
                 "city_hall",
@@ -243,7 +244,7 @@ public static class SeedData
             new DemoIssueSeed(
                 "Demo issue: blocked sidewalk in progress",
                 "A blocked sidewalk near the school route has been accepted and is being handled.",
-                "blocked_sidewalk",
+                IssueCategories.StreetsSidewalks,
                 "high",
                 "in_progress",
                 "community_and_city_hall",
@@ -265,7 +266,7 @@ public static class SeedData
             new DemoIssueSeed(
                 "Demo issue: Mehala cleanup mission ready",
                 "A small park edge in Mehala needs a community cleanup and volunteer coordination.",
-                "waste",
+                IssueCategories.SanitationPestSnow,
                 "medium",
                 "mission_created",
                 "community_and_city_hall",
@@ -287,7 +288,7 @@ public static class SeedData
             new DemoIssueSeed(
                 "Demo issue: graffiti cleanup resolved in Complex",
                 "Graffiti near the underpass was reported, reviewed and marked as resolved.",
-                "graffiti",
+                IssueCategories.PublicOrder,
                 "low",
                 "resolved",
                 "community_and_city_hall",
@@ -309,7 +310,7 @@ public static class SeedData
             new DemoIssueSeed(
                 "Demo issue: Fabric green path restored",
                 "A damaged green-space path in Fabric was fixed after community reporting.",
-                "green_space",
+                IssueCategories.EnvironmentPlaygroundsGreenSpaces,
                 "medium",
                 "resolved",
                 "community_and_city_hall",
@@ -353,6 +354,24 @@ public static class SeedData
             if (existingIssue.Status != demoIssue.Status)
             {
                 existingIssue.Status = demoIssue.Status;
+                issueChanged = true;
+            }
+
+            if (existingIssue.Category != demoIssue.Category)
+            {
+                existingIssue.Category = demoIssue.Category;
+                issueChanged = true;
+            }
+
+            if (existingIssue.Severity != demoIssue.Severity)
+            {
+                existingIssue.Severity = demoIssue.Severity;
+                issueChanged = true;
+            }
+
+            if (existingIssue.ResponsibleActor != demoIssue.ResponsibleActor)
+            {
+                existingIssue.ResponsibleActor = demoIssue.ResponsibleActor;
                 issueChanged = true;
             }
 

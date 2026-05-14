@@ -15,6 +15,11 @@
 - [x] `AgentRuns`: Id, IssueId, Status, StartedAt, CompletedAt, CreatedAt.
 - [x] `AgentSteps`: Id, AgentRunId, AgentName, Status, InputJson, OutputJson, Message, StartedAt, CompletedAt, Order.
 
+### Issue category taxonomy
+
+- [x] `Issues.Category` stores the Timisoara public-report taxonomy as stable string keys: `other`, `animals`, `water_sewer_heating`, `environmental_permits`, `construction_land`, `population_records`, `garages_cemeteries_public_toilets`, `public_lighting`, `environment_playgrounds_green_spaces`, `public_order`, `owners_associations`, `integrity_issues`, `employee_integrity_issues`, `advertising_commerce`, `sanitation_pest_snow`, `schools_hospitals`, `streets_sidewalks`, `timpark`, `road_traffic_signs`, `public_transport`, `urbanism`, `website_platform`, `construction_sites`.
+- [x] Legacy MVP category keys remain accepted by backend normalization for existing demo data and old rows.
+
 ### Missions
 
 - [x] `Missions`: Id, Title, Description, ZoneId, Status, CreatedFromIssueId, RewardId, StartsAt, EndsAt, ParticipantsNeeded, ImpactPoints, CreatedByAi, CreatedAt, UpdatedAt, CompletedAt.

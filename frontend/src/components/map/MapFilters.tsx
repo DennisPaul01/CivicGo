@@ -1,50 +1,78 @@
 import {
   Check,
+  ChevronDown,
   Clock3,
   Flag,
   Gift,
   Layers3,
-  MapPin,
-  Sparkles,
+  SlidersHorizontal,
   TriangleAlert,
+  type LucideIcon,
 } from 'lucide-react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import type { MapFilterKind } from '@/components/map/MapMarker'
 import type { MapTimeFilterKind } from '@/data/civicMapData'
+import { cn } from '@/lib/utils'
 
 type MapFilterOption = {
   value: MapFilterKind
   label: string
   shortLabel: string
-  icon: typeof MapPin
+  icon: LucideIcon
+  iconClassName: string
 }
 
 const mapFilters: MapFilterOption[] = [
-  { value: 'all', label: 'All', shortLabel: 'All', icon: Layers3 },
-  { value: 'new', label: 'New', shortLabel: 'New', icon: MapPin },
   {
-    value: 'ai_checked',
-    label: 'AI checked',
-    shortLabel: 'AI',
-    icon: Sparkles,
+    value: 'all',
+    label: 'Toate',
+    shortLabel: 'Toate',
+    icon: Layers3,
+    iconClassName: 'text-emerald-600',
+  },
+  {
+    value: 'new',
+    label: 'Probleme',
+    shortLabel: 'Probleme',
+    icon: TriangleAlert,
+    iconClassName: 'text-rose-500',
   },
   {
     value: 'in_progress',
-    label: 'In progress',
-    shortLabel: 'Active',
+    label: 'În progres',
+    shortLabel: 'Progres',
     icon: Clock3,
+    iconClassName: 'text-yellow-600',
   },
-  { value: 'resolved', label: 'Resolved', shortLabel: 'Done', icon: Check },
-  { value: 'mission', label: 'Missions', shortLabel: 'Missions', icon: Flag },
-  { value: 'reward', label: 'Rewards', shortLabel: 'Rewards', icon: Gift },
-  { value: 'urgent', label: 'Urgent', shortLabel: 'Urgent', icon: TriangleAlert },
+  {
+    value: 'resolved',
+    label: 'Rezolvate',
+    shortLabel: 'Gata',
+    icon: Check,
+    iconClassName: 'text-emerald-600',
+  },
+  {
+    value: 'mission',
+    label: 'Misiuni',
+    shortLabel: 'Misiuni',
+    icon: Flag,
+    iconClassName: 'text-blue-600',
+  },
+  {
+    value: 'reward',
+    label: 'Recompense',
+    shortLabel: 'Recomp.',
+    icon: Gift,
+    iconClassName: 'text-orange-600',
+  },
 ]
 
 const timeFilters: Array<{ value: MapTimeFilterKind; label: string }> = [
   { value: '24h', label: '24h' },
-  { value: '7d', label: '7 days' },
-  { value: '30d', label: '30 days' },
-  { value: 'all', label: 'All time' },
+  { value: '7d', label: '7 zile' },
+  { value: '30d', label: '30 zile' },
+  { value: 'all', label: 'Tot timpul' },
 ]
 
 type MapFiltersProps = {
@@ -66,71 +94,71 @@ export function MapFilters({
 }: MapFiltersProps) {
   const visibleCountLabel =
     visibleCount === totalCount
-      ? `${visibleCount} visible`
-      : `${visibleCount}/${totalCount} visible`
+      ? `${visibleCount} vizibile`
+      : `${visibleCount}/${totalCount} vizibile`
+  const [isMobileExpanded, setIsMobileExpanded] = useState(false)
+  const activeFilterOption =
+    mapFilters.find((filter) => filter.value === activeFilter) ?? mapFilters[0]
+  const activeTimeLabel =
+    timeFilters.find((filter) => filter.value === activeTimeFilter)?.label ?? '24h'
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-emerald-200/80 bg-white/92 p-3 shadow-sm sm:p-1.5">
-      <div className="flex items-center justify-between gap-3 sm:hidden">
-        <div>
-          <p className="text-xs font-semibold uppercase text-emerald-800">
-            Map filters
-          </p>
-          <p className="mt-0.5 text-xs text-slate-500">
-            Choose what appears on the map.
-          </p>
-        </div>
-        <span className="shrink-0 rounded-md bg-emerald-50 px-2 py-1 text-[0.68rem] font-bold uppercase text-emerald-700">
-          {visibleCountLabel}
+    <div className="w-[min(14.5rem,calc(100vw-1.5rem))] rounded-lg border border-emerald-200/80 bg-white/92 p-1.5 shadow-sm backdrop-blur-md sm:p-2">
+      <Button
+        type="button"
+        variant="ghost"
+        aria-expanded={isMobileExpanded}
+        aria-controls="mobile-map-filters"
+        className="h-10 w-full justify-between gap-2 rounded-md bg-white px-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 sm:hidden"
+        onClick={() => setIsMobileExpanded((expanded) => !expanded)}
+      >
+        <span className="flex min-w-0 items-center gap-2">
+          <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-emerald-50 text-emerald-700">
+            <SlidersHorizontal className="size-4" aria-hidden="true" />
+          </span>
+          <span className="min-w-0 text-left">
+            <span className="block truncate text-xs font-bold leading-none">
+              Filtre
+            </span>
+            <span className="mt-0.5 block truncate text-[0.68rem] font-medium leading-none text-slate-500">
+              {activeFilterOption.shortLabel} · {activeTimeLabel}
+            </span>
+          </span>
         </span>
-      </div>
+        <span className="flex shrink-0 items-center gap-1">
+          <span className="rounded-md bg-emerald-50 px-2 py-1 text-[0.62rem] font-bold uppercase text-emerald-700">
+            {visibleCountLabel}
+          </span>
+          <ChevronDown
+            className={cn(
+              'size-4 text-slate-500 transition-transform',
+              isMobileExpanded && 'rotate-180',
+            )}
+            aria-hidden="true"
+          />
+        </span>
+      </Button>
 
-      <div className="grid grid-cols-2 gap-1.5 sm:flex sm:flex-wrap sm:items-center sm:gap-1">
-        {mapFilters.map((filter) => {
-          const Icon = filter.icon
-          const isActive = activeFilter === filter.value
-
-          return (
-            <Button
-              key={filter.value}
-              type="button"
-              size="sm"
-              variant={isActive ? 'default' : 'ghost'}
-              aria-label={filter.label}
-              aria-pressed={isActive}
-              className={
-                isActive
-                  ? 'h-10 min-w-0 justify-start bg-emerald-600 px-2.5 text-[0.78rem] leading-none text-white hover:bg-emerald-700 sm:h-7 sm:px-2 sm:text-[0.8rem]'
-                  : 'h-10 min-w-0 justify-start border border-emerald-100 bg-white px-2.5 text-[0.78rem] leading-none text-slate-600 hover:bg-emerald-50 hover:text-emerald-800 sm:h-7 sm:border-transparent sm:bg-transparent sm:px-2 sm:text-[0.8rem]'
-              }
-              onClick={() => onFilterChange(filter.value)}
-            >
-              <Icon data-icon="inline-start" className="size-3.5" aria-hidden="true" />
-              <span className="min-w-0 truncate sm:hidden">
-                {filter.shortLabel}
-              </span>
-              <span className="hidden sm:inline">{filter.label}</span>
-            </Button>
-          )
-        })}
-      </div>
-
-      <div className="flex flex-col gap-2 border-t border-emerald-100 pt-2 sm:flex-row sm:items-center sm:justify-between sm:pt-1.5">
-        <div className="hidden min-w-0 items-center gap-2 px-1 text-xs font-semibold uppercase text-emerald-800 sm:flex">
-          <span className="shrink-0 rounded-md bg-emerald-50 px-2 py-1 text-[0.68rem] text-emerald-700">
+      <div
+        id="mobile-map-filters"
+        className={cn(
+          'min-w-0 flex-col gap-2 sm:flex',
+          isMobileExpanded ? 'mt-2 flex' : 'hidden',
+        )}
+      >
+        <div className="flex min-w-0 items-center justify-between gap-2">
+          <span className="text-[0.66rem] font-bold uppercase tracking-wide text-emerald-700">
+            Afișează
+          </span>
+          <span className="shrink-0 rounded-md bg-emerald-50 px-2 py-1 text-[0.62rem] font-bold uppercase text-emerald-700">
             {visibleCountLabel}
           </span>
         </div>
 
-        <div className="flex items-center justify-between gap-3 sm:hidden">
-          <span className="text-xs font-semibold uppercase text-emerald-800">
-            Posted
-          </span>
-        </div>
-
-        <div className="grid grid-cols-2 gap-1.5 sm:flex sm:items-center sm:justify-end sm:gap-1">
-          {timeFilters.map((filter) => {
-            const isActive = activeTimeFilter === filter.value
+        <div className="grid min-w-0 grid-cols-2 gap-1">
+          {mapFilters.map((filter) => {
+            const Icon = filter.icon
+            const isActive = activeFilter === filter.value
 
             return (
               <Button
@@ -138,18 +166,54 @@ export function MapFilters({
                 type="button"
                 size="sm"
                 variant={isActive ? 'default' : 'ghost'}
+                aria-label={filter.label}
                 aria-pressed={isActive}
                 className={
                   isActive
-                    ? 'h-9 min-w-0 bg-emerald-600 px-2 text-white hover:bg-emerald-700 sm:h-7'
-                    : 'h-9 min-w-0 border border-emerald-100 bg-white px-2 text-slate-600 hover:bg-emerald-50 hover:text-emerald-800 sm:h-7 sm:border-transparent sm:bg-transparent'
+                    ? 'h-8 min-w-0 justify-start bg-emerald-600 px-2 text-[0.72rem] leading-none text-white hover:bg-emerald-700'
+                    : 'h-8 min-w-0 justify-start bg-white px-2 text-[0.72rem] leading-none text-slate-600 hover:bg-emerald-50 hover:text-emerald-800'
                 }
-                onClick={() => onTimeFilterChange(filter.value)}
+                onClick={() => onFilterChange(filter.value)}
               >
-                {filter.label}
+                <Icon
+                  data-icon="inline-start"
+                  className={`size-3.5 ${isActive ? 'text-white' : filter.iconClassName}`}
+                  aria-hidden="true"
+                />
+                <span className="min-w-0 truncate">{filter.shortLabel}</span>
               </Button>
             )
           })}
+        </div>
+
+        <div className="border-t border-emerald-100 pt-2">
+          <span className="text-[0.66rem] font-bold uppercase tracking-wide text-slate-500">
+            Perioada
+          </span>
+
+          <div className="mt-1 grid grid-cols-2 gap-1">
+            {timeFilters.map((filter) => {
+              const isActive = activeTimeFilter === filter.value
+
+              return (
+                <Button
+                  key={filter.value}
+                  type="button"
+                  size="sm"
+                  variant={isActive ? 'default' : 'ghost'}
+                  aria-pressed={isActive}
+                  className={
+                    isActive
+                      ? 'h-7 min-w-0 bg-emerald-600 px-2 text-[0.68rem] text-white hover:bg-emerald-700'
+                      : 'h-7 min-w-0 bg-white px-2 text-[0.68rem] text-slate-600 hover:bg-emerald-50 hover:text-emerald-800'
+                  }
+                  onClick={() => onTimeFilterChange(filter.value)}
+                >
+                  {filter.label}
+                </Button>
+              )
+            })}
+          </div>
         </div>
       </div>
     </div>

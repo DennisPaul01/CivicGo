@@ -3,6 +3,7 @@ import { ArrowLeft, Award, Leaf, Trophy } from 'lucide-react'
 import { motion } from 'motion/react'
 import { Button } from '@/components/ui/button'
 import { useAuthStore } from '@/stores/authStore'
+import { roRank } from '@/lib/locale'
 
 const rankThresholds = [
   { name: 'New Citizen', minPoints: 0 },
@@ -64,10 +65,10 @@ export function ProfilePage() {
             </span>
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
-                Civic profile
+                Profil civic
               </p>
               <h1 className="text-2xl font-semibold text-emerald-950">
-                {profile?.fullName ?? 'Civic citizen'}
+                {profile?.fullName ?? 'Cetatean civic'}
               </h1>
             </div>
           </div>
@@ -75,7 +76,7 @@ export function ProfilePage() {
           <Button asChild variant="outline" size="sm">
             <Link to="/">
               <ArrowLeft data-icon="inline-start" aria-hidden="true" />
-              Live map
+              Harta live
             </Link>
           </Button>
         </div>
@@ -88,15 +89,15 @@ export function ProfilePage() {
               </span>
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-lime-700">
-                  Rank progress
+                  Progres rank
                 </p>
                 <h2 className="mt-1 text-xl font-semibold text-emerald-950">
-                  {profile?.rankName ?? progress.currentRank.name}
+                  {roRank(profile?.rankName ?? progress.currentRank.name)}
                 </h2>
                 <p className="mt-1 text-sm text-slate-600">
-                  {points} Civic Points
+                  {points} puncte civice
                   {progress.nextRank &&
-                    ` · ${progress.pointsToNext} points to ${progress.nextRank.name}`}
+                    ` · ${progress.pointsToNext} puncte pana la ${roRank(progress.nextRank.name)}`}
                 </p>
               </div>
             </div>
@@ -116,11 +117,11 @@ export function ProfilePage() {
               <Award className="size-5" aria-hidden="true" />
             </span>
             <h2 className="mt-4 text-lg font-semibold text-emerald-950">
-              Badges
+              Badge-uri
             </h2>
             <p className="mt-2 text-sm leading-6 text-slate-600">
-              First Reporter unlocks after the first valid report. More badge
-              views arrive in the dedicated rewards page.
+              Primul raportor se deblocheaza dupa primul raport valid. Mai multe
+              badge-uri apar in pagina dedicata de recompense.
             </p>
           </aside>
         </div>

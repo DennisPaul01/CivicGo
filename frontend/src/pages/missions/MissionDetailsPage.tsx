@@ -29,14 +29,15 @@ import {
   missionQueryKey,
   missionsQueryKey,
 } from '@/lib/queryClient'
+import { roReward, roStatus } from '@/lib/locale'
 import { useAuthStore } from '@/stores/authStore'
 
 function formatDate(value: string | null) {
   if (!value) {
-    return 'Suggested time'
+    return 'Ora propusa'
   }
 
-  return new Intl.DateTimeFormat('en', {
+  return new Intl.DateTimeFormat('ro-RO', {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
@@ -69,8 +70,8 @@ export function MissionDetailsPage() {
   if (!id || !isApiConfigured) {
     return (
       <DemoStatePage
-        title="Mission details need the CiviTm API"
-        description="The route is ready. Connect the API to inspect a generated mission."
+        title="Detaliile misiunii au nevoie de API-ul CiviTm"
+        description="Ruta este pregatita. Conecteaza API-ul ca sa inspectezi o misiune generata."
       />
     )
   }
@@ -89,8 +90,8 @@ export function MissionDetailsPage() {
     return (
       <DemoStatePage
         tone="amber"
-        title="Mission not available"
-        description="CiviTm could not load this mission. The mission list and live map are still available."
+        title="Misiunea nu este disponibila"
+        description="CiviTm nu a putut incarca aceasta misiune. Lista de misiuni si harta live sunt inca disponibile."
       />
     )
   }
@@ -134,7 +135,7 @@ function MissionDetails({
             </span>
             <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
-                Mission details
+                Detalii misiune
               </p>
               <h1 className="text-2xl font-semibold leading-tight text-emerald-950">
                 {mission.title}
@@ -146,14 +147,14 @@ function MissionDetails({
             <Button asChild variant="outline" size="sm">
               <Link to="/missions">
                 <ArrowLeft data-icon="inline-start" aria-hidden="true" />
-                Missions
+                Misiuni
               </Link>
             </Button>
             {mission.createdFromIssueId && (
               <Button asChild variant="outline" size="sm">
                 <Link to={`/issues/${mission.createdFromIssueId}`}>
                   <ExternalLink data-icon="inline-start" aria-hidden="true" />
-                  Issue
+                  Problema
                 </Link>
               </Button>
             )}
@@ -164,9 +165,9 @@ function MissionDetails({
           <section className="space-y-4">
             <article className="rounded-lg border border-emerald-200 bg-white p-5 shadow-sm">
               <div className="flex flex-wrap gap-2">
-                <Badge label={mission.status.replaceAll('_', ' ')} tone="emerald" />
-                <Badge label={`${mission.impactPoints} impact points`} tone="lime" />
-                {mission.createdByAi && <Badge label="AI generated" tone="teal" />}
+                <Badge label={roStatus(mission.status)} tone="emerald" />
+                <Badge label={`${mission.impactPoints} puncte de impact`} tone="lime" />
+                {mission.createdByAi && <Badge label="Generata de AI" tone="teal" />}
               </div>
               <p className="mt-5 text-base leading-7 text-slate-600">
                 {mission.description}
@@ -176,29 +177,29 @@ function MissionDetails({
             <section className="grid gap-3 sm:grid-cols-3">
               <MissionStat
                 icon={Users}
-                label="Participants"
+                label="Participanti"
                 value={`${mission.participantsJoined}/${mission.participantsNeeded}`}
               />
               <MissionStat
                 icon={CalendarDays}
-                label="Starts"
+                label="Incepe"
                 value={formatDate(mission.startsAt)}
               />
               <MissionStat
                 icon={MapPin}
-                label="Zone"
+                label="Zona"
                 value={mission.zoneName ?? 'Timisoara'}
               />
             </section>
 
             <section className="rounded-lg border border-emerald-200 bg-white p-4 shadow-sm">
               <h2 className="text-lg font-semibold text-emerald-950">
-                Linked issues
+                Probleme conectate
               </h2>
               <div className="mt-3 grid gap-2">
                 {mission.relatedIssueIds.length === 0 ? (
                   <p className="text-sm leading-6 text-slate-600">
-                    This mission was generated without additional linked issues.
+                    Aceasta misiune a fost generata fara alte probleme conectate.
                   </p>
                 ) : (
                   mission.relatedIssueIds.map((issueId) => (
@@ -207,7 +208,7 @@ function MissionDetails({
                       to={`/issues/${issueId}`}
                       className="flex items-center justify-between gap-3 rounded-lg border border-emerald-100 bg-emerald-50/70 p-3 text-sm font-medium text-emerald-900 outline-none transition-colors hover:bg-emerald-100 focus-visible:ring-3 focus-visible:ring-emerald-500/25"
                     >
-                      <span>Issue #{issueId.slice(0, 8)}</span>
+                      <span>Problema #{issueId.slice(0, 8)}</span>
                       <ExternalLink className="size-4" aria-hidden="true" />
                     </Link>
                   ))
@@ -222,11 +223,11 @@ function MissionDetails({
                 <CheckCircle2 className="size-5" aria-hidden="true" />
               </span>
               <h2 className="mt-4 text-lg font-semibold text-emerald-950">
-                Join mission
+                Alatura-te misiunii
               </h2>
               <p className="mt-2 text-sm leading-6 text-slate-600">
-                Joining makes the mission feel alive in the demo and updates the
-                participant count from the API.
+                Inscrierea activeaza participarea si actualizeaza numarul de
+                participanti din API.
               </p>
               {isAuthenticated ? (
                 <Button
@@ -240,12 +241,12 @@ function MissionDetails({
                   ) : (
                     <Users data-icon="inline-start" aria-hidden="true" />
                   )}
-                  Join mission
+                  Alatura-te misiunii
                 </Button>
               ) : (
                 <Button asChild className="mt-4 w-full bg-emerald-600 text-white hover:bg-emerald-700">
                   <Link to={`/login?returnTo=${encodeURIComponent(`/missions/${mission.id}`)}`}>
-                    Login to join
+                    Autentifica-te ca sa intri
                   </Link>
                 </Button>
               )}
@@ -262,11 +263,11 @@ function MissionDetails({
                   <Gift className="size-5" aria-hidden="true" />
                 </span>
                 <h2 className="mt-4 text-lg font-semibold text-emerald-950">
-                  {mission.reward.title}
+                  {roReward(mission.reward.title)}
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-slate-600">
-                  {mission.reward.partnerName ?? 'CiviTm system reward'} ·{' '}
-                  {mission.reward.requiredPoints} points required
+                  {mission.reward.partnerName ?? 'Recompensa de sistem CiviTm'} ·{' '}
+                  {mission.reward.requiredPoints} puncte necesare
                 </p>
               </section>
             )}
@@ -292,7 +293,7 @@ function DemoStatePage({
         <DemoState
           icon={tone === 'amber' ? TriangleAlert : Sparkles}
           tone={tone}
-          eyebrow="Mission details"
+          eyebrow="Detalii misiune"
           title={title}
           description={description}
         />

@@ -1,5 +1,6 @@
 using System.Globalization;
 using CivicGo.Api.Data;
+using CivicGo.Api.Issues;
 using Microsoft.EntityFrameworkCore;
 
 namespace CivicGo.Api.Dashboard;
@@ -287,6 +288,11 @@ public static class DashboardEndpoints
         }
 
         var normalizedValue = value.Replace('_', ' ');
+
+        if (IssueCategories.Supported.Contains(value))
+        {
+            return IssueCategories.HumanizeRo(value);
+        }
 
         return CultureInfo.InvariantCulture.TextInfo.ToTitleCase(normalizedValue);
     }

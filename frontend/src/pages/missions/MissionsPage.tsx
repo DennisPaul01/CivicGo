@@ -19,13 +19,14 @@ import {
   type MissionResponse,
 } from '@/lib/api'
 import { missionsQueryKey } from '@/lib/queryClient'
+import { roReward, roStatus } from '@/lib/locale'
 
 function formatDate(value: string | null) {
   if (!value) {
-    return 'Suggested time'
+    return 'Ora propusa'
   }
 
-  return new Intl.DateTimeFormat('en', {
+  return new Intl.DateTimeFormat('ro-RO', {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
@@ -56,10 +57,10 @@ export function MissionsPage() {
             </span>
             <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
-                CiviTm missions
+                Misiuni CiviTm
               </p>
               <h1 className="text-2xl font-semibold leading-tight text-emerald-950">
-                Active community missions
+                Misiuni comunitare active
               </h1>
             </div>
           </div>
@@ -67,7 +68,7 @@ export function MissionsPage() {
           <Button asChild variant="outline" size="sm">
             <Link to="/">
               <ArrowLeft data-icon="inline-start" aria-hidden="true" />
-              Live map
+              Harta live
             </Link>
           </Button>
         </div>
@@ -78,16 +79,16 @@ export function MissionsPage() {
           <DemoState
             icon={Flag}
             tone="amber"
-            eyebrow="Mission fallback"
-            title="Missions are temporarily unavailable"
-            description="The live map can still show seeded mission markers while the API recovers."
+            eyebrow="Fallback misiuni"
+            title="Misiunile sunt indisponibile temporar"
+            description="Harta live poate afisa in continuare misiunile disponibile pana isi revine API-ul."
           />
         ) : missions.length === 0 ? (
           <DemoState
             icon={Sparkles}
-            eyebrow="No missions yet"
-            title="New reports will become missions"
-            description="Eligible issues generate community actions with rewards and impact points."
+            eyebrow="Nicio misiune inca"
+            title="Rapoartele noi vor deveni misiuni"
+            description="Problemele eligibile genereaza actiuni comunitare cu recompense si puncte de impact."
           />
         ) : (
           <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -114,7 +115,7 @@ function MissionCard({ mission }: { mission: MissionResponse }) {
           <Flag className="size-5" aria-hidden="true" />
         </span>
         <span className="rounded-md bg-orange-50 px-2 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
-          {mission.status.replaceAll('_', ' ')}
+          {roStatus(mission.status)}
         </span>
       </div>
 
@@ -134,7 +135,7 @@ function MissionCard({ mission }: { mission: MissionResponse }) {
       <div className="mt-4 grid gap-2 text-sm text-slate-600">
         <span className="flex items-center gap-2">
           <Users className="size-4 text-emerald-600" aria-hidden="true" />
-          {mission.participantsJoined}/{mission.participantsNeeded} joined
+          {mission.participantsJoined}/{mission.participantsNeeded} inscrisi
         </span>
         <span className="flex items-center gap-2">
           <CalendarDays className="size-4 text-emerald-600" aria-hidden="true" />
@@ -144,8 +145,8 @@ function MissionCard({ mission }: { mission: MissionResponse }) {
           <span className="flex items-center gap-2">
             <Gift className="size-4 text-yellow-600" aria-hidden="true" />
             {mission.reward.partnerName
-              ? `${mission.reward.partnerName}: ${mission.reward.title}`
-              : mission.reward.title}
+              ? `${mission.reward.partnerName}: ${roReward(mission.reward.title)}`
+              : roReward(mission.reward.title)}
           </span>
         )}
       </div>
@@ -153,7 +154,7 @@ function MissionCard({ mission }: { mission: MissionResponse }) {
       <Button asChild className="mt-4 bg-emerald-600 text-white hover:bg-emerald-700">
         <Link to={`/missions/${mission.id}`}>
           <ExternalLink data-icon="inline-start" aria-hidden="true" />
-          View mission
+          Vezi misiunea
         </Link>
       </Button>
     </motion.article>

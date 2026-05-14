@@ -1,4 +1,5 @@
 using CivicGo.Api.Data.Entities;
+using CivicGo.Api.Issues;
 
 namespace CivicGo.Api.Ai.Prompts;
 
@@ -7,28 +8,16 @@ public static class IssueAnalysisPromptBuilder
     public static string Build(IssueEntity issue)
     {
         return $$"""
-        You are running CivicGO's MVP AI analysis pipeline.
-        Apply the Vision Agent instructions first, then the Triage Agent instructions.
-        Return only JSON. No markdown. No prose outside the JSON object.
+        Rulezi pipeline-ul AI MVP CivicGO.
+        Aplica mai intai instructiunile Vision Agent, apoi instructiunile Triage Agent.
+        Returneaza doar JSON. Fara markdown. Fara text in afara obiectului JSON.
 
         {{VisionAgentPrompt.Instructions}}
 
         {{TriageAgentPrompt.Instructions}}
 
         Allowed categories:
-        - waste
-        - road_damage
-        - broken_lighting
-        - blocked_sidewalk
-        - graffiti
-        - damaged_public_furniture
-        - green_space_issue
-        - accessibility_issue
-        - public_safety_concern
-        - abandoned_object
-        - water_issue
-        - public_transport_issue
-        - other
+        {{IssueCategories.ToPromptList()}}
 
         Allowed severities:
         - low
@@ -49,19 +38,23 @@ public static class IssueAnalysisPromptBuilder
         {
           "category": "one allowed category",
           "severity": "one allowed severity",
-          "summary": "short citizen-friendly summary under 160 characters",
+          "summary": "rezumat scurt, prietenos pentru cetateni, in romana, sub 160 de caractere",
           "confidence": 0.78,
           "isUrgent": false,
           "responsibleActor": "one allowed responsible actor",
-          "suggestedAction": "short practical next action under 160 characters",
+          "suggestedAction": "urmatoarea actiune practica, in romana, sub 160 de caractere",
           "rewardEligible": true
         }
 
-        Report context:
-        - User description: {{issue.Description ?? "No description provided."}}
-        - Zone: {{issue.Zone?.Name ?? "Unknown"}}
-        - Coordinates: {{issue.Latitude}}, {{issue.Longitude}}
-        - Current issue title: {{issue.Title}}
+        Context raport:
+        - Descriere utilizator: {{issue.Description ?? "Nu a fost oferita o descriere."}}
+        - Zona: {{issue.Zone?.Name ?? "Necunoscuta"}}
+        - Coordonate: {{issue.Latitude}}, {{issue.Longitude}}
+        - Titlu curent issue: {{issue.Title}}
+
+        Limba:
+        - Valorile enum precum category, severity si responsibleActor raman exact in engleza, din listele permise.
+        - Campurile summary si suggestedAction trebuie sa fie in romana, fara diacritice.
         """;
     }
 }

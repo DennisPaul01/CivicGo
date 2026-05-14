@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 using CivicGo.Api.Ai.Prompts;
 using CivicGo.Api.Data;
 using CivicGo.Api.Data.Entities;
+using CivicGo.Api.Issues;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -22,22 +23,8 @@ public sealed class IssueAiAnalysisService(
         WriteIndented = false
     };
 
-    private static readonly HashSet<string> SupportedCategories = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "waste",
-        "road_damage",
-        "broken_lighting",
-        "blocked_sidewalk",
-        "graffiti",
-        "damaged_public_furniture",
-        "green_space_issue",
-        "accessibility_issue",
-        "public_safety_concern",
-        "abandoned_object",
-        "water_issue",
-        "public_transport_issue",
-        "other"
-    };
+    private static readonly HashSet<string> SupportedCategories =
+        IssueCategories.Supported.ToHashSet(StringComparer.OrdinalIgnoreCase);
 
     private static readonly HashSet<string> SupportedSeverities = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -114,6 +101,7 @@ public sealed class IssueAiAnalysisService(
         issue.Category = analysis.Category;
         issue.Severity = analysis.Severity;
         issue.ResponsibleActor = analysis.ResponsibleActor;
+        issue.Title = CreateIssueTitle(analysis.Category, issue.Zone?.Name);
         issue.Status = "ai_analyzed";
         issue.UpdatedAt = now;
 
@@ -297,8 +285,8 @@ public sealed class IssueAiAnalysisService(
             confidence,
             isUrgent,
             responsibleActor,
-            Truncate(dto.SuggestedAction, 700, "Review and route this issue to the right civic action."),
-            dto.RewardEligible ?? category is "waste" or "graffiti" or "green_space_issue",
+            Truncate(dto.SuggestedAction, 700, "Verifica raportul si trimite-l catre actiunea civica potrivita."),
+            dto.RewardEligible ?? IssueCategories.IsRewardEligible(category),
             rawResponseJson,
             false,
             "openai"
@@ -314,15 +302,15 @@ public sealed class IssueAiAnalysisService(
         var isUrgent = severity is "high" or "critical";
         var zoneName = issue.Zone?.Name ?? "Timisoara";
         var summary = category == "other"
-            ? $"Issue reported in {zoneName} and queued for civic review."
-            : $"{Humanize(category)} issue reported in {zoneName}.";
+            ? $"Problema raportata in {zoneName}, trimisa pentru verificare civica."
+            : $"Problema de tip {HumanizeRo(category)} raportata in {zoneName}.";
         var suggestedAction = responsibleActor switch
         {
-            "emergency" => "Escalate quickly and verify the safety risk on site.",
-            "city_hall" => "Route to city services for inspection and resolution.",
-            "community_and_city_hall" => "Prepare a community action and notify city services.",
-            "community" => "Create a lightweight community follow-up mission.",
-            _ => "Review the report and assign the right civic owner."
+            "emergency" => "Escaladeaza rapid si verifica riscul de siguranta la fata locului.",
+            "city_hall" => "Trimite catre serviciile orasului pentru inspectie si rezolvare.",
+            "community_and_city_hall" => "Pregateste o actiune comunitara si anunta serviciile orasului.",
+            "community" => "Creeaza o misiune comunitara usoara de follow-up.",
+            _ => "Verifica raportul si atribuie responsabilul civic potrivit."
         };
         var confidence = category == "other" ? 0.72 : 0.81;
         var rawJson = JsonSerializer.Serialize(
@@ -337,7 +325,7 @@ public sealed class IssueAiAnalysisService(
                 isUrgent,
                 responsibleActor,
                 suggestedAction,
-                rewardEligible = category is "waste" or "graffiti" or "green_space_issue"
+                rewardEligible = IssueCategories.IsRewardEligible(category)
             },
             JsonOptions
         );
@@ -350,7 +338,7 @@ public sealed class IssueAiAnalysisService(
             isUrgent,
             responsibleActor,
             suggestedAction,
-            category is "waste" or "graffiti" or "green_space_issue",
+            IssueCategories.IsRewardEligible(category),
             rawJson,
             true,
             reason
@@ -380,8 +368,8 @@ public sealed class IssueAiAnalysisService(
             "Vision Agent",
             status,
             result.UsedFallback
-                ? $"Fallback spotted a {Humanize(result.Category)} issue."
-                : $"Spotted a {Humanize(result.Category)} issue from the photo.",
+                ? $"Fallback-ul a identificat o problema de tip {HumanizeRo(result.Category)}."
+                : $"A identificat din poza o problema de tip {HumanizeRo(result.Category)}.",
             new
             {
                 issue.ImageUrl,
@@ -408,8 +396,8 @@ public sealed class IssueAiAnalysisService(
             "Triage Agent",
             status,
             result.UsedFallback
-                ? $"Fallback routed this to {Humanize(result.ResponsibleActor)}."
-                : $"Found who can help: {Humanize(result.ResponsibleActor)}.",
+                ? $"Fallback-ul a directionat cazul catre {HumanizeRo(result.ResponsibleActor)}."
+                : $"A gasit cine poate ajuta: {HumanizeRo(result.ResponsibleActor)}.",
             new
             {
                 result.Category,
@@ -494,54 +482,112 @@ public sealed class IssueAiAnalysisService(
 
     private static string DetectCategory(string text)
     {
-        if (ContainsAny(text, "gunoi", "trash", "waste", "garbage", "litter", "moloz", "debris"))
+        if (ContainsAny(text, "animal", "animale", "caine", "caini", "pisica", "sobolan", "maidanez"))
         {
-            return "waste";
+            return IssueCategories.Animals;
         }
 
-        if (ContainsAny(text, "groapa", "pothole", "asfalt", "road", "drum", "carosabil"))
+        if (ContainsAny(text, "gunoi", "trash", "waste", "garbage", "litter", "moloz", "debris",
+                "salubrizare", "dezinsectie", "deratizare", "deszapezire", "zapada", "curatenie"))
         {
-            return "road_damage";
+            return IssueCategories.SanitationPestSnow;
         }
 
-        if (ContainsAny(text, "bec", "light", "lighting", "lamp", "intuneric", "streetlight"))
+        if (ContainsAny(text, "groapa", "pothole", "asfalt", "road", "drum", "carosabil",
+                "strada", "strazi", "trotuar", "trotuare", "bordura", "pavaj"))
         {
-            return "broken_lighting";
+            return IssueCategories.StreetsSidewalks;
         }
 
-        if (ContainsAny(text, "trotuar", "sidewalk", "blocked", "blocata", "obstruction"))
+        if (ContainsAny(text, "semafor", "indicator", "semn", "circulatie", "trafic", "trecere",
+                "marcaj", "sens unic"))
         {
-            return "blocked_sidewalk";
+            return IssueCategories.RoadTrafficSigns;
         }
 
-        if (ContainsAny(text, "graffiti", "tag", "vandal"))
+        if (ContainsAny(text, "bec", "light", "lighting", "lamp", "intuneric", "streetlight",
+                "iluminat"))
         {
-            return "graffiti";
+            return IssueCategories.PublicLighting;
         }
 
-        if (ContainsAny(text, "parc", "green", "grass", "iarba", "copac", "spatiu verde"))
+        if (ContainsAny(text, "parcare", "timpark", "parcometru", "abonament parcare"))
         {
-            return "green_space_issue";
+            return IssueCategories.Timpark;
         }
 
-        if (ContainsAny(text, "apa", "water", "leak", "inundat", "flood"))
+        if (ContainsAny(text, "apa", "water", "leak", "inundat", "flood", "canalizare",
+                "termoficare", "caldura", "teava", "conducta"))
         {
-            return "water_issue";
+            return IssueCategories.WaterSewerHeating;
         }
 
-        if (ContainsAny(text, "bus", "tram", "transport", "statie"))
+        if (ContainsAny(text, "parc", "green", "grass", "iarba", "copac", "spatiu verde",
+                "loc de joaca", "leagan", "tobogan", "mediu"))
         {
-            return "public_transport_issue";
+            return IssueCategories.EnvironmentPlaygroundsGreenSpaces;
         }
 
-        if (ContainsAny(text, "rampa", "wheelchair", "accessibility", "accesibil"))
+        if (ContainsAny(text, "bus", "tram", "transport", "statie", "autobuz", "tramvai",
+                "troleibuz"))
         {
-            return "accessibility_issue";
+            return IssueCategories.PublicTransport;
         }
 
-        return ContainsAny(text, "danger", "unsafe", "pericol", "safety")
-            ? "public_safety_concern"
-            : "other";
+        if (ContainsAny(text, "santier", "construction site", "lucrari"))
+        {
+            return IssueCategories.ConstructionSites;
+        }
+
+        if (ContainsAny(text, "constructie", "teren", "autorizatie", "urbanism", "puz", "pud"))
+        {
+            return IssueCategories.ConstructionLand;
+        }
+
+        if (ContainsAny(text, "publicitate", "reclama", "afisaj", "comert", "magazin", "terasa"))
+        {
+            return IssueCategories.AdvertisingCommerce;
+        }
+
+        if (ContainsAny(text, "scoala", "spital", "gradinita", "liceu", "clinica"))
+        {
+            return IssueCategories.SchoolsHospitals;
+        }
+
+        if (ContainsAny(text, "garaj", "cimitir", "toaleta", "wc public"))
+        {
+            return IssueCategories.GaragesCemeteriesPublicToilets;
+        }
+
+        if (ContainsAny(text, "asociatie", "proprietari", "administrator bloc"))
+        {
+            return IssueCategories.OwnersAssociations;
+        }
+
+        if (ContainsAny(text, "buletin", "carte de identitate", "evidenta persoanelor"))
+        {
+            return IssueCategories.PopulationRecords;
+        }
+
+        if (ContainsAny(text, "website", "platforma", "sesizari online", "aplicatie", "portal"))
+        {
+            return IssueCategories.WebsitePlatform;
+        }
+
+        if (ContainsAny(text, "integritate", "coruptie", "abuz", "functionar", "angajat"))
+        {
+            return ContainsAny(text, "angajat", "functionar")
+                ? IssueCategories.EmployeeIntegrityIssues
+                : IssueCategories.IntegrityIssues;
+        }
+
+        if (ContainsAny(text, "ordine publica", "galagie", "vandal", "vandalism", "danger",
+                "unsafe", "pericol", "safety"))
+        {
+            return IssueCategories.PublicOrder;
+        }
+
+        return IssueCategories.Other;
     }
 
     private static string DetectSeverity(string text, string category)
@@ -551,12 +597,15 @@ public sealed class IssueAiAnalysisService(
             return "critical";
         }
 
-        if (category is "public_safety_concern" or "water_issue" or "road_damage")
+        if (category is IssueCategories.PublicOrder or IssueCategories.WaterSewerHeating or
+            IssueCategories.StreetsSidewalks or IssueCategories.RoadTrafficSigns or
+            "public_safety_concern" or "water_issue" or "road_damage")
         {
             return "high";
         }
 
-        if (category is "graffiti")
+        if (category is IssueCategories.WebsitePlatform or IssueCategories.OwnersAssociations or
+            "graffiti")
         {
             return "low";
         }
@@ -573,9 +622,21 @@ public sealed class IssueAiAnalysisService(
 
         return category switch
         {
-            "waste" or "graffiti" or "green_space_issue" => "community_and_city_hall",
-            "road_damage" or "broken_lighting" or "water_issue" or "public_transport_issue" or
+            IssueCategories.SanitationPestSnow or IssueCategories.EnvironmentPlaygroundsGreenSpaces or
+                IssueCategories.GaragesCemeteriesPublicToilets or
+                "waste" or "graffiti" or "green_space_issue" or "green_space" =>
+                "community_and_city_hall",
+            IssueCategories.PublicLighting or IssueCategories.StreetsSidewalks or
+                IssueCategories.WaterSewerHeating or IssueCategories.PublicTransport or
+                IssueCategories.RoadTrafficSigns or IssueCategories.Timpark or
+                IssueCategories.SchoolsHospitals or IssueCategories.Urbanism or
+                IssueCategories.ConstructionLand or IssueCategories.EnvironmentalPermits or
+                IssueCategories.PopulationRecords or
+                "road_damage" or "broken_lighting" or "water_issue" or "public_transport_issue" or
                 "accessibility_issue" => "city_hall",
+            IssueCategories.ConstructionSites or IssueCategories.AdvertisingCommerce =>
+                "private_company",
+            IssueCategories.PublicOrder => "community_and_city_hall",
             "blocked_sidewalk" => "community",
             _ => "unknown"
         };
@@ -608,6 +669,51 @@ public sealed class IssueAiAnalysisService(
     private static string Humanize(string value)
     {
         return value.Replace('_', ' ');
+    }
+
+    private static string CreateIssueTitle(string category, string? zoneName)
+    {
+        var location = string.IsNullOrWhiteSpace(zoneName) ? "Timisoara" : zoneName.Trim();
+
+        return category switch
+        {
+            IssueCategories.SanitationPestSnow or "waste" =>
+                $"Deseuri si salubrizare in {location}",
+            IssueCategories.StreetsSidewalks or "road_damage" or "blocked_sidewalk" =>
+                $"Problema pe strada sau trotuar in {location}",
+            IssueCategories.PublicLighting or "broken_lighting" or "lighting" =>
+                $"Iluminat public defect in {location}",
+            IssueCategories.EnvironmentPlaygroundsGreenSpaces or "green_space_issue" or "green_space" =>
+                $"Spatiu verde sau loc de joaca in {location}",
+            IssueCategories.PublicTransport or "public_transport_issue" =>
+                $"Transport in comun in {location}",
+            IssueCategories.RoadTrafficSigns =>
+                $"Trafic rutier si semnalizare in {location}",
+            IssueCategories.WaterSewerHeating or "water_issue" =>
+                $"Apa, canalizare sau termoficare in {location}",
+            IssueCategories.Animals =>
+                $"Problema cu animale in {location}",
+            IssueCategories.ConstructionSites =>
+                $"Santier raportat in {location}",
+            IssueCategories.PublicOrder or "public_safety_concern" =>
+                $"Ordine publica in {location}",
+            _ => $"{IssueCategories.HumanizeRo(category)} in {location}"
+        };
+    }
+
+    private static string HumanizeRo(string value)
+    {
+        return value switch
+        {
+            "citizen" => "cetateni",
+            "community" => "comunitate",
+            "city_hall" => "primarie",
+            "private_company" => "companie privata",
+            "emergency" => "servicii de urgenta",
+            "unknown" => "neclar",
+            "community_and_city_hall" => "comunitate si primarie",
+            _ => IssueCategories.HumanizeRo(value)
+        };
     }
 
     private static string Truncate(string? value, int maxLength, string fallback)

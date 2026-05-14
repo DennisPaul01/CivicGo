@@ -11,12 +11,13 @@ import {
 import { SelectedIssuePanel } from '@/components/map/SelectedIssuePanel'
 import type { CivicMapItem } from '@/data/civicMapData'
 
-const TIMISOARA_CENTER: [number, number] = [21.2087, 45.7489]
+const TIMISOARA_CENTER: [number, number] = [21.224, 45.7552]
 const TIMISOARA_MAX_BOUNDS: [[number, number], [number, number]] = [
   [21.12, 45.68],
   [21.32, 45.81],
 ]
 const MARKER_SPREAD_DISTANCE = 42
+const MAPBOX_CANVAS_SELECTOR = '.mapboxgl-canvas'
 
 type MarkerRecord = {
   marker: MapboxMarker
@@ -29,6 +30,9 @@ type CivicMapProps = {
   activeFilter: MapFilterKind
   selectedItemId: string | null
   onSelectedItemChange: (itemId: string | null) => void
+  highlightedItemId?: string | null
+  focusItemId?: string | null
+  markerRevealDelayMs?: number
 }
 
 function shouldShowMarker(kind: MapMarkerKind, activeFilter: MapFilterKind) {
@@ -39,6 +43,8 @@ function renderMarker(
   root: Root,
   item: CivicMapItem,
   selectedItemId: string | null,
+  highlightedItemId: string | null,
+  markerRevealDelayMs: number,
   onSelectedItemChange: (itemId: string | null) => void,
 ) {
   root.render(
@@ -46,14 +52,22 @@ function renderMarker(
       kind={item.kind}
       label={item.label}
       isSelected={item.id === selectedItemId}
+      isHighlighted={item.id === highlightedItemId}
+      revealDelayMs={item.id === highlightedItemId ? markerRevealDelayMs : 0}
       onSelect={() => onSelectedItemChange(item.id)}
     />,
   )
 }
 
-function syncMarkerStacking(record: MarkerRecord, selectedItemId: string | null) {
+function syncMarkerStacking(
+  record: MarkerRecord,
+  selectedItemId: string | null,
+  highlightedItemId: string | null,
+) {
   record.marker.getElement().style.zIndex =
-    record.item.id === selectedItemId ? '10' : ''
+    record.item.id === selectedItemId || record.item.id === highlightedItemId
+      ? '10'
+      : ''
 }
 
 function applyMarkerSpread(
@@ -105,11 +119,28 @@ function applyMarkerSpread(
   })
 }
 
+function preventMapCanvasFocus(container: HTMLDivElement) {
+  const canvas = container.querySelector<HTMLCanvasElement>(MAPBOX_CANVAS_SELECTOR)
+
+  if (!canvas) {
+    return
+  }
+
+  canvas.tabIndex = -1
+
+  if (document.activeElement === canvas) {
+    canvas.blur()
+  }
+}
+
 export function CivicMap({
   items,
   activeFilter,
   selectedItemId,
   onSelectedItemChange,
+  highlightedItemId = null,
+  focusItemId = null,
+  markerRevealDelayMs = 0,
 }: CivicMapProps) {
   const mapShellRef = useRef<HTMLDivElement | null>(null)
   const mapContainerRef = useRef<HTMLDivElement | null>(null)
@@ -126,6 +157,9 @@ export function CivicMap({
   const selectedItem = selectedItemId
     ? items.find((item) => item.id === selectedItemId)
     : undefined
+  const focusedItem =
+    selectedItem ??
+    (focusItemId ? items.find((item) => item.id === focusItemId) : undefined)
 
   useEffect(() => {
     activeFilterRef.current = activeFilter
@@ -155,10 +189,17 @@ export function CivicMap({
 
     markerRefs.current.forEach((record) => {
       const { root, item } = record
-      renderMarker(root, item, selectedItemId, onSelectedItemChange)
-      syncMarkerStacking(record, selectedItemId)
+      renderMarker(
+        root,
+        item,
+        selectedItemId,
+        highlightedItemId,
+        markerRevealDelayMs,
+        onSelectedItemChange,
+      )
+      syncMarkerStacking(record, selectedItemId, highlightedItemId)
     })
-  }, [onSelectedItemChange, selectedItemId])
+  }, [highlightedItemId, markerRevealDelayMs, onSelectedItemChange, selectedItemId])
 
   useEffect(() => {
     const activeMap = mapRef.current
@@ -166,14 +207,19 @@ export function CivicMap({
     if (
       !activeMap ||
       !isMapReady ||
-      !selectedItem ||
-      !shouldShowMarker(selectedItem.kind, activeFilter)
+      !focusedItem ||
+      !shouldShowMarker(focusedItem.kind, activeFilter)
     ) {
       setSelectedMarkerPosition(null)
       return
     }
 
     const updateSelectedMarkerPosition = () => {
+      if (!selectedItem) {
+        setSelectedMarkerPosition(null)
+        return
+      }
+
       const projectedPoint = activeMap.project(selectedItem.coordinates)
       const markerOffset = markerRefs.current
         .find(({ item }) => item.id === selectedItem.id)
@@ -200,8 +246,8 @@ export function CivicMap({
     activeMap.on('resize', updateSelectedMarkerPosition)
 
     activeMap.easeTo({
-      center: selectedItem.coordinates,
-      duration: 450,
+      center: focusedItem.coordinates,
+      duration: 900,
       essential: true,
       padding: { top: 90, bottom: 190, left: 40, right: 40 },
     })
@@ -210,7 +256,7 @@ export function CivicMap({
       activeMap.off('move', updateSelectedMarkerPosition)
       activeMap.off('resize', updateSelectedMarkerPosition)
     }
-  }, [activeFilter, isMapReady, selectedItem])
+  }, [activeFilter, focusedItem, isMapReady, selectedItem])
 
   useEffect(() => {
     const activeMap = mapRef.current
@@ -273,9 +319,11 @@ export function CivicMap({
           existingMarker.root,
           mapItem,
           selectedItemIdRef.current,
+          highlightedItemId,
+          markerRevealDelayMs,
           onSelectedItemChange,
         )
-        syncMarkerStacking(existingMarker, selectedItemIdRef.current)
+        syncMarkerStacking(existingMarker, selectedItemIdRef.current, highlightedItemId)
         nextMarkers.push(existingMarker)
         existingMarkers.delete(mapItem.id)
         return
@@ -291,7 +339,14 @@ export function CivicMap({
         ? ''
         : 'none'
 
-      renderMarker(root, mapItem, selectedItemIdRef.current, onSelectedItemChange)
+      renderMarker(
+        root,
+        mapItem,
+        selectedItemIdRef.current,
+        highlightedItemId,
+        markerRevealDelayMs,
+        onSelectedItemChange,
+      )
 
       const marker = new mapboxgl.Marker({
         element: markerElement,
@@ -310,7 +365,7 @@ export function CivicMap({
 
     markerRefs.current = nextMarkers
     applyMarkerSpread(activeMap, markerRefs.current, activeFilterRef.current)
-  }, [isMapReady, items, onSelectedItemChange])
+  }, [highlightedItemId, isMapReady, items, markerRevealDelayMs, onSelectedItemChange])
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current || !isMapboxConfigured()) {
@@ -324,13 +379,11 @@ export function CivicMap({
         container: mapContainerRef.current,
         style: 'mapbox://styles/mapbox/streets-v12',
         center: TIMISOARA_CENTER,
-        zoom: 12.9,
+        zoom: 12.35,
         minZoom: 11.6,
         maxZoom: 17,
         maxBounds: TIMISOARA_MAX_BOUNDS,
       })
-
-      mapRef.current.addControl(new mapboxgl.NavigationControl(), 'bottom-right')
 
       const spreadVisibleMarkers = () => {
         if (mapRef.current) {
@@ -347,7 +400,8 @@ export function CivicMap({
       mapRef.current.on('resize', spreadVisibleMarkers)
 
       const markMapReady = () => {
-        if (isMounted) {
+        if (isMounted && mapContainerRef.current) {
+          preventMapCanvasFocus(mapContainerRef.current)
           setIsMapReady(true)
           spreadVisibleMarkers()
         }
@@ -384,9 +438,9 @@ export function CivicMap({
         <div className="mx-4 flex max-w-sm flex-col items-center gap-3 rounded-lg border border-emerald-200 bg-white/90 p-6 text-center shadow-sm">
           <MapPin className="size-7 text-emerald-600" aria-hidden="true" />
           <div>
-            <h1 className="text-lg font-semibold">CiviTm map is ready</h1>
+            <h1 className="text-lg font-semibold">Harta CiviTm este pregatita</h1>
             <p className="mt-1 text-sm text-slate-600">
-              Add a Mapbox token to render the live city map.
+              Adauga un token Mapbox pentru a afisa harta live a orasului.
             </p>
           </div>
         </div>

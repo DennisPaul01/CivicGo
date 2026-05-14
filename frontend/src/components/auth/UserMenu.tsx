@@ -29,9 +29,9 @@ export function UserMenu() {
             className="sm:h-7 sm:w-auto sm:px-2.5"
             asChild
           >
-            <Link to="/admin/dashboard" aria-label="Open admin dashboard">
+            <Link to="/admin/dashboard" aria-label="Deschide dashboard admin">
               <LayoutDashboard aria-hidden="true" />
-              <span className="hidden sm:inline">Dashboard</span>
+              <span className="hidden sm:inline">Panou</span>
             </Link>
           </Button>
         ) : null}
@@ -42,7 +42,7 @@ export function UserMenu() {
             className="sm:h-7 sm:w-auto sm:px-2.5"
             asChild
           >
-            <Link to="/partner" aria-label="Open partner dashboard">
+            <Link to="/partner" aria-label="Deschide panoul de partener">
               <Handshake aria-hidden="true" />
               <span className="hidden sm:inline">Partner</span>
             </Link>
@@ -54,10 +54,10 @@ export function UserMenu() {
           className="sm:h-7 sm:w-auto sm:px-2.5"
           asChild
         >
-          <Link to="/profile" aria-label="Open profile">
+            <Link to="/profile" aria-label="Deschide profilul">
             <UserCircle data-icon="inline-start" aria-hidden="true" />
             <span className="hidden max-w-32 truncate sm:inline">
-              {profile?.fullName ?? 'Profile'}
+              {profile?.fullName ?? 'Profil'}
             </span>
           </Link>
         </Button>
@@ -65,7 +65,7 @@ export function UserMenu() {
           type="button"
           variant="ghost"
           size="icon-sm"
-          aria-label="Logout"
+          aria-label="Deconectare"
           onClick={handleLogout}
         >
           <LogOut aria-hidden="true" />
@@ -78,7 +78,7 @@ export function UserMenu() {
     <Button variant="outline" size="sm" asChild>
       <Link to="/login">
         <UserCircle data-icon="inline-start" aria-hidden="true" />
-        Login
+        Autentificare
       </Link>
     </Button>
   )

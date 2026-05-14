@@ -3,7 +3,6 @@ import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr'
 import { useQueryClient } from '@tanstack/react-query'
 import { apiBaseUrl, isApiConfigured } from '@/lib/api'
 import {
-  issueQueryKey,
   issuesQueryKey,
   missionsQueryKey,
   rewardsQueryKey,
@@ -28,18 +27,15 @@ export function CivicLiveEvents() {
       .configureLogging(LogLevel.Warning)
       .build()
 
-    function invalidateIssue(payload?: CivicLivePayload) {
+    function invalidateIssue(_payload?: CivicLivePayload) {
       void queryClient.invalidateQueries({ queryKey: issuesQueryKey })
-
-      if (payload?.issueId) {
-        void queryClient.invalidateQueries({
-          queryKey: issueQueryKey(payload.issueId),
-        })
-      }
     }
 
     connection.on('IssueCreated', invalidateIssue)
     connection.on('IssueAnalyzed', invalidateIssue)
+    connection.on('DuplicateDetected', invalidateIssue)
+    connection.on('PointsAwarded', invalidateIssue)
+    connection.on('AgentPipelineFailed', invalidateIssue)
     connection.on('MissionCreated', (payload?: CivicLivePayload) => {
       invalidateIssue(payload)
       void queryClient.invalidateQueries({ queryKey: missionsQueryKey })

@@ -85,7 +85,7 @@ function createExactLocation(
   return {
     id: `exact-${source}`,
     name: place.name,
-    address: `${cleanAddress}${nearestArea ? ` · near ${nearestArea.name}` : ''}`,
+    address: `${cleanAddress}${nearestArea ? ` · langa ${nearestArea.name}` : ''}`,
     latitude: place.latitude,
     longitude: place.longitude,
     precision: 'exact',
@@ -126,7 +126,7 @@ export function LocationPicker({
   )
   const pinnedAddress =
     selectedExactLocation && selectedLocation
-      ? selectedLocation.address.split(' · near ')[0]
+      ? selectedLocation.address.split(' · langa ')[0]
       : ''
   const visibleAreas = useMemo(() => {
     const normalizedQuery = normalizeSearchText(areaQuery.trim())
@@ -230,8 +230,8 @@ export function LocationPicker({
     setIsLoadingSuggestions(false)
     setStatusMessage(
       exactLocation.zoneName
-        ? `Pinned to ${exactLocation.zoneName} automatically.`
-        : 'Exact location pinned.',
+        ? `Fixat automat in ${exactLocation.zoneName}.`
+        : 'Locatie exacta fixata.',
     )
   }
 
@@ -239,12 +239,12 @@ export function LocationPicker({
     const trimmedQuery = addressQuery.trim()
 
     if (trimmedQuery.length === 0) {
-      setStatusMessage('Type an address or landmark first.')
+      setStatusMessage('Scrie mai intai o adresa sau un reper.')
       return
     }
 
     if (!isMapboxConfigured()) {
-      setStatusMessage('Address search is unavailable. Choose a nearby area instead.')
+      setStatusMessage('Cautarea dupa adresa nu este disponibila. Alege o zona apropiata.')
       return
     }
 
@@ -255,7 +255,7 @@ export function LocationPicker({
       const place = await geocodeTimisoaraAddress(trimmedQuery)
 
       if (!place) {
-        setStatusMessage('No matching place found. Try a street name or landmark.')
+        setStatusMessage('Nu am gasit un loc potrivit. Incearca o strada sau un reper.')
         return
       }
 
@@ -266,7 +266,7 @@ export function LocationPicker({
       setStatusMessage(
         error instanceof Error
           ? error.message
-          : 'Address search is temporarily unavailable.',
+          : 'Cautarea dupa adresa este indisponibila temporar.',
       )
     } finally {
       setIsSearchingAddress(false)
@@ -275,12 +275,12 @@ export function LocationPicker({
 
   function handleUseCurrentLocation() {
     if (!navigator.geolocation) {
-      setStatusMessage('Current location is not available in this browser.')
+      setStatusMessage('Locatia curenta nu este disponibila in acest browser.')
       return
     }
 
     setIsUsingCurrentLocation(true)
-    setStatusMessage('Finding your address...')
+    setStatusMessage('Cautam adresa ta...')
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
@@ -289,8 +289,8 @@ export function LocationPicker({
           position.coords.longitude,
         )
         let place: MapboxGeocodedPlace = {
-          name: nearestArea ? `Current location near ${nearestArea.name}` : 'Current location',
-          address: 'Current device location',
+          name: nearestArea ? `Locatia curenta langa ${nearestArea.name}` : 'Locatia curenta',
+          address: 'Locatia curenta a dispozitivului',
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
         }
@@ -305,7 +305,7 @@ export function LocationPicker({
             place = reverseGeocodedPlace
           }
         } catch {
-          setStatusMessage('Address lookup failed. Pinned by GPS coordinates instead.')
+          setStatusMessage('Cautarea adresei a esuat. Am fixat locatia dupa coordonate GPS.')
         }
 
         selectExactPlace(place, 'current')
@@ -314,7 +314,7 @@ export function LocationPicker({
         setIsUsingCurrentLocation(false)
       },
       () => {
-        setStatusMessage('Allow location access or choose a nearby area.')
+        setStatusMessage('Permite accesul la locatie sau alege o zona apropiata.')
         setIsUsingCurrentLocation(false)
       },
       {
@@ -330,14 +330,14 @@ export function LocationPicker({
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
-            Location
+            Locatie
           </p>
           <h2 className="!mb-0 !mt-0.5 !text-base !leading-tight font-semibold text-emerald-950">
-            Where is the issue?
+            Unde este problema?
           </h2>
           <p className="mt-1 text-sm leading-5 text-slate-600">
-            Search an address, use your current location, or choose a nearby
-            area. CiviTm will place the report on the map.
+            Cauta o adresa, foloseste locatia curenta sau alege o zona
+            apropiata. CiviTm va pune raportul pe harta.
           </p>
         </div>
         <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
@@ -365,7 +365,7 @@ export function LocationPicker({
             }}
           >
             <Search className="size-4" aria-hidden="true" />
-            Enter address
+            Introdu adresa
           </button>
 
           <button
@@ -382,7 +382,7 @@ export function LocationPicker({
             ) : (
               <Navigation className="size-4" aria-hidden="true" />
             )}
-            Use my location
+            Foloseste locatia mea
           </button>
         </div>
 
@@ -393,7 +393,7 @@ export function LocationPicker({
                 className="text-sm font-medium text-slate-700"
                 htmlFor={locationInputId}
               >
-                Address or landmark
+                Adresa sau reper
               </label>
               <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
                 <input
@@ -427,7 +427,7 @@ export function LocationPicker({
                       setAreSuggestionsOpen(false)
                     }
                   }}
-                  placeholder="e.g. Calea Torontalului"
+                  placeholder="ex. Calea Torontalului"
                   aria-autocomplete="list"
                   aria-controls={suggestionsListId}
                   aria-expanded={areSuggestionsOpen}
@@ -444,7 +444,7 @@ export function LocationPicker({
                   ) : (
                     <Search className="size-4" aria-hidden="true" />
                   )}
-                  Find
+                  Cauta
                 </button>
               </div>
               {(areSuggestionsOpen || isLoadingSuggestions) && (
@@ -459,7 +459,7 @@ export function LocationPicker({
                         className="size-4 animate-spin"
                         aria-hidden="true"
                       />
-                      Searching nearby addresses...
+                      Cautam adrese apropiate...
                     </div>
                   ) : (
                     addressSuggestions.map((place) => (
@@ -501,14 +501,14 @@ export function LocationPicker({
         {selectedExactLocation && selectedLocation && (
           <div className="mt-3 grid gap-2 rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
             <div className="min-w-0">
-              <span className="font-medium text-slate-600">Pinned location</span>
+              <span className="font-medium text-slate-600">Locatie fixata</span>
               <span className="mt-0.5 block truncate font-semibold text-emerald-950">
-                {pinnedAddress || 'Current device location'}
+                {pinnedAddress || 'Locatia curenta a dispozitivului'}
               </span>
             </div>
             {selectedArea && (
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                <span className="font-medium text-slate-600">Detected area</span>
+                <span className="font-medium text-slate-600">Zona detectata</span>
                 <span className="inline-flex items-center gap-2.5 rounded-md bg-emerald-100 px-3 py-1 font-semibold text-emerald-800">
                   <Check className="size-3.5" aria-hidden="true" />
                   {selectedArea.name}
@@ -530,7 +530,7 @@ export function LocationPicker({
             ) : (
               <TriangleAlert className="size-4" aria-hidden="true" />
             )}
-            {statusMessage || 'Exact location pinned.'}
+            {statusMessage || 'Locatie exacta fixata.'}
           </p>
         )}
       </div>
@@ -539,16 +539,16 @@ export function LocationPicker({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Nearby areas
+              Zone apropiate
             </p>
             <p className="mt-1 text-xs leading-4 text-slate-500">
-              Showing {visibleAreas.length} of {reportLocations.length} areas.
+              Afisam {visibleAreas.length} din {reportLocations.length} zone.
             </p>
           </div>
 
           <div className="relative w-full sm:max-w-xs">
             <label className="sr-only" htmlFor={areaSearchInputId}>
-              Search nearby areas
+              Cauta zone apropiate
             </label>
             <Search
               className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400"
@@ -562,7 +562,7 @@ export function LocationPicker({
               onChange={(event) => {
                 setAreaQuery(event.target.value)
               }}
-              placeholder="Search area"
+              placeholder="Cauta zona"
             />
           </div>
         </div>
@@ -618,7 +618,7 @@ export function LocationPicker({
 
       {visibleAreas.length === 0 && (
         <div className="mt-3 rounded-lg border border-dashed border-slate-200 bg-slate-50 p-3 text-sm font-medium text-slate-600">
-          No area found. Try Iosefin, Mehala, Aradului or Fabric.
+          Nu am gasit nicio zona. Incearca Iosefin, Mehala, Aradului sau Fabric.
         </div>
       )}
     </section>

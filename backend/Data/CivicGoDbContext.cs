@@ -1,4 +1,5 @@
 using CivicGo.Api.Data.Entities;
+using CivicGo.Api.Issues;
 using Microsoft.EntityFrameworkCore;
 
 namespace CivicGo.Api.Data;
@@ -394,12 +395,17 @@ public sealed class CivicGoDbContext(DbContextOptions<CivicGoDbContext> options)
 
         return issue.Category switch
         {
-            "waste" => new ZoneScoreDelta(zoneId, 35, 10, 0, 5),
+            "waste" or IssueCategories.SanitationPestSnow =>
+                new ZoneScoreDelta(zoneId, 35, 10, 0, 5),
             "graffiti" => new ZoneScoreDelta(zoneId, 30, 15, 0, 5),
-            "green_space_issue" => new ZoneScoreDelta(zoneId, 25, 20, 0, 5),
-            "broken_lighting" => new ZoneScoreDelta(zoneId, 0, 10, 35, 5),
-            "road_damage" or "blocked_sidewalk" or "accessibility_issue" =>
+            "green_space_issue" or "green_space" or IssueCategories.EnvironmentPlaygroundsGreenSpaces =>
+                new ZoneScoreDelta(zoneId, 25, 20, 0, 5),
+            "broken_lighting" or IssueCategories.PublicLighting =>
+                new ZoneScoreDelta(zoneId, 0, 10, 35, 5),
+            "road_damage" or "blocked_sidewalk" or "accessibility_issue" or
+                IssueCategories.StreetsSidewalks or IssueCategories.RoadTrafficSigns =>
                 new ZoneScoreDelta(zoneId, 0, 15, 30, 5),
+            IssueCategories.PublicOrder => new ZoneScoreDelta(zoneId, 0, 20, 20, 10),
             _ => new ZoneScoreDelta(zoneId, 0, 30, 0, 20)
         };
     }

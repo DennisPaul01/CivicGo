@@ -19,7 +19,7 @@ export function LoginPage() {
     setError('')
 
     if (!isSupabaseConfigured || !supabase) {
-      setError('Supabase is not configured yet. Add the frontend env values.')
+      setError('Supabase nu este configurat inca. Adauga valorile env pentru frontend.')
       return
     }
 
@@ -40,8 +40,8 @@ export function LoginPage() {
 
   return (
     <AuthLayout
-      title="Login"
-      subtitle="Access protected CiviTm flows with your citizen account."
+      title="Autentificare"
+      subtitle="Acceseaza fluxurile protejate CiviTm cu contul tau civic."
     >
       <form className="grid gap-4" onSubmit={handleSubmit}>
         <label className="grid gap-1.5 text-sm font-medium text-slate-700">
@@ -57,7 +57,7 @@ export function LoginPage() {
         </label>
 
         <label className="grid gap-1.5 text-sm font-medium text-slate-700">
-          Password
+          Parola
           <input
             className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-emerald-500 focus:ring-3 focus:ring-emerald-500/20"
             type="password"
@@ -81,16 +81,16 @@ export function LoginPage() {
           disabled={isSubmitting}
         >
           <LogIn data-icon="inline-start" aria-hidden="true" />
-          {isSubmitting ? 'Logging in' : 'Login'}
+          {isSubmitting ? 'Se autentifica' : 'Autentificare'}
         </Button>
 
         <p className="text-center text-sm text-slate-600">
-          New to CiviTm?{' '}
+          Nou pe CiviTm?{' '}
           <Link
             className="font-semibold text-emerald-700 outline-none hover:text-emerald-800 focus-visible:ring-3 focus-visible:ring-emerald-500/25"
             to={`/register?returnTo=${encodeURIComponent(returnTo)}`}
           >
-            Create an account
+            Creeaza cont
           </Link>
         </p>
       </form>

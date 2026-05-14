@@ -20,7 +20,7 @@ export function RegisterPage() {
     setError('')
 
     if (!isSupabaseConfigured || !supabase) {
-      setError('Supabase is not configured yet. Add the frontend env values.')
+      setError('Supabase nu este configurat inca. Adauga valorile env pentru frontend.')
       return
     }
 
@@ -46,12 +46,12 @@ export function RegisterPage() {
 
   return (
     <AuthLayout
-      title="Create account"
-      subtitle="Start earning civic points from valid reports and missions."
+      title="Creeaza cont"
+      subtitle="Incepe sa castigi puncte civice din rapoarte valide si misiuni."
     >
       <form className="grid gap-4" onSubmit={handleSubmit}>
         <label className="grid gap-1.5 text-sm font-medium text-slate-700">
-          Full name
+          Nume complet
           <input
             className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-emerald-500 focus:ring-3 focus:ring-emerald-500/20"
             type="text"
@@ -75,7 +75,7 @@ export function RegisterPage() {
         </label>
 
         <label className="grid gap-1.5 text-sm font-medium text-slate-700">
-          Password
+          Parola
           <input
             className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-emerald-500 focus:ring-3 focus:ring-emerald-500/20"
             type="password"
@@ -99,16 +99,16 @@ export function RegisterPage() {
           disabled={isSubmitting}
         >
           <UserPlus data-icon="inline-start" aria-hidden="true" />
-          {isSubmitting ? 'Creating account' : 'Register'}
+          {isSubmitting ? 'Se creeaza contul' : 'Inregistrare'}
         </Button>
 
         <p className="text-center text-sm text-slate-600">
-          Already have an account?{' '}
+          Ai deja cont?{' '}
           <Link
             className="font-semibold text-emerald-700 outline-none hover:text-emerald-800 focus-visible:ring-3 focus-visible:ring-emerald-500/25"
             to={`/login?returnTo=${encodeURIComponent(returnTo)}`}
           >
-            Login
+            Autentificare
           </Link>
         </p>
       </form>

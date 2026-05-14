@@ -23,19 +23,10 @@ import {
   type IssueResponse,
 } from '@/lib/api'
 import { issueQueryKey } from '@/lib/queryClient'
-
-function formatLabel(value: string | null | undefined, fallback = 'Unknown') {
-  if (!value) {
-    return fallback
-  }
-
-  return value
-    .replaceAll('_', ' ')
-    .replace(/\b\w/g, (character) => character.toUpperCase())
-}
+import { roActor, roCategory, roReward, roSeverity, roStatus } from '@/lib/locale'
 
 function formatDate(value: string) {
-  return new Intl.DateTimeFormat('en', {
+  return new Intl.DateTimeFormat('ro-RO', {
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
@@ -54,8 +45,8 @@ export function IssueDetailsPage() {
   if (!id || !isApiConfigured) {
     return (
       <DemoStatePage
-        title="Issue details need the CiviTm API"
-        description="The public issue details route is ready. Connect the API to load the selected report."
+        title="Detaliile problemei au nevoie de API-ul CiviTm"
+        description="Ruta publica pentru detalii este pregatita. Conecteaza API-ul ca sa incarce raportul selectat."
       />
     )
   }
@@ -74,8 +65,8 @@ export function IssueDetailsPage() {
     return (
       <DemoStatePage
         tone="amber"
-        title="Issue not available"
-        description="CiviTm could not load this report. The live map can still show the city overview."
+        title="Problema nu este disponibila"
+        description="CiviTm nu a putut incarca acest raport. Harta live poate afisa in continuare imaginea de ansamblu."
       />
     )
   }
@@ -99,7 +90,7 @@ function IssueDetails({ issue }: { issue: IssueResponse }) {
             </span>
             <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
-                Public issue
+                Problema publica
               </p>
               <h1 className="text-2xl font-semibold leading-tight text-emerald-950">
                 {issue.title}
@@ -111,14 +102,14 @@ function IssueDetails({ issue }: { issue: IssueResponse }) {
             <Button asChild variant="outline" size="sm">
               <Link to={`/?issue=${issue.id}`}>
                 <ArrowLeft data-icon="inline-start" aria-hidden="true" />
-                Live map
+                Harta live
               </Link>
             </Button>
             {issue.relatedMission && (
               <Button asChild size="sm" className="bg-emerald-600 text-white hover:bg-emerald-700">
                 <Link to={`/missions/${issue.relatedMission.id}`}>
                   <Flag data-icon="inline-start" aria-hidden="true" />
-                  Mission
+                  Misiune
                 </Link>
               </Button>
             )}
@@ -141,13 +132,12 @@ function IssueDetails({ issue }: { issue: IssueResponse }) {
               )}
               <div className="p-4">
                 <div className="flex flex-wrap gap-2">
-                  <StatusBadge label={formatLabel(issue.status)} tone="emerald" />
-                  <StatusBadge label={formatLabel(issue.severity)} tone="amber" />
-                  <StatusBadge label={formatLabel(issue.category)} tone="slate" />
-                  {issue.isUrgent && <StatusBadge label="Urgent" tone="rose" />}
+                  <StatusBadge label={roStatus(issue.status)} tone="emerald" />
+                  <StatusBadge label={roSeverity(issue.severity)} tone="amber" />
+                  <StatusBadge label={roCategory(issue.category)} tone="slate" />
                 </div>
                 <p className="mt-4 text-sm leading-6 text-slate-600">
-                  {issue.description ?? 'A citizen reported this issue through CiviTm.'}
+                  {issue.description ?? 'Un cetatean a raportat aceasta problema prin CiviTm.'}
                 </p>
               </div>
             </div>
@@ -155,12 +145,12 @@ function IssueDetails({ issue }: { issue: IssueResponse }) {
             {issue.aiSummary && (
               <InfoCard
                 icon={Bot}
-                title="AI summary"
+                title="Rezumat AI"
                 tone="teal"
                 body={issue.aiSummary}
                 footer={
                   issue.aiConfidence !== null
-                    ? `Confidence ${Math.round(issue.aiConfidence * 100)}%`
+                    ? `Incredere ${Math.round(issue.aiConfidence * 100)}%`
                     : undefined
                 }
               />
@@ -169,24 +159,20 @@ function IssueDetails({ issue }: { issue: IssueResponse }) {
             {issue.duplicateCount > 0 && (
               <InfoCard
                 icon={CopyCheck}
-                title="Duplicate signal"
+                title="Semnal duplicat"
                 tone="amber"
                 body={
                   issue.nearestDuplicate
-                    ? `${issue.duplicateCount} nearby signal${
-                        issue.duplicateCount === 1 ? '' : 's'
-                      } found. Nearest: ${issue.nearestDuplicate.title} (${issue.nearestDuplicate.distanceMeters}m away).`
-                    : `${issue.duplicateCount} duplicate signal${
-                        issue.duplicateCount === 1 ? '' : 's'
-                      } found near this report.`
+                    ? `${issue.duplicateCount} semnal duplicat in apropiere. Cel mai apropiat: ${issue.nearestDuplicate.title} (${issue.nearestDuplicate.distanceMeters}m).`
+                    : `${issue.duplicateCount} semnal duplicat gasit langa acest raport.`
                 }
               />
             )}
 
             {issue.afterImageUrl && (
               <section className="grid gap-3 rounded-lg border border-emerald-200 bg-white p-4 shadow-sm sm:grid-cols-2">
-                <BeforeAfterImage label="Before" imageUrl={issue.imageUrl} />
-                <BeforeAfterImage label="After" imageUrl={issue.afterImageUrl} />
+                <BeforeAfterImage label="Inainte" imageUrl={issue.imageUrl} />
+                <BeforeAfterImage label="Dupa" imageUrl={issue.afterImageUrl} />
               </section>
             )}
 
@@ -196,15 +182,15 @@ function IssueDetails({ issue }: { issue: IssueResponse }) {
           <aside className="space-y-4 lg:sticky lg:top-5 lg:self-start">
             <section className="rounded-lg border border-emerald-200 bg-white p-4 shadow-sm">
               <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
-                Civic routing
+                Rutare civica
               </p>
               <dl className="mt-4 grid gap-3 text-sm">
-                <DetailRow label="Zone" value={issue.zoneName ?? 'Timisoara'} />
-                <DetailRow label="Owner" value={formatLabel(issue.responsibleActor)} />
-                <DetailRow label="Created" value={formatDate(issue.createdAt)} />
+                <DetailRow label="Zona" value={issue.zoneName ?? 'Timisoara'} />
+                <DetailRow label="Responsabil" value={roActor(issue.responsibleActor)} />
+                <DetailRow label="Creat" value={formatDate(issue.createdAt)} />
                 <DetailRow
-                  label="Reward eligible"
-                  value={issue.rewardEligible ? 'Yes' : 'Not yet'}
+                  label="Eligibil recompensa"
+                  value={issue.rewardEligible ? 'Da' : 'Nu inca'}
                 />
               </dl>
             </section>
@@ -219,13 +205,13 @@ function IssueDetails({ issue }: { issue: IssueResponse }) {
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-slate-600">
                   {issue.relatedMission.participantsJoined}/
-                  {issue.relatedMission.participantsNeeded} joined · +
-                  {issue.relatedMission.impactPoints} impact points
+                  {issue.relatedMission.participantsNeeded} inscrisi · +
+                  {issue.relatedMission.impactPoints} puncte de impact
                 </p>
                 <Button asChild variant="outline" size="sm" className="mt-4 w-full">
                   <Link to={`/missions/${issue.relatedMission.id}`}>
                     <ExternalLink data-icon="inline-start" aria-hidden="true" />
-                    View mission
+                    Vezi misiunea
                   </Link>
                 </Button>
               </section>
@@ -237,11 +223,11 @@ function IssueDetails({ issue }: { issue: IssueResponse }) {
                   <Gift className="size-5" aria-hidden="true" />
                 </span>
                 <h2 className="mt-4 text-lg font-semibold text-emerald-950">
-                  {issue.relatedReward.title}
+                  {roReward(issue.relatedReward.title)}
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-slate-600">
-                  {issue.relatedReward.partnerName ?? 'CiviTm system reward'} ·{' '}
-                  {issue.relatedReward.requiredPoints} points required
+                  {issue.relatedReward.partnerName ?? 'Recompensa de sistem CiviTm'} ·{' '}
+                  {issue.relatedReward.requiredPoints} puncte necesare
                 </p>
               </section>
             )}
@@ -267,7 +253,7 @@ function DemoStatePage({
         <DemoState
           icon={tone === 'amber' ? TriangleAlert : Sparkles}
           tone={tone}
-          eyebrow="Issue details"
+          eyebrow="Detalii problema"
           title={title}
           description={description}
         />

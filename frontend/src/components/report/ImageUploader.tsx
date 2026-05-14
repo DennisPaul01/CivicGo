@@ -17,10 +17,10 @@ export function ImageUploader({
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
-            Photo
+            Fotografie
           </p>
           <h2 className="!mb-0 !mt-0.5 !text-base !leading-tight font-semibold text-emerald-950">
-            Add a clear issue photo
+            Adauga o fotografie clara a problemei
           </h2>
         </div>
         <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-emerald-700">
@@ -35,7 +35,7 @@ export function ImageUploader({
         {previewUrl ? (
           <img
             src={previewUrl}
-            alt="Selected issue preview"
+            alt="Preview pentru problema selectata"
             className="h-36 w-full rounded-lg object-cover sm:h-40"
           />
         ) : (
@@ -45,10 +45,10 @@ export function ImageUploader({
             </span>
             <span>
               <span className="block text-sm font-semibold text-emerald-950">
-                Upload a photo
+                Incarca o fotografie
               </span>
               <span className="mt-1 block text-sm text-slate-600">
-                Use JPG, PNG or HEIC from your phone.
+                Foloseste JPG, PNG sau HEIC de pe telefon.
               </span>
             </span>
           </span>
@@ -64,10 +64,7 @@ export function ImageUploader({
       />
 
       {file && (
-        <div className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-          <p className="min-w-0 truncate text-sm font-medium text-slate-700">
-            {file.name}
-          </p>
+        <div className="mt-3 flex items-center justify-end rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
           <Button
             type="button"
             variant="ghost"
@@ -76,7 +73,7 @@ export function ImageUploader({
             onClick={() => onFileChange(null)}
           >
             <Trash2 data-icon="inline-start" aria-hidden="true" />
-            Remove
+            Sterge
           </Button>
         </div>
       )}

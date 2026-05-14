@@ -25,7 +25,7 @@ export function ProtectedPlaceholderPage({
             {description}
           </p>
           <Button asChild className="mt-6 bg-emerald-600 text-white hover:bg-emerald-700">
-            <Link to="/">Back to live map</Link>
+            <Link to="/">Inapoi la harta live</Link>
           </Button>
         </div>
       </section>

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using CivicGo.Api.Data;
 using CivicGo.Api.Data.Entities;
+using CivicGo.Api.Issues;
 using Microsoft.EntityFrameworkCore;
 
 namespace CivicGo.Api.Duplicates;
@@ -92,8 +93,8 @@ public sealed class DuplicateDetectionService(
         {
             Id = Guid.NewGuid(),
             Type = "duplicate_detected",
-            Title = "Possible duplicate detected",
-            Message = $"AI found a nearby {issue.Category.Replace('_', ' ')} report in {issue.Zone?.Name ?? "Timisoara"}.",
+            Title = "Posibil duplicat detectat",
+            Message = $"AI a gasit un raport apropiat de tip {HumanizeCategoryRo(issue.Category)} in {issue.Zone?.Name ?? "Timisoara"}.",
             RelatedIssueId = issue.Id,
             RelatedZoneId = issue.ZoneId,
             CreatedAt = now
@@ -233,8 +234,8 @@ public sealed class DuplicateDetectionService(
                 matchingIssueIds = matches.Select(match => match.Issue.Id).ToArray()
             }, JsonOptions),
             Message = nearest is null
-                ? "Checked nearby reports: no duplicate found."
-                : "Possible duplicate detected nearby.",
+                ? "A verificat rapoartele din apropiere: nu a gasit duplicat."
+                : "A detectat un posibil duplicat in apropiere.",
             StartedAt = now.AddMilliseconds(-220),
             CompletedAt = now,
             Order = nextOrder
@@ -266,6 +267,14 @@ public sealed class DuplicateDetectionService(
     private static double ToRadians(double value)
     {
         return value * Math.PI / 180;
+    }
+
+    private static string HumanizeCategoryRo(string value)
+    {
+        return value switch
+        {
+            _ => IssueCategories.HumanizeRo(value)
+        };
     }
 
     private sealed record DuplicateCandidate(IssueEntity Issue, double DistanceMeters);

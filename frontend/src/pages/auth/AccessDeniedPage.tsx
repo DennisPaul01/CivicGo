@@ -10,24 +10,24 @@ export function AccessDeniedPage() {
           <ShieldX className="size-5" aria-hidden="true" />
         </span>
         <p className="mt-5 text-xs font-semibold uppercase tracking-wide text-emerald-700">
-          Restricted area
+          Zona restrictionata
         </p>
         <h1 className="mt-2 text-2xl font-semibold leading-tight text-emerald-950">
-          You don't have access to this area
+          Nu ai acces la aceasta zona
         </h1>
         <p className="mt-3 text-sm leading-6 text-slate-600">
-          CiviTm keeps partner and admin spaces scoped to the right demo role.
-          The live map, missions and public issue details are still available.
+          CiviTm pastreaza zonele de partener si admin pentru rolurile potrivite
+          din platforma. Harta live, misiunile si detaliile publice raman disponibile.
         </p>
         <div className="mt-6 flex flex-col gap-2 sm:flex-row">
           <Button asChild className="bg-emerald-600 text-white hover:bg-emerald-700">
             <Link to="/">
               <ArrowLeft data-icon="inline-start" aria-hidden="true" />
-              Back to live map
+              Inapoi la harta live
             </Link>
           </Button>
           <Button asChild variant="outline">
-            <Link to="/missions">View missions</Link>
+            <Link to="/missions">Vezi misiunile</Link>
           </Button>
         </div>
       </section>

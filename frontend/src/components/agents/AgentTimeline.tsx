@@ -27,10 +27,10 @@ export function AgentTimeline({ run }: AgentTimelineProps) {
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
-            Agent timeline
+            Timeline agenti
           </p>
           <h3 className="mt-1 text-base font-semibold text-emerald-950">
-            CiviTm AI checked the report
+            AI-ul CiviTm a verificat raportul
           </h3>
         </div>
         <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-teal-700">
@@ -62,8 +62,8 @@ export function AgentTimeline({ run }: AgentTimelineProps) {
 
       {usedFallback && (
         <p className="mt-3 rounded-lg border border-teal-100 bg-teal-50 px-3 py-2 text-xs leading-5 text-teal-800">
-          Fallback path was used, so the demo stays stable even when the live AI
-          request is unavailable.
+          A fost folosit fallback-ul, astfel analiza ramane disponibila chiar daca
+          cererea AI live nu este disponibila.
         </p>
       )}
     </motion.section>

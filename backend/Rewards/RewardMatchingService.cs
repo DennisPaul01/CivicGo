@@ -66,7 +66,7 @@ public sealed class RewardMatchingService(
         {
             Id = Guid.NewGuid(),
             Type = "reward_matched",
-            Title = "Reward matched",
+            Title = "Recompensa potrivita",
             Message = CreateFeedMessage(mission, selectedReward),
             RelatedIssueId = mission.CreatedFromIssueId,
             RelatedMissionId = mission.Id,
@@ -142,21 +142,31 @@ public sealed class RewardMatchingService(
         if (partnerName.Equals("CoffeeLab", StringComparison.OrdinalIgnoreCase) &&
             (missionText.Contains("clean-up", StringComparison.Ordinal) ||
              missionText.Contains("cleanup", StringComparison.Ordinal) ||
-             missionText.Contains("waste", StringComparison.Ordinal)))
+             missionText.Contains("waste", StringComparison.Ordinal) ||
+             missionText.Contains("curatenie", StringComparison.Ordinal) ||
+             missionText.Contains("deseuri", StringComparison.Ordinal) ||
+             missionText.Contains("salubrizare", StringComparison.Ordinal) ||
+             missionText.Contains("sanitation_pest_snow", StringComparison.Ordinal)))
         {
             score += 40;
         }
 
         if (partnerName.Equals("Local Gym", StringComparison.OrdinalIgnoreCase) &&
             (missionText.Contains("green", StringComparison.Ordinal) ||
-             missionText.Contains("walk", StringComparison.Ordinal)))
+             missionText.Contains("walk", StringComparison.Ordinal) ||
+             missionText.Contains("spatiu verde", StringComparison.Ordinal) ||
+             missionText.Contains("locuri de joaca", StringComparison.Ordinal) ||
+             missionText.Contains("environment_playgrounds_green_spaces", StringComparison.Ordinal) ||
+             missionText.Contains("tur", StringComparison.Ordinal)))
         {
             score += 25;
         }
 
         if (partnerName.Equals("Bookstore", StringComparison.OrdinalIgnoreCase) &&
             (missionText.Contains("accessibility", StringComparison.Ordinal) ||
-             missionText.Contains("check", StringComparison.Ordinal)))
+             missionText.Contains("check", StringComparison.Ordinal) ||
+             missionText.Contains("accesibilitate", StringComparison.Ordinal) ||
+             missionText.Contains("verificare", StringComparison.Ordinal)))
         {
             score += 18;
         }
@@ -168,7 +178,7 @@ public sealed class RewardMatchingService(
     {
         var sponsor = reward.Partner?.Name ?? "CivicGO";
 
-        return $"{sponsor} matched {reward.Title} to {mission.Title}.";
+        return $"{sponsor} a potrivit {reward.Title} cu {mission.Title}.";
     }
 
     private static void AddRewardAgentStep(
@@ -213,7 +223,7 @@ public sealed class RewardMatchingService(
                 partner = reward.Partner?.Name,
                 reward.RequiredPoints
             }, JsonOptions),
-            Message = $"Matched {reward.Title}.",
+            Message = $"A potrivit recompensa {reward.Title}.",
             StartedAt = now.AddMilliseconds(-160),
             CompletedAt = now,
             Order = nextOrder

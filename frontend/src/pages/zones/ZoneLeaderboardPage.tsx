@@ -31,7 +31,7 @@ const demoZoneLeaderboard: ZoneLeaderboardItemResponse[] = [
     id: 'demo-complex',
     rank: 1,
     name: 'Complex',
-    description: 'Student area with high civic activity and sidewalk reports.',
+    description: 'Zona studenteasca cu activitate civica ridicata si rapoarte despre trotuare.',
     score: 575,
     scoreDelta: 65,
     cleanlinessScore: 170,
@@ -50,7 +50,7 @@ const demoZoneLeaderboard: ZoneLeaderboardItemResponse[] = [
     id: 'demo-girocului',
     rank: 2,
     name: 'Girocului',
-    description: 'Residential zone with active road and cleanup reports.',
+    description: 'Zona rezidentiala cu rapoarte active despre drumuri si curatenie.',
     score: 505,
     scoreDelta: 85,
     cleanlinessScore: 160,
@@ -69,7 +69,7 @@ const demoZoneLeaderboard: ZoneLeaderboardItemResponse[] = [
     id: 'demo-fabric',
     rank: 3,
     name: 'Fabric',
-    description: 'Historic neighborhood with public lighting and safety reports.',
+    description: 'Cartier istoric cu rapoarte despre iluminat public si siguranta.',
     score: 438,
     scoreDelta: 58,
     cleanlinessScore: 112,
@@ -88,7 +88,7 @@ const demoZoneLeaderboard: ZoneLeaderboardItemResponse[] = [
     id: 'demo-soarelui',
     rank: 4,
     name: 'Soarelui',
-    description: 'Green-space focused zone for community checks.',
+    description: 'Zona concentrata pe spatii verzi si verificari comunitare.',
     score: 410,
     scoreDelta: 50,
     cleanlinessScore: 138,
@@ -107,7 +107,7 @@ const demoZoneLeaderboard: ZoneLeaderboardItemResponse[] = [
     id: 'demo-mehala',
     rank: 5,
     name: 'Mehala',
-    description: 'Priority zone for safety and accessibility follow-up.',
+    description: 'Zona prioritara pentru siguranta si accesibilitate.',
     score: 335,
     scoreDelta: 45,
     cleanlinessScore: 78,
@@ -125,10 +125,10 @@ const demoZoneLeaderboard: ZoneLeaderboardItemResponse[] = [
 ]
 
 const scoreBreakdown = [
-  { key: 'cleanlinessScore', label: 'Cleanliness', color: 'bg-lime-500' },
-  { key: 'communityScore', label: 'Community', color: 'bg-emerald-500' },
-  { key: 'safetyScore', label: 'Safety', color: 'bg-teal-500' },
-  { key: 'engagementScore', label: 'Engagement', color: 'bg-sky-500' },
+  { key: 'cleanlinessScore', label: 'Curatenie', color: 'bg-lime-500' },
+  { key: 'communityScore', label: 'Comunitate', color: 'bg-emerald-500' },
+  { key: 'safetyScore', label: 'Siguranta', color: 'bg-teal-500' },
+  { key: 'engagementScore', label: 'Implicare', color: 'bg-sky-500' },
 ] satisfies Array<{
   key: keyof Pick<
     ZoneLeaderboardItemResponse,
@@ -142,7 +142,7 @@ const scoreBreakdown = [
 }>
 
 function formatNumber(value: number) {
-  return new Intl.NumberFormat('en').format(value)
+  return new Intl.NumberFormat('ro-RO').format(value)
 }
 
 function AnimatedNumber({
@@ -276,15 +276,15 @@ function ZoneCard({
         <div className="mt-3 grid gap-2 sm:grid-cols-3">
           <div className="flex items-center gap-2 rounded-md bg-orange-50 px-3 py-2 text-sm text-emerald-800">
             <Flag className="size-4 shrink-0" aria-hidden="true" />
-            <span className="truncate">{zone.activeMissions} missions</span>
+            <span className="truncate">{zone.activeMissions} misiuni</span>
           </div>
           <div className="flex items-center gap-2 rounded-md bg-lime-50 px-3 py-2 text-sm text-lime-800">
             <CheckCircle2 className="size-4 shrink-0" aria-hidden="true" />
-            <span className="truncate">{zone.resolvedIssues} resolved</span>
+            <span className="truncate">{zone.resolvedIssues} rezolvate</span>
           </div>
           <div className="flex items-center gap-2 rounded-md bg-teal-50 px-3 py-2 text-sm text-teal-800">
             <MapPinned className="size-4 shrink-0" aria-hidden="true" />
-            <span className="truncate">{zone.openIssues} open</span>
+            <span className="truncate">{zone.openIssues} deschise</span>
           </div>
         </div>
 
@@ -297,7 +297,7 @@ function ZoneCard({
         <ScoreDeltaBadge delta={zone.scoreDelta} />
         <div className="text-right">
           <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
-            Score
+            Scor
           </p>
           <AnimatedNumber
             value={zone.score}
@@ -328,9 +328,9 @@ function LoadingZones() {
     <div className="grid gap-3">
       <DemoState
         icon={Activity}
-        eyebrow="Loading zones"
-        title="Syncing live leaderboard"
-        description="Zone scores, mission counts and resolved issues are loading from the API."
+        eyebrow="Se incarca zonele"
+        title="Sincronizam leaderboard-ul live"
+        description="Scorurile zonelor, misiunile si problemele rezolvate se incarca din API."
       />
       <DemoSkeletonGrid items={3} />
     </div>
@@ -371,10 +371,10 @@ export function ZoneLeaderboardPage() {
             </span>
             <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
-                CiviTm zones
+                Zone CiviTm
               </p>
               <h1 className="!m-0 !text-2xl font-semibold leading-tight text-emerald-950">
-                Zone leaderboard
+                Leaderboard pe zone
               </h1>
             </div>
           </div>
@@ -383,7 +383,7 @@ export function ZoneLeaderboardPage() {
             <Button asChild variant="outline" size="sm">
               <Link to="/">
                 <ArrowLeft data-icon="inline-start" aria-hidden="true" />
-                Live map
+                Harta live
               </Link>
             </Button>
             <Button
@@ -393,7 +393,7 @@ export function ZoneLeaderboardPage() {
             >
               <Link to="/report">
                 <Leaf data-icon="inline-start" aria-hidden="true" />
-                Report
+                Raporteaza
               </Link>
             </Button>
           </div>
@@ -402,47 +402,47 @@ export function ZoneLeaderboardPage() {
         <div className="grid gap-3 md:grid-cols-4">
           <section className="rounded-lg border border-emerald-200 bg-white p-4 shadow-sm">
             <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
-              Leading zone
+              Zona lider
             </p>
             <p className="mt-2 truncate text-xl font-semibold text-emerald-950">
               {topZone?.name ?? 'Timisoara'}
             </p>
             <p className="mt-1 text-sm text-slate-600">
-              #{topZone?.rank ?? 1} city impact
+              #{topZone?.rank ?? 1} impact urban
             </p>
           </section>
 
           <section className="rounded-lg border border-emerald-200 bg-white p-4 shadow-sm">
             <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
-              City score
+              Scor oras
             </p>
             <AnimatedNumber
               value={cityScore}
               className="mt-2 block text-3xl font-semibold text-emerald-950"
             />
-            <p className="mt-1 text-sm text-slate-600">Across active zones.</p>
+            <p className="mt-1 text-sm text-slate-600">In zonele active.</p>
           </section>
 
           <section className="rounded-lg border border-emerald-200 bg-white p-4 shadow-sm">
             <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
-              Active missions
+              Misiuni active
             </p>
             <AnimatedNumber
               value={activeMissions}
               className="mt-2 block text-3xl font-semibold text-emerald-950"
             />
-            <p className="mt-1 text-sm text-slate-600">Community actions.</p>
+            <p className="mt-1 text-sm text-slate-600">Actiuni comunitare.</p>
           </section>
 
           <section className="rounded-lg border border-emerald-200 bg-white p-4 shadow-sm">
             <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
-              Resolved issues
+              Probleme rezolvate
             </p>
             <AnimatedNumber
               value={resolvedIssues}
               className="mt-2 block text-3xl font-semibold text-emerald-950"
             />
-            <p className="mt-1 text-sm text-slate-600">Visible fixes.</p>
+            <p className="mt-1 text-sm text-slate-600">Rezolvari vizibile.</p>
           </section>
         </div>
 
@@ -450,9 +450,9 @@ export function ZoneLeaderboardPage() {
           <DemoState
             icon={TriangleAlert}
             tone="amber"
-            eyebrow="Demo fallback"
-            title="Using seeded zone leaderboard"
-            description="The live zone endpoint could not be reached, so the page keeps the Friday demo readable with seeded zone scores."
+            eyebrow="Fallback temporar"
+            title="Folosim leaderboard-ul demo pe zone"
+            description="Endpointul live pentru zone nu a putut fi accesat, asa ca pagina foloseste scoruri demo."
           />
         )}
 
@@ -462,9 +462,9 @@ export function ZoneLeaderboardPage() {
           <DemoState
             icon={SearchX}
             tone="slate"
-            eyebrow="No zone scores"
-            title="No leaderboard data yet"
-            description="Zone scores will appear after issues, resolved work or active missions are attached to a zone."
+            eyebrow="Fara scoruri de zona"
+            title="Nu exista date de leaderboard inca"
+            description="Scorurile apar dupa ce problemele, rezolvarile sau misiunile active sunt legate de o zona."
           />
         ) : (
           <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
@@ -475,7 +475,7 @@ export function ZoneLeaderboardPage() {
                 <div className="flex items-center gap-2">
                   <Activity className="size-5 text-emerald-700" aria-hidden="true" />
                   <h2 className="!m-0 !text-lg font-semibold text-emerald-950">
-                    City pulse
+                    Pulsul orasului
                   </h2>
                 </div>
                 <div className="mt-4 grid gap-3">
@@ -489,7 +489,7 @@ export function ZoneLeaderboardPage() {
                           {zone.name}
                         </p>
                         <p className="text-xs text-slate-600">
-                          {zone.activeMissions} missions / {zone.openIssues} open
+                          {zone.activeMissions} misiuni / {zone.openIssues} deschise
                         </p>
                       </div>
                       <ScoreDeltaBadge delta={zone.scoreDelta} />
@@ -502,18 +502,18 @@ export function ZoneLeaderboardPage() {
                 <div className="flex items-center gap-2">
                   <MapPinned className="size-5 text-teal-700" aria-hidden="true" />
                   <h2 className="!m-0 !text-lg font-semibold text-emerald-950">
-                    Coverage
+                    Acoperire
                   </h2>
                 </div>
                 <div className="mt-4 grid gap-2 text-sm text-slate-600">
                   <div className="flex items-center justify-between rounded-md bg-orange-50 px-3 py-2">
-                    <span>Tracked zones</span>
+                    <span>Zone urmarite</span>
                     <span className="font-semibold text-emerald-800">
                       {zones.length}
                     </span>
                   </div>
                   <div className="flex items-center justify-between rounded-md bg-lime-50 px-3 py-2">
-                    <span>Best delta</span>
+                    <span>Cel mai bun delta</span>
                     <span className="font-semibold text-lime-800">
                       +{Math.max(0, ...zones.map((zone) => zone.scoreDelta))}
                     </span>
