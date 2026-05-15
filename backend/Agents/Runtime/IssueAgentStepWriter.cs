@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 namespace CivicGo.Api.Agents.Runtime;
 
 public sealed class IssueAgentStepWriter(
-    CivicGoDbContext dbContext,
+    IServiceScopeFactory scopeFactory,
     IHubContext<CivicHub> civicHub,
     IssueEventStreamService eventStream
 )
@@ -22,6 +22,9 @@ public sealed class IssueAgentStepWriter(
         CancellationToken cancellationToken
     )
     {
+        using var scope = scopeFactory.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<CivicGoDbContext>();
+
         return await dbContext.AgentConfigs
             .AsNoTracking()
             .ToDictionaryAsync(
@@ -52,6 +55,9 @@ public sealed class IssueAgentStepWriter(
 
     public async Task PublishIssueCreatedAsync(Guid issueId, CancellationToken cancellationToken)
     {
+        using var scope = scopeFactory.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<CivicGoDbContext>();
+
         var createdIssue = await dbContext.Issues
             .AsNoTracking()
             .Include(item => item.Zone)
@@ -82,6 +88,9 @@ public sealed class IssueAgentStepWriter(
         CancellationToken cancellationToken
     )
     {
+        using var scope = scopeFactory.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<CivicGoDbContext>();
+
         var payload = new
         {
             issueId,
@@ -89,7 +98,12 @@ public sealed class IssueAgentStepWriter(
             receivesFromAgent,
             received = receivesFromAgent is null
                 ? null
-                : await GetLatestStepOutputAsync(issueId, receivesFromAgent, cancellationToken)
+                : await GetLatestStepOutputAsync(
+                    dbContext,
+                    issueId,
+                    receivesFromAgent,
+                    cancellationToken
+                )
         };
 
         await civicHub.Clients.All.SendAsync("AgentStepStarted", payload, cancellationToken);
@@ -106,11 +120,13 @@ public sealed class IssueAgentStepWriter(
         CancellationToken cancellationToken
     )
     {
-        var step = await GetLatestStepAsync(issueId, agentName, cancellationToken);
+        using var scope = scopeFactory.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<CivicGoDbContext>();
+        var step = await GetLatestStepAsync(dbContext, issueId, agentName, cancellationToken);
 
         if (step is null)
         {
-            var run = await EnsureAgentRunAsync(issueId, cancellationToken);
+            var run = await EnsureAgentRunAsync(dbContext, issueId, cancellationToken);
             step = new AgentStepEntity
             {
                 Id = Guid.NewGuid(),
@@ -124,7 +140,7 @@ public sealed class IssueAgentStepWriter(
                 CompletedAt = DateTimeOffset.UtcNow,
                 Order = GetNextOrder(run)
             };
-            run.AgentSteps.Add(step);
+            dbContext.AgentSteps.Add(step);
         }
         else
         {
@@ -228,6 +244,9 @@ public sealed class IssueAgentStepWriter(
         CancellationToken cancellationToken
     )
     {
+        using var scope = scopeFactory.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<CivicGoDbContext>();
+
         var step = await dbContext.AgentSteps
             .AsNoTracking()
             .Where(item => item.AgentRun!.IssueId == issueId && item.AgentName == agentName)
@@ -246,6 +265,7 @@ public sealed class IssueAgentStepWriter(
     }
 
     private async Task<AgentStepEntity?> GetLatestStepAsync(
+        CivicGoDbContext dbContext,
         Guid issueId,
         string agentName,
         CancellationToken cancellationToken
@@ -258,6 +278,7 @@ public sealed class IssueAgentStepWriter(
     }
 
     private async Task<string?> GetLatestStepOutputAsync(
+        CivicGoDbContext dbContext,
         Guid issueId,
         string agentName,
         CancellationToken cancellationToken
@@ -272,40 +293,42 @@ public sealed class IssueAgentStepWriter(
     }
 
     private async Task<AgentRunEntity> EnsureAgentRunAsync(
+        CivicGoDbContext dbContext,
         Guid issueId,
         CancellationToken cancellationToken
     )
     {
-        var issue = await dbContext.Issues
-            .Include(item => item.AgentRuns)
-                .ThenInclude(run => run.AgentSteps)
-            .FirstOrDefaultAsync(item => item.Id == issueId, cancellationToken);
-
-        if (issue is null)
-        {
-            throw new KeyNotFoundException($"Issue {issueId} was not found.");
-        }
-
-        var latestRun = issue.AgentRuns
+        var latestRun = await dbContext.AgentRuns
+            .Include(run => run.AgentSteps)
+            .Where(run => run.IssueId == issueId)
             .OrderByDescending(run => run.CreatedAt)
-            .FirstOrDefault();
+            .FirstOrDefaultAsync(cancellationToken);
 
         if (latestRun is not null)
         {
             return latestRun;
         }
 
+        var issueExists = await dbContext.Issues
+            .AsNoTracking()
+            .AnyAsync(issue => issue.Id == issueId, cancellationToken);
+
+        if (!issueExists)
+        {
+            throw new KeyNotFoundException($"Issue {issueId} was not found.");
+        }
+
         var now = DateTimeOffset.UtcNow;
         latestRun = new AgentRunEntity
         {
             Id = Guid.NewGuid(),
-            IssueId = issue.Id,
+            IssueId = issueId,
             Status = "completed",
             StartedAt = now,
             CompletedAt = now,
             CreatedAt = now
         };
-        issue.AgentRuns.Add(latestRun);
+        dbContext.AgentRuns.Add(latestRun);
 
         return latestRun;
     }

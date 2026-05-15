@@ -32,7 +32,7 @@ function pickFirst(items: CivicMapItem[], kinds: CivicMapItem['kind'][]) {
 
 function buildRailMoments(items: CivicMapItem[]) {
   const priorityItem = pickFirst(items, ['new'])
-  const missionItem = pickFirst(items, ['mission', 'in_progress'])
+  const missionItem = pickFirst(items, ['mission'])
   const resolvedItem = pickFirst(items, ['resolved'])
   const rewardItem =
     items.find((item) => item.reward && item.kind !== 'resolved') ??
@@ -51,13 +51,13 @@ function buildRailMoments(items: CivicMapItem[]) {
     },
     missionItem && {
       key: 'mission',
-      label: 'Misiune de join',
+      label: 'Eveniment comunitar',
       title: missionItem.relatedMission ?? missionItem.title,
       description: missionItem.meta,
       item: missionItem,
       icon: Flag,
       className: 'border-slate-200 bg-slate-50 text-slate-700',
-      actionLabel: 'Deschide',
+      actionLabel: 'Vezi eveniment',
     },
     resolvedItem && {
       key: 'proof',
@@ -147,7 +147,7 @@ export function BottomRail({ items = civicMapItems }: BottomRailProps) {
   const setSelectedItemId = useMapStore((state) => state.setSelectedItemId)
   const moments = buildRailMoments(items).slice(0, 4)
   const openCount = countItems(items, ['new'])
-  const missionCount = countItems(items, ['mission', 'in_progress'])
+  const missionCount = countItems(items, ['mission'])
   const resolvedCount = countItems(items, ['resolved'])
 
   function selectItem(item: CivicMapItem) {
@@ -169,7 +169,7 @@ export function BottomRail({ items = civicMapItems }: BottomRailProps) {
             Flux de actiune
           </p>
           <h2 className="text-base font-semibold text-emerald-950">
-            De la raport la misiune si recompensa
+            De la raport mare la eveniment si recompensa
           </h2>
         </div>
 
@@ -180,7 +180,7 @@ export function BottomRail({ items = civicMapItems }: BottomRailProps) {
           </span>
           <span className="inline-flex items-center gap-1 rounded-md bg-slate-50 px-2 py-1 text-slate-700">
             <Users className="size-3.5" aria-hidden="true" />
-            {missionCount} misiuni
+            {missionCount} evenimente
           </span>
           <span className="inline-flex items-center gap-1 rounded-md bg-teal-50 px-2 py-1 text-teal-800">
             <CheckCircle2 className="size-3.5" aria-hidden="true" />
@@ -202,7 +202,7 @@ export function BottomRail({ items = civicMapItems }: BottomRailProps) {
       <div className="mt-3 flex flex-col gap-2 rounded-md border border-emerald-100 bg-emerald-50/70 p-2 text-sm text-emerald-900 sm:flex-row sm:items-center sm:justify-between">
         <span className="inline-flex items-center gap-2 font-medium">
           <MapPinned className="size-4 shrink-0" aria-hidden="true" />
-          Semnalul, misiunea, dovada si recompensa sunt conectate pe aceeasi harta.
+          Semnalul, evenimentul comunitar, dovada si recompensa sunt conectate pe aceeasi harta.
         </span>
         <button
           type="button"

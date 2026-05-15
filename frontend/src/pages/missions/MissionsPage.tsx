@@ -25,6 +25,7 @@ import {
 } from '@/lib/api'
 import { missionsQueryKey } from '@/lib/queryClient'
 import { roMissionText, roReward, roStatus } from '@/lib/locale'
+import { useAuthStore } from '@/stores/authStore'
 import missionCleanupImage from '@/assets/banners-missions/banner-1.png'
 import missionGreenImage from '@/assets/banners-missions/2.png'
 import missionStreetImage from '@/assets/banners-missions/3.png'
@@ -86,9 +87,10 @@ function getStatusTone(status: string) {
 }
 
 export function MissionsPage() {
+  const session = useAuthStore((state) => state.session)
   const missionsQuery = useQuery({
-    queryKey: missionsQueryKey,
-    queryFn: fetchMissions,
+    queryKey: [...missionsQueryKey, session?.user.id ?? 'public'],
+    queryFn: () => fetchMissions(session?.access_token),
     enabled: isApiConfigured,
     refetchOnWindowFocus: true,
   })
@@ -115,20 +117,20 @@ export function MissionsPage() {
         <TopNavigation />
 
         <section className="overflow-hidden rounded-2xl border border-emerald-100 bg-white shadow-sm shadow-slate-900/6">
-          <div className="grid gap-0 lg:grid-cols-[minmax(0,1.12fr)_minmax(20rem,0.88fr)]">
-            <div className="p-4 sm:p-6 lg:p-7">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_20rem]">
+            <div className="p-4 sm:p-5 lg:p-6">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div className="min-w-0">
                   <p className="inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-xs font-bold uppercase tracking-wide text-emerald-800">
                     <Flag className="size-3.5" aria-hidden="true" />
-                    Misiuni CiviTm
+                    Evenimente comunitare CiviTm
                   </p>
-                  <h1 className="mt-4 max-w-3xl text-3xl font-semibold leading-tight text-emerald-950 sm:text-4xl lg:text-5xl">
-                    Alege o actiune civica si transforma harta in progres.
+                  <h1 className="mt-3 max-w-3xl text-2xl font-semibold leading-tight text-emerald-950 sm:text-3xl lg:text-4xl">
+                    Comunitatea se inscrie acolo unde harta arata o problema reala.
                   </h1>
-                  <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">
-                    Misiunile pornesc din probleme reale raportate pe harta live:
-                    voluntari, reward-uri locale si impact vizibil pe zonele din Timisoara.
+                  <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">
+                    Problemele mari devin evenimente locale cu voluntari, recompensa si impact
+                    vizibil pe zonele din Timisoara.
                   </p>
                 </div>
 
@@ -145,7 +147,7 @@ export function MissionsPage() {
                 </Button>
               </div>
 
-              <div className="mt-6 grid gap-3 sm:grid-cols-3">
+              <div className="mt-4 grid grid-cols-3 gap-2">
                 <MissionSummaryCard
                   label="Active acum"
                   value={activeMissions.length}
@@ -155,7 +157,7 @@ export function MissionsPage() {
                 <MissionSummaryCard
                   label="Participanti"
                   value={participants}
-                  detail="Inscrieri in misiuni"
+                  detail="Inscrieri la evenimente"
                   icon={Users}
                 />
                 <MissionSummaryCard
@@ -167,14 +169,14 @@ export function MissionsPage() {
               </div>
             </div>
 
-            <div className="relative min-h-64 overflow-hidden border-t border-emerald-100 bg-emerald-950 lg:border-l lg:border-t-0">
+            <div className="relative hidden min-h-44 overflow-hidden border-t border-emerald-100 bg-emerald-950 lg:block lg:border-l lg:border-t-0">
               <img
                 src={missionRewardImage}
                 alt=""
                 className="absolute inset-0 size-full object-cover opacity-82"
               />
               <div className="absolute inset-0 bg-gradient-to-br from-emerald-950/68 via-emerald-900/18 to-transparent" />
-              <div className="relative flex h-full min-h-64 flex-col justify-between p-4 text-white sm:p-6">
+              <div className="relative flex h-full min-h-44 flex-col justify-between p-4 text-white sm:p-5">
                 <div className="flex items-center justify-between gap-3">
                   <span className="inline-flex items-center gap-2 rounded-full bg-white/92 px-3 py-1 text-xs font-bold text-emerald-900 shadow-sm">
                     <MapPinned className="size-3.5" aria-hidden="true" />
@@ -185,21 +187,21 @@ export function MissionsPage() {
                   </span>
                 </div>
 
-                <div className="mt-auto max-w-md rounded-xl border border-white/30 bg-white/88 p-4 text-emerald-950 shadow-lg shadow-emerald-950/18 backdrop-blur">
+                <div className="mt-auto max-w-md rounded-xl border border-white/30 bg-white/90 p-3 text-emerald-950 shadow-lg shadow-emerald-950/18 backdrop-blur">
                   <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">
                     Demo flow
                   </p>
-                  <p className="mt-2 text-xl font-semibold leading-tight">
-                    Raportul devine misiune, misiunea aduce oameni si recompensa.
+                  <p className="mt-1 text-base font-semibold leading-tight">
+                    Raportul mare devine eveniment cu oameni, recompensa si progres vizibil.
                   </p>
-                  <div className="mt-3 grid grid-cols-3 gap-2 text-xs font-semibold text-slate-600">
-                    <span className="rounded-lg bg-emerald-50 px-2 py-2">
+                  <div className="mt-2 grid grid-cols-3 gap-2 text-xs font-semibold text-slate-600">
+                    <span className="rounded-lg bg-emerald-50 px-2 py-1.5">
                       AI checked
                     </span>
-                    <span className="rounded-lg bg-yellow-50 px-2 py-2">
+                    <span className="rounded-lg bg-yellow-50 px-2 py-1.5">
                       Reward
                     </span>
-                    <span className="rounded-lg bg-white px-2 py-2">
+                    <span className="rounded-lg bg-white px-2 py-1.5">
                       Impact
                     </span>
                   </div>
@@ -214,8 +216,8 @@ export function MissionsPage() {
             icon={Flag}
             tone="amber"
             eyebrow="API neconfigurat"
-            title="Misiunile au nevoie de conexiunea la baza de date"
-            description="Seteaza VITE_API_URL catre backendul CiviTm ca lista sa fie citita din endpointul /api/missions."
+            title="Evenimentele au nevoie de conexiunea la baza de date"
+            description="Seteaza VITE_API_URL catre backendul CiviTm ca lista de evenimente sa fie citita din endpointul /api/missions."
           />
         ) : missionsQuery.isLoading ? (
           <DemoSkeletonGrid items={6} className="md:grid-cols-2 xl:grid-cols-3" />
@@ -224,15 +226,15 @@ export function MissionsPage() {
             icon={Flag}
             tone="amber"
             eyebrow="Database indisponibil"
-            title="Nu am putut incarca misiunile"
+            title="Nu am putut incarca evenimentele"
             description={missionsQuery.error.message}
           />
         ) : missions.length === 0 ? (
           <DemoState
             icon={Sparkles}
-            eyebrow="Nicio misiune inca"
-            title="Rapoartele noi vor deveni misiuni"
-            description="Problemele eligibile genereaza actiuni comunitare cu recompense si puncte de impact."
+            eyebrow="Niciun eveniment inca"
+            title="Rapoartele mari vor deveni evenimente"
+            description="Doar problemele care cer comunitatea genereaza evenimente cu participanti, recompense si puncte de impact."
           />
         ) : (
           <>
@@ -261,19 +263,19 @@ function MissionSummaryCard({
   icon: typeof Flag
 }) {
   return (
-    <article className="rounded-xl border border-emerald-100 bg-[#f7fbf2] p-3 shadow-sm sm:p-4">
+    <article className="rounded-xl border border-emerald-100 bg-[#f7fbf2] p-3 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
             {label}
           </p>
-          <p className="mt-2 text-3xl font-semibold text-emerald-950">{value}</p>
+          <p className="mt-1 text-2xl font-semibold text-emerald-950">{value}</p>
         </div>
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white text-emerald-700 shadow-sm">
-          <Icon className="size-5" aria-hidden="true" />
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-white text-emerald-700 shadow-sm">
+          <Icon className="size-4" aria-hidden="true" />
         </span>
       </div>
-      <p className="mt-3 text-sm leading-6 text-slate-600">{detail}</p>
+      <p className="mt-2 hidden text-sm leading-5 text-slate-600 sm:block">{detail}</p>
     </article>
   )
 }
@@ -298,12 +300,18 @@ function FeaturedMission({ mission }: { mission: MissionResponse }) {
         <div className="absolute inset-x-4 bottom-4 flex flex-wrap items-center gap-2">
           <span className="inline-flex items-center gap-2 rounded-full bg-white/94 px-3 py-1 text-xs font-bold text-emerald-900 shadow-sm">
             <Target className="size-3.5" aria-hidden="true" />
-            Misiune recomandata
+            Eveniment recomandat
           </span>
           {mission.reward && (
             <span className="inline-flex items-center gap-2 rounded-full bg-[#ffd166] px-3 py-1 text-xs font-bold text-emerald-950 shadow-sm">
               <Gift className="size-3.5" aria-hidden="true" />
               Reward atasat
+            </span>
+          )}
+          {mission.isJoinedByCurrentUser && (
+            <span className="inline-flex items-center gap-2 rounded-full bg-emerald-500 px-3 py-1 text-xs font-bold text-white shadow-sm">
+              <CheckCircle2 className="size-3.5" aria-hidden="true" />
+              Esti inscris
             </span>
           )}
         </div>
@@ -377,7 +385,7 @@ function FeaturedMission({ mission }: { mission: MissionResponse }) {
           </p>
           <Button asChild className="min-h-11 bg-emerald-600 text-white hover:bg-emerald-700">
             <Link to={`/missions/${mission.id}`}>
-              Deschide misiunea
+              {mission.isJoinedByCurrentUser ? 'Vezi inscrierea' : 'Vezi evenimentul'}
               <ArrowRight data-icon="inline-end" aria-hidden="true" />
             </Link>
           </Button>
@@ -437,6 +445,12 @@ function MissionCard({ mission }: { mission: MissionResponse }) {
           <MapPin className="size-3.5" aria-hidden="true" />
           {mission.zoneName ?? 'Timisoara'}
         </span>
+        {mission.isJoinedByCurrentUser && (
+          <span className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-full bg-emerald-500 px-3 py-1 text-xs font-bold text-white shadow-sm">
+            <CheckCircle2 className="size-3.5" aria-hidden="true" />
+            Inscris
+          </span>
+        )}
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col p-4">
@@ -488,7 +502,7 @@ function MissionCard({ mission }: { mission: MissionResponse }) {
         <Button asChild className="mt-4 min-h-11 bg-emerald-600 text-white hover:bg-emerald-700">
           <Link to={`/missions/${mission.id}`}>
             <ExternalLink data-icon="inline-start" aria-hidden="true" />
-            Vezi misiunea
+            {mission.isJoinedByCurrentUser ? 'Vezi inscrierea' : 'Vezi evenimentul'}
           </Link>
         </Button>
       </div>

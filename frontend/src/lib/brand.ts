@@ -1,4 +1,6 @@
 import type { LucideIcon } from '@/components/icons/hugeicons'
+import appIcon from '@/assets/logo/app-icon.png'
+import logoWordmark from '@/assets/logo/logo-wordmark.png'
 
 export const brand = {
   name: 'CiviTm',
@@ -6,7 +8,8 @@ export const brand = {
   description:
     'A friendly civic companion that brings people, ideas and actions together to build stronger communities.',
   logo: {
-    icon: '/logo/ChatGPT Image May 12, 2026, 11_05_51 AM (3).png',
+    icon: appIcon,
+    wordmark: logoWordmark,
   },
 }
 

@@ -58,6 +58,14 @@ const itemStyles: Record<
   },
 }
 
+function normalizePanelText(value: string) {
+  return value
+    .trim()
+    .toLocaleLowerCase('ro-RO')
+    .replace(/\s+/g, ' ')
+    .replace(/[.,;:!?]+$/g, '')
+}
+
 export function SelectedIssuePanel({
   item,
   className,
@@ -71,13 +79,16 @@ export function SelectedIssuePanel({
       : item.source === 'api' && item.kind !== 'reward'
         ? `/issues/${item.id}`
         : null
+  const shouldShowAiSummary =
+    Boolean(item.aiSummary) &&
+    normalizePanelText(item.aiSummary ?? '') !== normalizePanelText(item.description)
 
   return (
     <AnimatePresence mode="wait">
       <motion.aside
         key={item.id}
         className={cn(
-          'relative rounded-lg border border-emerald-200/80 bg-white/94 p-2.5 text-slate-950 shadow-sm backdrop-blur-md',
+          'relative rounded-xl border border-emerald-200 bg-white p-3.5 text-slate-950 shadow-sm shadow-emerald-950/8 ring-1 ring-white sm:p-4',
           className,
         )}
         initial={{ opacity: 0, y: 12, scale: 0.98 }}
@@ -86,39 +97,39 @@ export function SelectedIssuePanel({
         transition={{ duration: 0.24, ease: 'easeOut' }}
         aria-label="Element civic selectat"
       >
-        <div className="grid grid-cols-[2rem_minmax(0,1fr)_1.75rem] items-start gap-2">
+        <div className="grid grid-cols-[2.25rem_minmax(0,1fr)_2rem] items-start gap-2.5 sm:grid-cols-[2.5rem_minmax(0,1fr)_2.25rem] sm:gap-3">
           <span
             className={cn(
-              'flex size-8 shrink-0 items-center justify-center rounded-lg',
+              'flex size-9 shrink-0 items-center justify-center rounded-lg sm:size-10',
               style.className,
             )}
           >
-            <Icon className="size-4" aria-hidden="true" />
+            <Icon className="size-4 sm:size-5" aria-hidden="true" />
           </span>
 
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-1.5">
               <span
                 className={cn(
-                  'inline-flex items-center rounded-md px-2 py-0.5 text-[0.7rem] font-semibold leading-5 ring-1',
+                  'inline-flex items-center rounded-md px-2 py-0.5 text-[0.7rem] font-semibold leading-5 ring-1 sm:text-xs',
                   style.badgeClassName,
                 )}
               >
                 {item.statusLabel}
               </span>
-              <span className="text-[0.7rem] font-medium leading-5 text-slate-500">
+              <span className="text-[0.7rem] font-medium leading-5 text-slate-500 sm:text-xs">
                 {item.zone}
               </span>
             </div>
 
             <div
-              className="mt-1 text-[0.78rem] font-semibold leading-[1.18] text-emerald-950"
+              className="mt-1 text-sm font-bold leading-tight text-emerald-950 sm:text-[0.98rem]"
               role="heading"
               aria-level={2}
             >
               {item.title}
             </div>
-            <p className="mt-1 text-[0.82rem] leading-snug text-slate-600">
+            <p className="mt-1 text-sm leading-snug text-slate-600">
               {item.description}
             </p>
           </div>
@@ -148,38 +159,38 @@ export function SelectedIssuePanel({
           </div>
         )}
 
-        <div className="mt-2 grid gap-1.5 text-[0.78rem] leading-snug">
-          <div className="flex items-start gap-1.5 rounded-md border border-slate-200 bg-slate-50/80 p-1.5">
-            <Users className="mt-0.5 size-3.5 shrink-0 text-slate-500" aria-hidden="true" />
+        <div className="mt-3 grid gap-2 text-sm leading-snug">
+          <div className="flex items-start gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2">
+            <Users className="mt-0.5 size-4 shrink-0 text-slate-500" aria-hidden="true" />
             <span className="text-slate-700">{item.meta}</span>
           </div>
 
-          <div className="flex items-start gap-1.5 rounded-md border border-emerald-100 bg-emerald-50/80 p-1.5">
-            <Target className="mt-0.5 size-3.5 shrink-0 text-emerald-600" aria-hidden="true" />
+          <div className="flex items-start gap-2 rounded-lg border border-emerald-100 bg-emerald-50 p-2">
+            <Target className="mt-0.5 size-4 shrink-0 text-emerald-600" aria-hidden="true" />
             <span className="font-medium text-emerald-800">{item.impact}</span>
           </div>
 
           {item.pointsEarned !== undefined && (
-            <div className="flex items-start gap-1.5 rounded-md border border-lime-100 bg-lime-50/80 p-1.5">
-              <Sparkles className="mt-0.5 size-3.5 shrink-0 text-lime-700" aria-hidden="true" />
+            <div className="flex items-start gap-2 rounded-lg border border-lime-100 bg-lime-50 p-2">
+              <Sparkles className="mt-0.5 size-4 shrink-0 text-lime-700" aria-hidden="true" />
               <span className="font-medium text-lime-800">
                 Puncte civice: +{item.pointsEarned}
               </span>
             </div>
           )}
 
-          {item.aiSummary && (
-            <div className="flex items-start gap-1.5 rounded-md border border-slate-200 bg-white p-1.5">
-              <MessageSquareText className="mt-0.5 size-3.5 shrink-0 text-slate-500" aria-hidden="true" />
+          {shouldShowAiSummary && item.aiSummary && (
+            <div className="flex items-start gap-2 rounded-lg border border-slate-200 bg-white p-2">
+              <MessageSquareText className="mt-0.5 size-4 shrink-0 text-slate-500" aria-hidden="true" />
               <span className="text-slate-700">{item.aiSummary}</span>
             </div>
           )}
 
           {item.missionId && (
-            <div className="flex items-start gap-1.5 rounded-md border border-lime-100 bg-lime-50/80 p-1.5">
-              <Flag className="mt-0.5 size-3.5 shrink-0 text-lime-700" aria-hidden="true" />
+            <div className="flex items-start gap-2 rounded-lg border border-lime-100 bg-lime-50 p-2">
+              <Flag className="mt-0.5 size-4 shrink-0 text-lime-700" aria-hidden="true" />
               <span className="font-medium text-lime-900">
-                Task comunitar conectat
+                Eveniment comunitar conectat
                 {item.participantsNeeded !== undefined &&
                   ` · ${item.participantsJoined ?? 0}/${item.participantsNeeded} inscrisi`}
               </span>
@@ -187,8 +198,8 @@ export function SelectedIssuePanel({
           )}
 
           {item.duplicateCount !== undefined && item.duplicateCount > 0 && (
-            <div className="flex items-start gap-1.5 rounded-md border border-amber-100 bg-amber-50/80 p-1.5">
-              <TriangleAlert className="mt-0.5 size-3.5 shrink-0 text-amber-700" aria-hidden="true" />
+            <div className="flex items-start gap-2 rounded-lg border border-amber-100 bg-amber-50 p-2">
+              <TriangleAlert className="mt-0.5 size-4 shrink-0 text-amber-700" aria-hidden="true" />
               <span className="font-medium text-amber-900">
                 {item.duplicateCount} semnal duplicat in apropiere
                 {item.duplicateCount === 1 ? '' : 'e'}
@@ -213,7 +224,7 @@ export function SelectedIssuePanel({
             )}
             {item.relatedMission && (
               <p>
-                <span className="font-semibold text-slate-800">Task:</span>{' '}
+                <span className="font-semibold text-slate-800">Eveniment:</span>{' '}
                 {item.relatedMission}
               </p>
             )}
@@ -233,7 +244,7 @@ export function SelectedIssuePanel({
             </Button>
             {item.missionId && item.kind !== 'mission' && (
               <Button asChild size="sm" variant="outline">
-                <Link to={`/missions/${item.missionId}`}>Deschide misiunea</Link>
+                <Link to={`/missions/${item.missionId}`}>Vezi evenimentul</Link>
               </Button>
             )}
           </div>

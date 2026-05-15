@@ -38,7 +38,7 @@ function isResolved(status: string) {
 
 export function CommandCenterPage() {
   const issuesQuery = useQuery({ queryKey: issuesQueryKey, queryFn: fetchIssues })
-  const missionsQuery = useQuery({ queryKey: missionsQueryKey, queryFn: fetchMissions })
+  const missionsQuery = useQuery({ queryKey: missionsQueryKey, queryFn: () => fetchMissions() })
   const zonesQuery = useQuery({
     queryKey: zoneLeaderboardQueryKey,
     queryFn: fetchZoneLeaderboard,

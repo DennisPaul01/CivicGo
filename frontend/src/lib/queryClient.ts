@@ -9,6 +9,10 @@ export const missionsQueryKey = ['missions'] as const
 export const missionQueryKey = (id: string) => ['missions', id] as const
 export const rewardClaimsQueryKey = ['reward-claims'] as const
 export const rewardsQueryKey = ['rewards'] as const
+export const leaderboardQueryKey = (period: '30d' | 'overall') =>
+  ['gamification', 'leaderboard', period] as const
+export const publicUserProfileQueryKey = (id: string) =>
+  ['users', id, 'public-profile'] as const
 export const zoneLeaderboardQueryKey = ['zones', 'leaderboard'] as const
 export const zonesQueryKey = ['zones'] as const
 export const zoneQueryKey = (id: string) => ['zones', id] as const

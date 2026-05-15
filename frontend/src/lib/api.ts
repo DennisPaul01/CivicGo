@@ -153,6 +153,7 @@ export type MissionResponse = MissionSummaryResponse & {
   createdAt: string
   completedAt: string | null
   relatedIssueIds: string[]
+  isJoinedByCurrentUser: boolean
 }
 
 export type PointAwardResponse = {
@@ -189,6 +190,57 @@ export type GamificationAwardResponse = {
   pointAwards: PointAwardResponse[]
 }
 
+export type LeaderboardPeriod = '30d' | 'overall'
+
+export type LeaderboardBadgeResponse = {
+  id: string
+  name: string
+  description: string
+  icon: string
+  unlockedAt: string
+}
+
+export type LeaderboardUserResponse = {
+  id: string
+  rank: number
+  overallRank: number
+  thirtyDayRank: number
+  fullName: string
+  avatarUrl: string | null
+  points: number
+  periodPoints: number
+  rankName: string
+  trustScore: number
+  badgeCount: number
+  reportCount: number
+  missionCount: number
+  badges: LeaderboardBadgeResponse[]
+}
+
+export type PublicContributionResponse = {
+  type: string
+  title: string
+  detail: string
+  createdAt: string
+}
+
+export type PublicUserProfileResponse = {
+  id: string
+  fullName: string
+  avatarUrl: string | null
+  points: number
+  thirtyDayPoints: number
+  rankName: string
+  trustScore: number
+  badgeCount: number
+  reportCount: number
+  missionCount: number
+  overallRank: number
+  thirtyDayRank: number
+  badges: LeaderboardBadgeResponse[]
+  recentContributions: PublicContributionResponse[]
+}
+
 export type NearestDuplicateIssueResponse = {
   issueId: string
   title: string
@@ -214,6 +266,8 @@ export type IssueResponse = {
   aiConfidence: number | null
   isUrgent: boolean
   rewardEligible: boolean
+  isValidIssue: boolean
+  invalidReason: string | null
   aiAnalyzedAt: string | null
   duplicateCount: number
   nearestDuplicate: NearestDuplicateIssueResponse | null
@@ -223,6 +277,23 @@ export type IssueResponse = {
   gamification: GamificationAwardResponse | null
   createdByUserId: string
   createdAt: string
+}
+
+export type IssueResolutionVerificationResponse = {
+  isResolved: boolean
+  confidence: number
+  summary: string
+  suggestedAction: string
+  usedFallback: boolean
+  source: string
+}
+
+export type ResolveIssueResponse = {
+  verified: boolean
+  message: string
+  issue: IssueResponse
+  verification: IssueResolutionVerificationResponse
+  gamification: GamificationAwardResponse | null
 }
 
 export type PublicActivityResponse = {
@@ -296,6 +367,11 @@ export type AdminIssueUpdateInput = {
   zoneName: string
   latitude: number
   longitude: number
+}
+
+export type RetryAgentPipelineResponse = {
+  issueId: string
+  status: 'queued'
 }
 
 type ResolveIssueInput = {
@@ -489,7 +565,7 @@ export async function resolveIssue(input: ResolveIssueInput) {
     throw new Error(message)
   }
 
-  return (await response.json()) as IssueResponse
+  return (await response.json()) as ResolveIssueResponse
 }
 
 export async function updateAdminIssue(input: AdminIssueUpdateInput) {
@@ -561,6 +637,31 @@ export async function reopenAdminIssue(issueId: string, accessToken: string) {
   return (await response.json()) as IssueResponse
 }
 
+export async function retryAdminIssueAgentPipeline(
+  issueId: string,
+  accessToken: string,
+) {
+  if (!isApiConfigured) {
+    throw new Error('CiviTm API is not configured.')
+  }
+
+  const response = await fetch(
+    `${apiBaseUrl}/api/issues/${issueId}/admin/retry-agent-pipeline`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    },
+  )
+
+  if (!response.ok) {
+    throw new Error('Unable to retry the agent pipeline.')
+  }
+
+  return (await response.json()) as RetryAgentPipelineResponse
+}
+
 export async function createAdminIssueEmailDraft(
   issueId: string,
   accessToken: string,
@@ -586,26 +687,41 @@ export async function createAdminIssueEmailDraft(
   return (await response.json()) as AdminIssueEmailDraftResponse
 }
 
-export async function fetchMissions() {
+function createOptionalAuthHeaders(accessToken?: string) {
+  return accessToken
+    ? {
+        Authorization: `Bearer ${accessToken}`,
+      }
+    : undefined
+}
+
+export async function fetchMissions(accessTokenOrContext?: string | unknown) {
   if (!isApiConfigured) {
     throw new Error('API-ul CiviTm nu este configurat.')
   }
 
-  const response = await fetch(`${apiBaseUrl}/api/missions`)
+  const accessToken =
+    typeof accessTokenOrContext === 'string' ? accessTokenOrContext : undefined
+
+  const response = await fetch(`${apiBaseUrl}/api/missions`, {
+    headers: createOptionalAuthHeaders(accessToken),
+  })
 
   if (!response.ok) {
-    throw new Error('Nu am putut incarca misiunile CiviTm.')
+    throw new Error('Nu am putut incarca evenimentele CiviTm.')
   }
 
   return (await response.json()) as MissionResponse[]
 }
 
-export async function fetchMissionById(id: string) {
+export async function fetchMissionById(id: string, accessToken?: string) {
   if (!isApiConfigured) {
     throw new Error('API-ul CiviTm nu este configurat.')
   }
 
-  const response = await fetch(`${apiBaseUrl}/api/missions/${id}`)
+  const response = await fetch(`${apiBaseUrl}/api/missions/${id}`, {
+    headers: createOptionalAuthHeaders(accessToken),
+  })
 
   if (!response.ok) {
     throw new Error('Nu am putut incarca aceasta misiune CiviTm.')
@@ -627,7 +743,7 @@ export async function joinMission(missionId: string, accessToken: string) {
   })
 
   if (!response.ok) {
-    let message = 'Nu am putut face inscrierea la aceasta misiune.'
+    let message = 'Nu am putut face inscrierea la acest eveniment.'
 
     try {
       const errorBody = (await response.json()) as { message?: string }
@@ -637,7 +753,39 @@ export async function joinMission(missionId: string, accessToken: string) {
     }
 
     if (message === 'Only active missions can be joined.') {
-      message = 'Te poti inscrie doar la misiuni active.'
+      message = 'Te poti inscrie doar la evenimente active.'
+    }
+
+    throw new Error(message)
+  }
+
+  return (await response.json()) as MissionResponse
+}
+
+export async function leaveMission(missionId: string, accessToken: string) {
+  if (!isApiConfigured) {
+    throw new Error('API-ul CiviTm nu este configurat.')
+  }
+
+  const response = await fetch(`${apiBaseUrl}/api/missions/${missionId}/leave`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  })
+
+  if (!response.ok) {
+    let message = 'Nu am putut renunta la inscrierea pentru acest eveniment.'
+
+    try {
+      const errorBody = (await response.json()) as { message?: string }
+      message = errorBody.message ?? message
+    } catch {
+      // Keep the friendly default when the backend returns a non-JSON error.
+    }
+
+    if (message === 'Only active missions can be left.') {
+      message = 'Poti renunta doar la evenimente active.'
     }
 
     throw new Error(message)
@@ -658,6 +806,43 @@ export async function fetchZoneLeaderboard() {
   }
 
   return (await response.json()) as ZoneLeaderboardItemResponse[]
+}
+
+export async function fetchLeaderboard(
+  period: LeaderboardPeriod,
+  limit = 50,
+) {
+  if (!isApiConfigured) {
+    return [] satisfies LeaderboardUserResponse[]
+  }
+
+  const searchParams = new URLSearchParams({
+    period,
+    limit: String(limit),
+  })
+  const response = await fetch(
+    `${apiBaseUrl}/api/gamification/leaderboard?${searchParams}`,
+  )
+
+  if (!response.ok) {
+    throw new Error('Unable to fetch CiviTm leaderboard.')
+  }
+
+  return (await response.json()) as LeaderboardUserResponse[]
+}
+
+export async function fetchPublicUserProfile(id: string) {
+  if (!isApiConfigured) {
+    throw new Error('CiviTm API is not configured.')
+  }
+
+  const response = await fetch(`${apiBaseUrl}/api/users/${id}/public-profile`)
+
+  if (!response.ok) {
+    throw new Error('Unable to fetch this public CiviTm profile.')
+  }
+
+  return (await response.json()) as PublicUserProfileResponse
 }
 
 export async function fetchZones() {

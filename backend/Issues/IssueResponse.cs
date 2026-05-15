@@ -24,6 +24,8 @@ public sealed record IssueResponse(
     double? AiConfidence,
     bool IsUrgent,
     bool RewardEligible,
+    bool IsValidIssue,
+    string? InvalidReason,
     DateTimeOffset? AiAnalyzedAt,
     int DuplicateCount,
     NearestDuplicateIssueResponse? NearestDuplicate,

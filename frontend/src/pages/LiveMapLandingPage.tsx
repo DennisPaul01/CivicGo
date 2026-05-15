@@ -707,7 +707,7 @@ export function LiveMapLandingPage() {
   })
   const missionsQuery = useQuery({
     queryKey: missionsQueryKey,
-    queryFn: fetchMissions,
+    queryFn: () => fetchMissions(),
   })
   const mapItems = useMemo(
     () => getCivicMapItems(issuesQuery.data ?? [], missionsQuery.data ?? []),

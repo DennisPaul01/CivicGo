@@ -19,6 +19,10 @@ const TIMISOARA_MAX_BOUNDS: [[number, number], [number, number]] = [
 const MARKER_SPREAD_DISTANCE = 42
 const MAPBOX_CANVAS_SELECTOR = '.mapboxgl-canvas'
 const FALLBACK_MIN_MARKER_DISTANCE = 5.6
+const DESKTOP_PANEL_WIDTH = 384
+const DESKTOP_PANEL_ESTIMATED_HEIGHT = 512
+const DESKTOP_PANEL_MARGIN = 20
+const DESKTOP_PANEL_TOP_GAP = 24
 const FALLBACK_BOUNDS = {
   minLng: TIMISOARA_MAX_BOUNDS[0][0],
   minLat: TIMISOARA_MAX_BOUNDS[0][1],
@@ -304,13 +308,13 @@ function FallbackCivicMap({
 
       {selectedItem && (
         <div
-          className="pointer-events-auto absolute inset-x-2 bottom-20 z-50 sm:hidden"
+          className="pointer-events-auto fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+5rem)] z-[70] sm:hidden"
           onClick={(event) => event.stopPropagation()}
         >
           <SelectedIssuePanel
             item={selectedItem}
             onClose={() => onSelectedItemChange(null)}
-            className="max-h-[min(24rem,calc(100svh-10rem))] overflow-y-auto rounded-xl shadow-xl shadow-slate-900/18"
+            className="max-h-[min(32rem,calc(100dvh-7rem))] overflow-y-auto overscroll-contain rounded-xl shadow-xl shadow-slate-900/18"
           />
         </div>
       )}
@@ -328,7 +332,7 @@ function FallbackCivicMap({
           <SelectedIssuePanel
             item={selectedItem}
             onClose={() => onSelectedItemChange(null)}
-            className="max-h-[min(23rem,calc(100svh-7rem))] w-[min(20.5rem,calc(100vw-2rem))] overflow-y-auto shadow-lg shadow-slate-900/12"
+            className="max-h-[min(32rem,calc(100dvh-6rem))] w-[min(24rem,calc(100vw-2rem))] overflow-y-auto overscroll-contain shadow-xl shadow-slate-900/14"
           />
         </div>
       )}
@@ -427,19 +431,36 @@ export function CivicMap({
         .find(({ item }) => item.id === selectedItem.id)
         ?.marker.getOffset()
       const shellWidth = mapShellRef.current?.clientWidth ?? 0
-      const panelHalfWidth = Math.min(160, Math.max(0, shellWidth / 2 - 20))
+      const shellHeight = mapShellRef.current?.clientHeight ?? 0
+      const panelHalfWidth = Math.min(
+        DESKTOP_PANEL_WIDTH / 2,
+        Math.max(0, shellWidth / 2 - DESKTOP_PANEL_MARGIN),
+      )
       const projectedX = projectedPoint.x + (markerOffset?.x ?? 0)
+      const projectedY = projectedPoint.y + (markerOffset?.y ?? 0)
       const nextX =
         shellWidth > 0
           ? Math.min(
-              Math.max(projectedX, panelHalfWidth + 12),
-              shellWidth - panelHalfWidth - 12,
+              Math.max(projectedX, panelHalfWidth + DESKTOP_PANEL_MARGIN),
+              shellWidth - panelHalfWidth - DESKTOP_PANEL_MARGIN,
             )
           : projectedX
+      const nextY =
+        shellHeight > 0
+          ? Math.min(
+              Math.max(projectedY + DESKTOP_PANEL_TOP_GAP, DESKTOP_PANEL_MARGIN),
+              Math.max(
+                DESKTOP_PANEL_MARGIN,
+                shellHeight -
+                  DESKTOP_PANEL_ESTIMATED_HEIGHT -
+                  DESKTOP_PANEL_MARGIN,
+              ),
+            )
+          : projectedY + DESKTOP_PANEL_TOP_GAP
 
       setSelectedMarkerPosition({
         x: nextX,
-        y: projectedPoint.y + (markerOffset?.y ?? 0),
+        y: nextY,
       })
     }
 
@@ -477,6 +498,25 @@ export function CivicMap({
       activeMap.off('click', closeSelectedItem)
     }
   }, [isMapReady, onSelectedItemChange])
+
+  useEffect(() => {
+    const activeMap = mapRef.current
+    const mapShell = mapShellRef.current
+
+    if (!activeMap || !mapShell || !isMapReady) {
+      return
+    }
+
+    const resizeMap = () => {
+      activeMap.resize()
+    }
+    const resizeObserver = new ResizeObserver(resizeMap)
+
+    resizeObserver.observe(mapShell)
+    window.setTimeout(resizeMap, 0)
+
+    return () => resizeObserver.disconnect()
+  }, [isMapReady])
 
   useEffect(() => {
     const closeSelectedItem = (event: KeyboardEvent) => {
@@ -653,18 +693,18 @@ export function CivicMap({
   }
 
   return (
-    <div ref={mapShellRef} className="relative h-full min-h-80 w-full overflow-visible">
-      <div ref={mapContainerRef} className="h-full min-h-80 w-full rounded-lg" />
+    <div ref={mapShellRef} className="relative h-full min-h-80 w-full max-w-full overflow-hidden sm:overflow-visible">
+      <div ref={mapContainerRef} className="h-full min-h-80 w-full max-w-full rounded-lg" />
 
       {selectedItem && selectedMarkerPosition && (
         <div
-          className="pointer-events-auto absolute inset-x-2 bottom-20 z-50 sm:hidden"
+          className="pointer-events-auto fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+5rem)] z-[70] sm:hidden"
           onClick={(event) => event.stopPropagation()}
         >
           <SelectedIssuePanel
             item={selectedItem}
             onClose={() => onSelectedItemChange(null)}
-            className="max-h-[min(24rem,calc(100svh-10rem))] overflow-y-auto rounded-xl shadow-xl shadow-slate-900/18"
+            className="max-h-[min(32rem,calc(100dvh-7rem))] overflow-y-auto overscroll-contain rounded-xl shadow-xl shadow-slate-900/18"
           />
         </div>
       )}
@@ -675,13 +715,13 @@ export function CivicMap({
           style={{
             left: selectedMarkerPosition.x,
             top: selectedMarkerPosition.y,
-            transform: 'translate(-50%, 1.4rem)',
+            transform: 'translateX(-50%)',
           }}
         >
           <SelectedIssuePanel
             item={selectedItem}
             onClose={() => onSelectedItemChange(null)}
-            className="max-h-[min(23rem,calc(100svh-7rem))] w-[min(20.5rem,calc(100vw-2rem))] overflow-y-auto shadow-lg shadow-slate-900/12"
+            className="max-h-[min(32rem,calc(100dvh-6rem))] w-[min(24rem,calc(100vw-2rem))] overflow-y-auto overscroll-contain shadow-xl shadow-slate-900/14"
           />
         </div>
       )}

@@ -1,16 +1,18 @@
 import {
   AlertTriangle,
-  ArrowDownToLine,
-  ArrowUpFromLine,
   Check,
   Circle,
   CircleDashed,
-  GitBranch,
   LoaderCircle,
   RotateCcw,
-  Target,
-  Wrench,
 } from '@/components/icons/hugeicons'
+import visionAgentImage from '@/assets/ai-agents/01_vision_agent_square.png'
+import triageAgentImage from '@/assets/ai-agents/02_triage_agent_square.png'
+import duplicateAgentImage from '@/assets/ai-agents/03_duplicate_agent_square.png'
+import missionAgentImage from '@/assets/ai-agents/04_mission_agent_square.png'
+import rewardAgentImage from '@/assets/ai-agents/05_reward_agent_square.png'
+import cityAgentImage from '@/assets/ai-agents/06_city_agent_square.png'
+import authorityEmailAgentImage from '@/assets/ai-agents/07_authority_email_agent_square.png'
 import { motion } from 'motion/react'
 import { cn } from '@/lib/utils'
 import type { AgentStepResponse, AgentStepStatus } from '@/lib/api'
@@ -18,14 +20,6 @@ import { roAgentMessage, roAgentName } from '@/lib/locale'
 
 type AgentStepCardProps = {
   step: AgentStepResponse
-}
-
-type RichAgentOutput = {
-  observation?: string
-  toolUsed?: string
-  decision?: string
-  nextAction?: string
-  confidence?: number | null
 }
 
 const statusStyles: Record<
@@ -75,46 +69,18 @@ const statusStyles: Record<
   },
 }
 
+const agentAvatarByName: Record<string, string> = {
+  'Vision Agent': visionAgentImage,
+  'Triage Agent': triageAgentImage,
+  'Duplicate Agent': duplicateAgentImage,
+  'Mission Agent': missionAgentImage,
+  'Reward Agent': rewardAgentImage,
+  'City Agent': cityAgentImage,
+  'Authority Email Agent': authorityEmailAgentImage,
+}
+
 function normalizeStatus(status: string): AgentStepStatus {
   return status in statusStyles ? (status as AgentStepStatus) : 'pending'
-}
-
-function formatAgentJson(value: string) {
-  if (!value) {
-    return ''
-  }
-
-  try {
-    return JSON.stringify(JSON.parse(value), null, 2)
-  } catch {
-    return value
-  }
-}
-
-function parseRichOutput(value: string): RichAgentOutput | null {
-  if (!value) {
-    return null
-  }
-
-  try {
-    const parsed = JSON.parse(value) as RichAgentOutput
-    const hasRichFields =
-      typeof parsed.observation === 'string' ||
-      typeof parsed.toolUsed === 'string' ||
-      typeof parsed.decision === 'string' ||
-      typeof parsed.nextAction === 'string' ||
-      typeof parsed.confidence === 'number'
-
-    return hasRichFields ? parsed : null
-  } catch {
-    return null
-  }
-}
-
-function formatToolName(value: string) {
-  return value
-    .replaceAll('_', ' ')
-    .replace(/\b\w/g, (letter) => letter.toUpperCase())
 }
 
 export function AgentStepCard({ step }: AgentStepCardProps) {
@@ -123,9 +89,7 @@ export function AgentStepCard({ step }: AgentStepCardProps) {
   const StatusIcon = styles.icon
   const isRunning = status === 'running'
   const isCompleted = status === 'completed'
-  const input = formatAgentJson(step.inputJson)
-  const output = formatAgentJson(step.outputJson)
-  const richOutput = parseRichOutput(step.outputJson)
+  const agentAvatar = agentAvatarByName[step.agentName]
 
   return (
     <motion.li
@@ -147,10 +111,18 @@ export function AgentStepCard({ step }: AgentStepCardProps) {
         animate={isCompleted ? { scale: 1, rotate: 0 } : undefined}
         transition={{ duration: 0.22, ease: 'easeOut' }}
       >
-        <StatusIcon
-          className={cn('size-4', isRunning && 'animate-spin')}
-          aria-hidden="true"
-        />
+        {agentAvatar ? (
+          <img
+            src={agentAvatar}
+            alt=""
+            className="size-5 rounded object-cover"
+          />
+        ) : (
+          <StatusIcon
+            className={cn('size-4', isRunning && 'animate-spin')}
+            aria-hidden="true"
+          />
+        )}
       </motion.span>
 
       <span className="min-w-0 flex-1">
@@ -166,96 +138,6 @@ export function AgentStepCard({ step }: AgentStepCardProps) {
           {roAgentMessage(step.message)}
         </span>
 
-        {richOutput && status !== 'pending' && (
-          <div className="mt-3 grid gap-2 text-xs leading-5 text-slate-700 sm:grid-cols-2">
-            {richOutput.toolUsed && (
-              <span className="min-w-0 rounded-lg border border-white/80 bg-white/70 px-3 py-2">
-                <span className="mb-0.5 flex items-center gap-1.5 font-semibold text-slate-500">
-                  <Wrench className="size-3.5 shrink-0" aria-hidden="true" />
-                  Tool
-                </span>
-                <span className="block break-words font-medium text-emerald-950">
-                  {formatToolName(richOutput.toolUsed)}
-                </span>
-              </span>
-            )}
-            {richOutput.confidence !== null &&
-              richOutput.confidence !== undefined && (
-                <span className="min-w-0 rounded-lg border border-white/80 bg-white/70 px-3 py-2">
-                  <span className="mb-0.5 flex items-center gap-1.5 font-semibold text-slate-500">
-                    <Target className="size-3.5 shrink-0" aria-hidden="true" />
-                    Incredere
-                  </span>
-                  <span className="block font-medium text-emerald-950">
-                    {Math.round(richOutput.confidence * 100)}%
-                  </span>
-                </span>
-              )}
-            {richOutput.observation && (
-              <span className="min-w-0 rounded-lg border border-white/80 bg-white/70 px-3 py-2 sm:col-span-2">
-                <span className="mb-0.5 block font-semibold text-slate-500">
-                  Observatie
-                </span>
-                <span className="block break-words text-slate-800">
-                  {richOutput.observation}
-                </span>
-              </span>
-            )}
-            {richOutput.decision && (
-              <span className="min-w-0 rounded-lg border border-white/80 bg-white/70 px-3 py-2 sm:col-span-2">
-                <span className="mb-0.5 flex items-center gap-1.5 font-semibold text-slate-500">
-                  <GitBranch className="size-3.5 shrink-0" aria-hidden="true" />
-                  Decizie
-                </span>
-                <span className="block break-words text-slate-800">
-                  {richOutput.decision}
-                </span>
-              </span>
-            )}
-            {richOutput.nextAction && (
-              <span className="min-w-0 rounded-lg border border-white/80 bg-white/70 px-3 py-2 sm:col-span-2">
-                <span className="mb-0.5 block font-semibold text-slate-500">
-                  Preda catre
-                </span>
-                <span className="block break-words text-slate-800">
-                  {richOutput.nextAction}
-                </span>
-              </span>
-            )}
-          </div>
-        )}
-
-        {(input || output) && status !== 'pending' && (
-          <details className="mt-3 rounded-lg border border-white/80 bg-white/70">
-            <summary className="cursor-pointer px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/30">
-              Vezi ce a primit si ce trimite mai departe
-            </summary>
-            <div className="grid gap-2 border-t border-white/80 p-3 md:grid-cols-2">
-              {input && (
-                <div className="min-w-0">
-                  <span className="mb-1 flex items-center gap-1.5 text-[0.7rem] font-semibold uppercase text-slate-500">
-                    <ArrowDownToLine className="size-3.5" aria-hidden="true" />
-                    Primit
-                  </span>
-                  <pre className="max-h-36 overflow-auto rounded-md bg-slate-950 p-2 text-[0.68rem] leading-4 text-emerald-50">
-                    {input}
-                  </pre>
-                </div>
-              )}
-              {output && (
-                <div className="min-w-0">
-                  <span className="mb-1 flex items-center gap-1.5 text-[0.7rem] font-semibold uppercase text-slate-500">
-                    <ArrowUpFromLine className="size-3.5" aria-hidden="true" />
-                    Trimis mai departe
-                  </span>
-                  <pre className="max-h-36 overflow-auto rounded-md bg-slate-950 p-2 text-[0.68rem] leading-4 text-emerald-50">
-                    {output}
-                  </pre>
-                </div>
-              )}
-            </div>
-          </details>
-        )}
       </span>
 
       {status === 'pending' && (

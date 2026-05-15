@@ -118,7 +118,6 @@ public sealed class DuplicateDetectionService(
             return new DuplicateDetectionResult(issue.DuplicateCount, null, diagnostics);
         }
 
-        issue.Status = "duplicate_detected";
         issue.DuplicateCount = Math.Max(issue.DuplicateCount, matches.Length);
         issue.UpdatedAt = now;
 
@@ -185,6 +184,17 @@ public sealed class DuplicateDetectionService(
             logger.LogWarning(
                 exception,
                 "Duplicate detection skipped persistence for issue {IssueId} because tracked data changed before save.",
+                issueId
+            );
+            dbContext.ChangeTracker.Clear();
+
+            return false;
+        }
+        catch (DbUpdateException exception)
+        {
+            logger.LogWarning(
+                exception,
+                "Duplicate detection skipped persistence for issue {IssueId} because the duplicate update could not be saved.",
                 issueId
             );
             dbContext.ChangeTracker.Clear();
@@ -271,6 +281,7 @@ public sealed class DuplicateDetectionService(
         }
 
         return candidate.Images.Any(image =>
+            !string.IsNullOrWhiteSpace(image.ContentHash) &&
             !image.ContentHash.StartsWith("legacy:", StringComparison.OrdinalIgnoreCase) &&
             issueImageHashes.Contains(image.ContentHash)
         );

@@ -16,8 +16,10 @@ import { MissionDetailsPage } from '@/pages/missions/MissionDetailsPage'
 import { MissionsPage } from '@/pages/missions/MissionsPage'
 import { PartnerDashboardPage } from '@/pages/partner/PartnerDashboardPage'
 import { ProfilePage } from '@/pages/profile/ProfilePage'
+import { LeaderboardPage } from '@/pages/leaderboard/LeaderboardPage'
 import { ReportIssuePage } from '@/pages/report/ReportIssuePage'
 import { RewardsPage } from '@/pages/rewards/RewardsPage'
+import { PublicUserProfilePage } from '@/pages/users/PublicUserProfilePage'
 import { ZoneDetailsPage } from '@/pages/zones/ZoneDetailsPage'
 import { ZoneLeaderboardPage } from '@/pages/zones/ZoneLeaderboardPage'
 
@@ -37,6 +39,8 @@ function App() {
           <Route path="/issues/:id" element={<IssueDetailsPage />} />
           <Route path="/missions" element={<MissionsPage />} />
           <Route path="/missions/:id" element={<MissionDetailsPage />} />
+          <Route path="/leaderboard" element={<LeaderboardPage />} />
+          <Route path="/users/:id" element={<PublicUserProfilePage />} />
           <Route
             path="/report"
             element={

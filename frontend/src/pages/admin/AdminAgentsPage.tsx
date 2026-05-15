@@ -40,18 +40,69 @@ const emptyForm: AgentFormState = {
   isEnabled: true,
 }
 
+const agentDefaults = {
+  vision: {
+    role: 'Clasificator poza si sesizare',
+    description:
+      'Analizeaza poza, descrierea, locatia si coordonatele, apoi returneaza categoria, severitatea, rezumatul, increderea si riscul.',
+    instructions:
+      'Analizeaza sesizarea CiviTm cu poza, descriere, locatie si coordonate. Foloseste taxonomia Timisoara, alege categoria cea mai specifica sau other cand dovezile sunt neclare. Returneaza category, subcategory extra, severity low/medium/high/critical, confidence, summary scurt, visibleEvidence, safetyRisk si isUrgent. Nu folosi urgent ca severity; pentru riscuri de siguranta foloseste critical + isUrgent true. Nu exagera ce se vede in poza si explica incertitudinea.',
+    fallbackMode: 'Fallback pe descriere, categorie si zona, cu incredere medie.',
+  },
+  triage: {
+    role: 'Router actor responsabil',
+    description: 'Alege ruta practica pentru primarie, comunitate, parteneri sau actiune mixta.',
+    instructions:
+      'Decide ruta practica folosind categoria, severitatea, locatia, duplicatul si Vision Agent. Mapare DB: city_hall -> city_hall, community -> community, mixed -> community_and_city_hall; partner ramane semnal pentru Reward Agent, nu responsibleActor. Alege city_hall pentru infrastructura, siguranta, drumuri, iluminat, canalizare, transport sau responsabilitate legala. Alege community pentru actiuni locale sigure. Nu atribui vina; propune urmatoarea actiune utila si o eticheta UI scurta.',
+    fallbackMode: 'Mapare determinista dupa categorie, risc si actor responsabil.',
+  },
+  duplicate: {
+    role: 'Verificator duplicate apropiate',
+    description: 'Compara sesizari active apropiate si pastreaza clusterele vizibile pentru demo.',
+    instructions:
+      'Verifica daca noua sesizare este probabil duplicat. Compara distanta, categoria, subcategoria, severitatea, statusul, data, textul/imaginea cand exista si aceeasi strada/zona/reper. Marcheaza duplicat doar cand potrivirea este clara; daca e medie, recomanda admin review, nu bloca. Pastreaza clusterele vizibile pentru storytelling si nu ascunde sesizari valide.',
+    fallbackMode: 'Scan numeric lat/lng 300m plus hash imagine si categorie/status.',
+  },
+  mission: {
+    role: 'Planificator misiuni civice',
+    description: 'Transforma sesizari eligibile in misiuni mici, sigure si locale.',
+    instructions:
+      'Creeaza o misiune mica doar daca sesizarea este potrivita pentru actiune sigura din partea comunitatii sau partenerilor. Foloseste categoria, severitatea, locatia, ruta Triage si duplicatul. Nu crea misiuni pentru probleme periculoase sau tehnice care cer interventie oficiala. Misiunile trebuie sa fie locale, realiste pentru HackTM, prietenoase civic, cu participanti, timp estimat, impact, materiale, note de siguranta si criterii de succes cand exista in output.',
+    fallbackMode: 'Template local pentru deseuri mari eligibile si zona raportata.',
+  },
+  reward: {
+    role: 'Matcher recompense civice',
+    description: 'Potriveste misiuni si actiuni civice cu recompense de sistem sau parteneri.',
+    instructions:
+      'Potriveste misiunea cu recompense realiste folosind tipul misiunii, dificultatea, punctele de impact, nivelul userului, lista de rewards si zona. Prefera parteneri locali cand exista date reale potrivite. Nu inventa oferte, bani, beneficii oficiale sau premii indisponibile. Daca nu exista partener potrivit, foloseste reward de sistem, badge sau rank progress. Recompensa trebuie sa incurajeze actiuni utile, nu spam.',
+    fallbackMode: 'Selectie din rewards seeded; fallback system reward.',
+  },
+  city: {
+    role: 'Analist impact oras',
+    description: 'Genereaza insight-uri pentru admin din sesizari, misiuni, zone si impact.',
+    instructions:
+      'Analizeaza sesizarile active, misiunile, zonele si semnalele de impact pentru dashboard admin. Concentreaza-te pe zona cea mai activa, semnal civic puternic, tipare repetate, riscuri urgente, impact comunitar, oportunitati pentru parteneri si urmatoarea actiune vizibila. Nu exagera cand sunt putine date; foloseste semnal timpuriu sau tipar emergent.',
+    fallbackMode: 'Rezumat determinist din zone, categorii, urgente si misiuni.',
+  },
+  authorityEmail: {
+    role: 'Redactor email autoritati',
+    description: 'Pregateste emailuri concise in romana pentru autoritatea locala potrivita.',
+    instructions:
+      'Scrie email concis in romana pentru autoritatea locala potrivita folosind tipul sesizarii, severitatea, locatia, data si dovada foto. Include subiect clar, salut politicos, context scurt, coordonate, data, motivul severitatii, URL foto si actiunea solicitata. Ton profesional, neutru si factual; nu acuza si nu spune ca problema a fost verificata oficial. Daca autoritatea e incerta, cere redirectionarea catre departamentul potrivit.',
+    fallbackMode: 'Sablon email dupa categorie, actor responsabil si severitate.',
+  },
+} as const
+
 const demoAdminAgents: AdminAgentResponse[] = [
   {
     id: 'demo-vision',
     key: 'vision',
     name: 'Vision Agent',
-    role: 'Photo and issue classifier',
-    description:
-      'Reads the uploaded photo, description and coordinates, then returns category, severity, summary, confidence and urgency.',
-    instructions:
-      'Classify the civic report using the Timisoara taxonomy. Prefer specific categories, keep summaries short and flag urgent safety risks.',
+    role: agentDefaults.vision.role,
+    description: agentDefaults.vision.description,
+    instructions: agentDefaults.vision.instructions,
     model: 'gpt-4o-mini',
-    fallbackMode: 'Keyword and description fallback with medium confidence.',
+    fallbackMode: agentDefaults.vision.fallbackMode,
     isEnabled: true,
     sortOrder: 1,
     totalSteps: 0,
@@ -67,13 +118,11 @@ const demoAdminAgents: AdminAgentResponse[] = [
     id: 'demo-triage',
     key: 'triage',
     name: 'Triage Agent',
-    role: 'Responsible actor router',
-    description:
-      'Chooses whether the report belongs to city hall, community action, partners or a mixed route.',
-    instructions:
-      'Use the category, severity and location context to pick the most practical responsible actor for demo follow-up.',
+    role: agentDefaults.triage.role,
+    description: agentDefaults.triage.description,
+    instructions: agentDefaults.triage.instructions,
     model: 'gpt-4o-mini',
-    fallbackMode: 'Rule-based actor mapping by category.',
+    fallbackMode: agentDefaults.triage.fallbackMode,
     isEnabled: true,
     sortOrder: 2,
     totalSteps: 0,
@@ -89,13 +138,11 @@ const demoAdminAgents: AdminAgentResponse[] = [
     id: 'demo-duplicate',
     key: 'duplicate',
     name: 'Duplicate Agent',
-    role: 'Nearby report checker',
-    description:
-      'Checks active nearby reports and marks likely duplicate clusters before a mission is generated.',
-    instructions:
-      'Compare distance, category and unresolved status. Only mark a duplicate when the match is clear enough for an admin to review.',
+    role: agentDefaults.duplicate.role,
+    description: agentDefaults.duplicate.description,
+    instructions: agentDefaults.duplicate.instructions,
     model: 'deterministic',
-    fallbackMode: 'Numeric latitude/longitude radius check.',
+    fallbackMode: agentDefaults.duplicate.fallbackMode,
     isEnabled: true,
     sortOrder: 3,
     totalSteps: 0,
@@ -111,13 +158,11 @@ const demoAdminAgents: AdminAgentResponse[] = [
     id: 'demo-mission',
     key: 'mission',
     name: 'Mission Agent',
-    role: 'Community mission planner',
-    description:
-      'Turns eligible issues into small civic missions with participants, impact points and timing.',
-    instructions:
-      'Generate compact, local, actionable missions that fit a Friday HackTM demo and avoid production-heavy workflows.',
+    role: agentDefaults.mission.role,
+    description: agentDefaults.mission.description,
+    instructions: agentDefaults.mission.instructions,
     model: 'gpt-4o-mini',
-    fallbackMode: 'Template mission based on category and zone.',
+    fallbackMode: agentDefaults.mission.fallbackMode,
     isEnabled: true,
     sortOrder: 4,
     totalSteps: 0,
@@ -133,13 +178,11 @@ const demoAdminAgents: AdminAgentResponse[] = [
     id: 'demo-reward',
     key: 'reward',
     name: 'Reward Agent',
-    role: 'Reward matcher',
-    description:
-      'Matches missions and reports to system or partner rewards where appropriate.',
-    instructions:
-      'Prefer relevant partner rewards, keep required points realistic and fall back to system rewards when no partner fits.',
+    role: agentDefaults.reward.role,
+    description: agentDefaults.reward.description,
+    instructions: agentDefaults.reward.instructions,
     model: 'deterministic',
-    fallbackMode: 'Seeded system reward or CoffeeLab demo reward.',
+    fallbackMode: agentDefaults.reward.fallbackMode,
     isEnabled: true,
     sortOrder: 5,
     totalSteps: 0,
@@ -155,13 +198,11 @@ const demoAdminAgents: AdminAgentResponse[] = [
     id: 'demo-city',
     key: 'city',
     name: 'City Agent',
-    role: 'Zone impact analyst',
-    description:
-      'Updates city-level insight and zone impact signals for admin overview and demo storytelling.',
-    instructions:
-      'Summarize the strongest active city signal and suggest the next visible action for the admin dashboard.',
+    role: agentDefaults.city.role,
+    description: agentDefaults.city.description,
+    instructions: agentDefaults.city.instructions,
     model: 'deterministic',
-    fallbackMode: 'Static summary generated from top zone and category counts.',
+    fallbackMode: agentDefaults.city.fallbackMode,
     isEnabled: true,
     sortOrder: 6,
     totalSteps: 0,
@@ -177,13 +218,11 @@ const demoAdminAgents: AdminAgentResponse[] = [
     id: 'demo-authority-email',
     key: 'authority_email',
     name: 'Authority Email Agent',
-    role: 'Local authority email drafter',
-    description:
-      'Prepares a clear email draft for the right local authority based on issue type, severity, location, date and photo evidence.',
-    instructions:
-      'Write concise Romanian authority emails. Include the issue context, severity rationale, exact location, report date, photo URL and requested next action.',
+    role: agentDefaults.authorityEmail.role,
+    description: agentDefaults.authorityEmail.description,
+    instructions: agentDefaults.authorityEmail.instructions,
     model: 'deterministic',
-    fallbackMode: 'Template email based on category, responsible actor and severity.',
+    fallbackMode: agentDefaults.authorityEmail.fallbackMode,
     isEnabled: true,
     sortOrder: 7,
     totalSteps: 0,
@@ -211,10 +250,12 @@ export function AdminAgentsPage() {
     enabled: Boolean(accessToken && isApiConfigured),
     refetchInterval: 5_000,
   })
-  const fetchedAgents = agentsQuery.data ?? []
+  const fetchedAgents = useMemo(() => agentsQuery.data ?? [], [agentsQuery.data])
   const shouldUseDemoAgents =
     !agentsQuery.isLoading &&
-    (!isApiConfigured || agentsQuery.isError || fetchedAgents.length === 0)
+    (!isApiConfigured || (!agentsQuery.isError && fetchedAgents.length === 0))
+  const shouldShowAdminApiError =
+    !agentsQuery.isLoading && isApiConfigured && agentsQuery.isError
   const agents = useMemo(
     () => (shouldUseDemoAgents ? demoAdminAgents : fetchedAgents),
     [fetchedAgents, shouldUseDemoAgents],
@@ -346,15 +387,21 @@ export function AdminAgentsPage() {
             description={
               !isApiConfigured
                 ? 'Set VITE_API_URL and sign in as an admin to edit live agent configuration.'
-                : agentsQuery.isError
-                  ? 'The admin API request failed, so this page keeps the demo agents visible in read-only mode.'
-                  : 'The backend returned no agent configs, so this page keeps the seeded MVP agents visible in read-only mode.'
+                : 'The backend returned no agent configs, so this page keeps the seeded MVP agents visible in read-only mode.'
             }
           />
         )}
 
         {agentsQuery.isLoading ? (
           <DemoSkeletonGrid items={6} className="md:grid-cols-2 xl:grid-cols-3" />
+        ) : shouldShowAdminApiError ? (
+          <DemoState
+            icon={TriangleAlert}
+            tone="rose"
+            eyebrow="Admin API"
+            title="Statisticile live ale agentilor nu au putut fi citite"
+            description="Verifica daca esti logat cu rol admin si daca backendul raspunde pe VITE_API_URL. Misiunile si recompensele pot rula in fluxul de raportare, dar aceasta pagina nu afiseaza countere reale fara raspunsul /api/admin/agents."
+          />
         ) : (
           <section className="grid gap-4 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.4fr)]">
             <div className="grid gap-3">
@@ -398,7 +445,7 @@ export function AdminAgentsPage() {
                   </div>
 
                   <div className="grid grid-cols-3 gap-2 text-xs">
-                    <MetricPill label="Runs" value={agent.totalSteps} />
+                    <MetricPill label="Steps" value={agent.totalSteps} />
                     <MetricPill label="Skipped" value={agent.skippedSteps} />
                     <MetricPill label="Failed" value={agent.failedSteps} />
                   </div>

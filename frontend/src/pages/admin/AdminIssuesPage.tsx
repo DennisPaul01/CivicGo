@@ -40,6 +40,7 @@ import {
   createAdminIssueEmailDraft,
   reopenAdminIssue,
   resolveIssue,
+  retryAdminIssueAgentPipeline,
   updateAdminIssue,
   type AdminIssueEmailDraftResponse,
   type IssueResponse,
@@ -50,6 +51,7 @@ import {
 } from '@/lib/api'
 import { roActor, roCategory, roReward, roStatus } from '@/lib/locale'
 import {
+  adminAgentsQueryKey,
   issuesQueryKey,
   issueQueryKey,
   missionsQueryKey,
@@ -144,6 +146,22 @@ function isOpenIssue(issue: IssueResponse) {
   return !isResolvedIssue(issue) && issue.status !== 'rejected'
 }
 
+function shouldRetryAgentPipeline(issue: IssueResponse) {
+  if (!isOpenIssue(issue)) {
+    return false
+  }
+
+  const completedAgentNames = new Set(
+    issue.agentRun?.steps
+      .filter((step) => step.status === 'completed' || step.status === 'fallback')
+      .map((step) => step.agentName) ?? [],
+  )
+
+  return ['Duplicate Agent', 'Mission Agent', 'Reward Agent'].some(
+    (agentName) => !completedAgentNames.has(agentName),
+  )
+}
+
 function isCommunityIssue(issue: IssueResponse) {
   return issue.responsibleActor.includes('community')
 }
@@ -236,7 +254,7 @@ export function AdminIssuesPage() {
   })
   const missionsQuery = useQuery({
     queryKey: missionsQueryKey,
-    queryFn: fetchMissions,
+    queryFn: () => fetchMissions(),
   })
   const rewardsQuery = useQuery({
     queryKey: rewardsQueryKey,
@@ -669,9 +687,19 @@ function IssueRow({ issue }: { issue: IssueResponse }) {
     useState<AdminIssueEmailDraftResponse | null>(null)
   const isResolved = isResolvedIssue(issue)
   const canResolve = !isResolved && issue.responsibleActor === 'city_hall'
+  const canRetryPipeline = shouldRetryAgentPipeline(issue)
   const invalidateAdminIssueData = (updatedIssue: IssueResponse) => {
     queryClient.setQueryData(issueQueryKey(updatedIssue.id), updatedIssue)
     queryClient.invalidateQueries({ queryKey: issuesQueryKey })
+    queryClient.invalidateQueries({ queryKey: publicActivityQueryKey(168, 80) })
+    queryClient.invalidateQueries({ queryKey: zoneLeaderboardQueryKey })
+  }
+  const invalidateAgentPipelineData = () => {
+    queryClient.invalidateQueries({ queryKey: issueQueryKey(issue.id) })
+    queryClient.invalidateQueries({ queryKey: issuesQueryKey })
+    queryClient.invalidateQueries({ queryKey: adminAgentsQueryKey })
+    queryClient.invalidateQueries({ queryKey: missionsQueryKey })
+    queryClient.invalidateQueries({ queryKey: rewardsQueryKey })
     queryClient.invalidateQueries({ queryKey: publicActivityQueryKey(168, 80) })
     queryClient.invalidateQueries({ queryKey: zoneLeaderboardQueryKey })
   }
@@ -723,6 +751,16 @@ function IssueRow({ issue }: { issue: IssueResponse }) {
       invalidateAdminIssueData(updatedIssue)
     },
   })
+  const retryPipelineMutation = useMutation({
+    mutationFn: () => {
+      if (!accessToken) {
+        throw new Error('Admin session is not available.')
+      }
+
+      return retryAdminIssueAgentPipeline(issue.id, accessToken)
+    },
+    onSuccess: invalidateAgentPipelineData,
+  })
   const emailDraftMutation = useMutation({
     mutationFn: () => {
       if (!accessToken) {
@@ -754,7 +792,8 @@ function IssueRow({ issue }: { issue: IssueResponse }) {
         accessToken,
       })
     },
-    onSuccess: (updatedIssue) => {
+    onSuccess: (resolution) => {
+      const updatedIssue = resolution.issue
       setResolutionNote('')
       setAfterImage(null)
       setImagePreviewUrl(null)
@@ -1121,6 +1160,23 @@ function IssueRow({ issue }: { issue: IssueResponse }) {
             Detalii
           </Link>
         </Button>
+        {canRetryPipeline && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-9 bg-white"
+            onClick={() => retryPipelineMutation.mutate()}
+            disabled={retryPipelineMutation.isPending}
+          >
+            {retryPipelineMutation.isPending ? (
+              <Loader2 data-icon="inline-start" className="animate-spin" aria-hidden="true" />
+            ) : (
+              <Bot data-icon="inline-start" aria-hidden="true" />
+            )}
+            Reia agentii
+          </Button>
+        )}
         {isResolved ? (
           <Button
             type="button"
@@ -1171,6 +1227,11 @@ function IssueRow({ issue }: { issue: IssueResponse }) {
         {emailDraftMutation.isError && (
           <p className="text-xs font-medium text-rose-700">
             Nu am putut genera emailul.
+          </p>
+        )}
+        {retryPipelineMutation.isError && (
+          <p className="text-xs font-medium text-rose-700">
+            Nu am putut relua agentii.
           </p>
         )}
         {(closeMutation.isError || reopenMutation.isError) && (

@@ -18,8 +18,12 @@ public static class MissionMapper
         );
     }
 
-    public static MissionResponse ToResponse(MissionEntity mission)
+    public static MissionResponse ToResponse(MissionEntity mission, Guid? currentUserId = null)
     {
+        var joinedParticipants = mission.Participants
+            .Where(participant => participant.Status == "joined")
+            .ToArray();
+
         return new MissionResponse(
             mission.Id,
             mission.Title,
@@ -33,7 +37,7 @@ public static class MissionMapper
             mission.StartsAt,
             mission.EndsAt,
             mission.ParticipantsNeeded,
-            mission.Participants.Count(participant => participant.Status == "joined"),
+            joinedParticipants.Length,
             mission.ImpactPoints,
             mission.CreatedByAi,
             mission.CreatedAt,
@@ -42,7 +46,9 @@ public static class MissionMapper
                 .Select(missionIssue => missionIssue.IssueId)
                 .Distinct()
                 .ToArray(),
-            RewardMapper.ToSummary(mission.Reward)
+            RewardMapper.ToSummary(mission.Reward),
+            currentUserId.HasValue &&
+                joinedParticipants.Any(participant => participant.UserId == currentUserId.Value)
         );
     }
 }

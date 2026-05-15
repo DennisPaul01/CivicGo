@@ -69,7 +69,14 @@ type StreamEnvelope = {
     step?: AgentStepResponse | null
     category?: string
     severity?: string
+    summary?: string | null
+    confidence?: number | null
     isUrgent?: boolean
+    isValidIssue?: boolean
+    invalidReason?: string | null
+    responsibleActor?: string
+    rewardEligible?: boolean
+    status?: string
     duplicateCount?: number
     nearestDuplicate?: IssueResponse['nearestDuplicate']
     missionId?: string
@@ -138,6 +145,8 @@ function createOptimisticIssue(
     aiConfidence: null,
     isUrgent: false,
     rewardEligible: true,
+    isValidIssue: true,
+    invalidReason: null,
     aiAnalyzedAt: null,
     duplicateCount: 0,
     nearestDuplicate: null,
@@ -602,12 +611,26 @@ export function ReportIssuePage() {
       }))
 
       if (eventName === 'issue.analyzed' && envelope?.data) {
+        const isValidIssue = envelope.data?.isValidIssue ?? true
         patchVisibleIssue(issueId, (currentIssue) => ({
           ...currentIssue,
           category: envelope.data?.category ?? currentIssue.category,
           severity: envelope.data?.severity ?? currentIssue.severity,
+          aiSummary: envelope.data?.summary ?? currentIssue.aiSummary,
+          aiConfidence: envelope.data?.confidence ?? currentIssue.aiConfidence,
           isUrgent: envelope.data?.isUrgent ?? currentIssue.isUrgent,
-          status: 'ai_analyzed',
+          isValidIssue,
+          invalidReason:
+            isValidIssue === false
+              ? envelope.data?.invalidReason ?? currentIssue.invalidReason
+              : null,
+          responsibleActor:
+            envelope.data?.responsibleActor ?? currentIssue.responsibleActor,
+          rewardEligible:
+            envelope.data?.rewardEligible ?? currentIssue.rewardEligible,
+          status:
+            envelope.data?.status ??
+            (isValidIssue === false ? 'rejected' : 'ai_analyzed'),
           aiAnalyzedAt: new Date().toISOString(),
         }))
       }
@@ -709,7 +732,7 @@ export function ReportIssuePage() {
 
   return (
     <main className="min-h-svh bg-[#f7fbf2] px-4 py-4 text-slate-950 sm:px-6 lg:px-8">
-      <div className="mx-auto mb-4 w-full max-w-6xl">
+      <div className="sticky top-3 z-50 mx-auto mb-4 w-full max-w-6xl sm:top-4">
         <TopNavigation />
       </div>
       <section className="mx-auto w-full max-w-6xl">

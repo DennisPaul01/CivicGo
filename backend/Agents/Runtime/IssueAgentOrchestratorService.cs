@@ -1,9 +1,12 @@
 using CivicGo.Api.Agents.Tools;
 using CivicGo.Api.Ai;
+using CivicGo.Api.Data;
+using CivicGo.Api.Data.Entities;
 using CivicGo.Api.Duplicates;
 using CivicGo.Api.Gamification;
 using CivicGo.Api.Missions;
 using CivicGo.Api.Rewards;
+using Microsoft.EntityFrameworkCore;
 
 namespace CivicGo.Api.Agents.Runtime;
 
@@ -19,6 +22,9 @@ public sealed class IssueAgentOrchestratorService(
 
     private async Task RunAsync(Guid issueId, CancellationToken cancellationToken)
     {
+        var currentAgentName = "Agent Pipeline";
+        var currentPhase = "starting";
+
         try
         {
             using var scope = scopeFactory.CreateScope();
@@ -32,6 +38,7 @@ public sealed class IssueAgentOrchestratorService(
             var context = new AgentWorkContext(issueId);
             var agentConfigs = await writer.LoadAgentConfigsAsync(cancellationToken);
 
+            currentPhase = "publish_issue_created";
             await writer.PublishIssueCreatedAsync(issueId, cancellationToken);
 
             var visionAgent = IssueAgentStepWriter.GetAgentConfig(
@@ -45,7 +52,10 @@ public sealed class IssueAgentOrchestratorService(
                 "Triage Agent"
             );
 
+            currentAgentName = "Vision Agent";
+            currentPhase = "start_step";
             await writer.StartStepAsync(issueId, "Vision Agent", null, cancellationToken);
+            currentPhase = "execute";
             var analysisToolResult = await analyzeIssueTool.ExecuteAsync(
                 issueId,
                 agentConfigs,
@@ -53,6 +63,7 @@ public sealed class IssueAgentOrchestratorService(
             );
             context.Analysis = (IssueAiAnalysisResponse)analysisToolResult.Data!;
             context.NextAction = "Run Triage Agent";
+            currentPhase = "complete_step";
             await writer.CompleteStepAsync(
                 issueId,
                 "Vision Agent",
@@ -84,9 +95,14 @@ public sealed class IssueAgentOrchestratorService(
                         issueId,
                         context.Analysis.Category,
                         context.Analysis.Severity,
+                        context.Analysis.Summary,
+                        context.Analysis.Confidence,
                         context.Analysis.IsUrgent,
                         context.Analysis.IsValidIssue,
                         context.Analysis.InvalidReason,
+                        context.Analysis.ResponsibleActor,
+                        context.Analysis.RewardEligible,
+                        context.Analysis.SuggestedAction,
                         status = "rejected",
                         context.Analysis.CreatedAt
                     },
@@ -115,6 +131,8 @@ public sealed class IssueAgentOrchestratorService(
                 return;
             }
 
+            currentAgentName = "Triage Agent";
+            currentPhase = "start_step";
             await writer.StartStepAsync(issueId, "Triage Agent", "Vision Agent", cancellationToken);
             var triageDecision = CreateTriageDecision(context.Analysis);
             context.IsEscalationPath =
@@ -124,6 +142,7 @@ public sealed class IssueAgentOrchestratorService(
             context.NextAction = context.IsEscalationPath
                 ? "Escalate the report and skip community mission generation."
                 : "Run Duplicate Agent";
+            currentPhase = "complete_step";
             await writer.CompleteStepAsync(
                 issueId,
                 "Triage Agent",
@@ -154,8 +173,13 @@ public sealed class IssueAgentOrchestratorService(
                     issueId,
                     context.Analysis.Category,
                     context.Analysis.Severity,
+                    context.Analysis.Summary,
+                    context.Analysis.Confidence,
                     context.Analysis.IsUrgent,
                     context.Analysis.IsValidIssue,
+                    context.Analysis.ResponsibleActor,
+                    context.Analysis.RewardEligible,
+                    context.Analysis.SuggestedAction,
                     context.Analysis.CreatedAt
                 },
                 cancellationToken
@@ -172,6 +196,8 @@ public sealed class IssueAgentOrchestratorService(
             }
             else
             {
+                currentAgentName = "Duplicate/Mission/Reward Agents";
+                currentPhase = "run_downstream_agents";
                 await RunDuplicateMissionRewardPathAsync(
                     writer,
                     searchNearbyIssuesTool,
@@ -183,12 +209,17 @@ public sealed class IssueAgentOrchestratorService(
                 );
             }
 
+            currentAgentName = "Gamification";
+            currentPhase = "apply_report_rewards";
             context.Gamification = await gamificationService.ApplyReportRewardsAsync(
                 issueId,
                 cancellationToken
             );
+            currentPhase = "publish_gamification_events";
             await PublishGamificationEventsAsync(writer, context, cancellationToken);
 
+            currentAgentName = "City Agent";
+            currentPhase = "run_city_agent";
             await RunCityAgentAsync(
                 writer,
                 updateZoneScoreTool,
@@ -206,6 +237,9 @@ public sealed class IssueAgentOrchestratorService(
             var failedPayload = new
             {
                 issueId,
+                agentName = currentAgentName,
+                phase = currentPhase,
+                exceptionType = exception.GetType().Name,
                 message = "Agent runtime failed before finishing."
             };
 
@@ -219,7 +253,7 @@ public sealed class IssueAgentOrchestratorService(
         }
     }
 
-    private static async Task RunDuplicateMissionRewardPathAsync(
+    private async Task RunDuplicateMissionRewardPathAsync(
         IssueAgentStepWriter writer,
         SearchNearbyIssuesTool searchNearbyIssuesTool,
         CreateMissionTool createMissionTool,
@@ -275,8 +309,10 @@ public sealed class IssueAgentOrchestratorService(
                     duplicateAgent.FallbackMode,
                     duplicateAgent.IsEnabled
                 },
-                null,
-                context.IsDuplicatePath
+                duplicateToolResult.Succeeded ? null : "fallback",
+                !duplicateToolResult.Succeeded
+                    ? "Verificarea duplicatelor a folosit fallback si continua fara blocaj."
+                    : context.IsDuplicatePath
                     ? "A detectat un posibil duplicat in apropiere."
                     : "A verificat rapoartele din apropiere: nu a gasit duplicat.",
                 cancellationToken
@@ -296,14 +332,11 @@ public sealed class IssueAgentOrchestratorService(
                     },
                     cancellationToken
                 );
-                await SkipMissionAndRewardForDuplicateAsync(
-                    writer,
-                    agentConfigs,
+                await PersistDuplicateSignalAsync(
                     context.IssueId,
+                    context.DuplicateResult,
                     cancellationToken
                 );
-
-                return;
             }
         }
 
@@ -315,6 +348,79 @@ public sealed class IssueAgentOrchestratorService(
             context,
             cancellationToken
         );
+    }
+
+    private async Task PersistDuplicateSignalAsync(
+        Guid issueId,
+        DuplicateDetectionResult result,
+        CancellationToken cancellationToken
+    )
+    {
+        if (result.DuplicateCount <= 0 && result.NearestDuplicate is null)
+        {
+            return;
+        }
+
+        try
+        {
+            using var scope = scopeFactory.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<CivicGoDbContext>();
+            var issue = await dbContext.Issues
+                .AsNoTracking()
+                .Include(item => item.Zone)
+                .FirstOrDefaultAsync(item => item.Id == issueId, cancellationToken);
+
+            if (issue is null)
+            {
+                return;
+            }
+
+            var now = DateTimeOffset.UtcNow;
+            await dbContext.Issues
+                .Where(item => item.Id == issueId)
+                .ExecuteUpdateAsync(
+                    setters => setters
+                        .SetProperty(
+                            item => item.DuplicateCount,
+                            item => item.DuplicateCount < result.DuplicateCount
+                                ? result.DuplicateCount
+                                : item.DuplicateCount
+                        )
+                        .SetProperty(item => item.UpdatedAt, now),
+                    cancellationToken
+                );
+
+            var existingFeedItem = await dbContext.PublicActivityFeedItems.AnyAsync(
+                item => item.Type == "duplicate_detected" && item.RelatedIssueId == issueId,
+                cancellationToken
+            );
+
+            if (!existingFeedItem)
+            {
+                dbContext.PublicActivityFeedItems.Add(new PublicActivityFeedItemEntity
+                {
+                    Id = Guid.NewGuid(),
+                    Type = "duplicate_detected",
+                    Title = "Posibil duplicat detectat",
+                    Message = result.NearestDuplicate is null
+                        ? $"AI a gasit semnale apropiate pentru raportul din {issue.Zone?.Name ?? "Timisoara"}."
+                        : $"AI a gasit un raport apropiat la {result.NearestDuplicate.DistanceMeters}m in {issue.Zone?.Name ?? "Timisoara"}.",
+                    RelatedIssueId = issue.Id,
+                    RelatedZoneId = issue.ZoneId,
+                    CreatedAt = now
+                });
+
+                await dbContext.SaveChangesAsync(cancellationToken);
+            }
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(
+                exception,
+                "Duplicate signal persistence failed for issue {IssueId}. Continuing agent runtime.",
+                issueId
+            );
+        }
     }
 
     private static async Task RunMissionAndRewardAsync(
@@ -381,7 +487,7 @@ public sealed class IssueAgentOrchestratorService(
             },
             null,
             context.Mission is null
-                ? "A decis ca raportul nu are nevoie de o misiune comunitara."
+                ? "Raportul nu necesita o actiune comunitara; poate fi rezolvat individual sau trimis catre autoritatea potrivita."
                 : $"A creat misiunea {context.Mission.Title}.",
             cancellationToken
         );
@@ -392,7 +498,7 @@ public sealed class IssueAgentOrchestratorService(
                 writer,
                 agentConfigs,
                 context.IssueId,
-                "No mission was created, so reward matching is not applicable.",
+                "Raportul nu necesita o actiune comunitara, asa ca reward matching nu se aplica.",
                 cancellationToken
             );
 
@@ -830,6 +936,19 @@ public sealed class IssueAgentOrchestratorService(
         AgentToolResult toolResult
     )
     {
+        if (!toolResult.Succeeded)
+        {
+            return new AgentDecision(
+                toolResult.Message ?? "Duplicate search used fallback.",
+                SearchNearbyIssuesTool.ToolName,
+                "Continue to mission eligibility using duplicate fallback.",
+                "Run Mission Agent",
+                0.52,
+                true,
+                toolResult
+            );
+        }
+
         var hasDuplicate = result.NearestDuplicate is not null;
 
         return new AgentDecision(
@@ -854,7 +973,7 @@ public sealed class IssueAgentOrchestratorService(
     {
         return new AgentDecision(
             mission is null
-                ? "The issue is not suitable for a community mission."
+                ? "Raportul nu necesita o actiune comunitara; poate fi rezolvat individual sau trimis catre autoritatea potrivita."
                 : $"Created mission {mission.Title}.",
             CreateMissionTool.ToolName,
             mission is null

@@ -902,7 +902,7 @@ export function ZoneLeaderboardPage() {
   })
   const missionsQuery = useQuery({
     queryKey: missionsQueryKey,
-    queryFn: fetchMissions,
+    queryFn: () => fetchMissions(),
     enabled: isApiConfigured,
   })
   const zones = useMemo(() => {

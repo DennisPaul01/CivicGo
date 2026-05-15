@@ -165,6 +165,8 @@ const demoMunicipalQueue: IssueResponse[] = [
     aiConfidence: 0.91,
     isUrgent: true,
     rewardEligible: false,
+    isValidIssue: true,
+    invalidReason: null,
     aiAnalyzedAt: new Date().toISOString(),
     duplicateCount: 0,
     nearestDuplicate: null,
@@ -1074,7 +1076,7 @@ export function AdminDashboardPage() {
   })
   const missionsQuery = useQuery({
     queryKey: missionsQueryKey,
-    queryFn: fetchMissions,
+    queryFn: () => fetchMissions(),
   })
   const rewardsQuery = useQuery({
     queryKey: rewardsQueryKey,

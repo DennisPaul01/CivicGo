@@ -4,7 +4,7 @@ const statusLabels: Record<string, string> = {
   duplicate_detected: 'Posibil duplicat',
   in_review: 'Problema activa',
   in_progress: 'In lucru',
-  mission_created: 'Misiune activa',
+  mission_created: 'Eveniment activ',
   resolved: 'Rezolvat',
   issue_resolved: 'Rezolvat',
   rejected: 'Respins',
@@ -105,25 +105,25 @@ const rewardLabels: Record<string, string> = {
   '15% bookstore discount': 'Reducere 15% la librarie',
   'Free dessert': 'Desert gratuit',
   'Coworking day ticket': 'Bilet de o zi la coworking',
-  'Mission Hero weekend boost': 'Bonus de weekend Erou de misiune',
+  'Mission Hero weekend boost': 'Bonus de weekend Erou de eveniment',
   'Before/After impact card': 'Card de impact inainte/dupa',
   'Team cleanup coffee tray': 'Tava de cafea pentru echipa',
   'Civic notebook pack': 'Pachet de carnetele civice',
 }
 
 const missionTextLabels: Record<string, string> = {
-  'Clean-up Mehala park edge': 'Curatenie la marginea parcului Mehala',
+  'Clean-up Mehala park edge': 'Eveniment de curatenie la marginea parcului Mehala',
   'Community clean-up for the Mehala park edge reported in the live map.':
     'Curatenie comunitara pentru marginea parcului din Mehala, raportata pe harta live.',
   'Safe route Soarelui sidewalk sprint':
-    'Sprint pentru trotuarul sigur din Soarelui',
+    'Rutare pentru trotuarul sigur din Soarelui',
   'Volunteers and the city team clear the blocked sidewalk on a school route.':
     'Voluntarii si echipa orasului elibereaza trotuarul blocat de pe traseul spre scoala.',
-  'Fabric lighting safety walk': 'Tur de siguranta pentru iluminatul din Fabric',
+  'Fabric lighting safety walk': 'Rutare siguranta pentru iluminatul din Fabric',
   'Evening safety walk to document broken lighting and confirm repair spots.':
     'Tur de siguranta seara pentru documentarea iluminatului defect si confirmarea punctelor care trebuie reparate.',
   'Temporary reward matching verification mission.':
-    'Misiune temporara pentru verificarea potrivirii recompensei.',
+    'Eveniment temporar pentru verificarea potrivirii recompensei.',
 }
 
 const pointReasonLabels: Record<string, string> = {
@@ -135,7 +135,7 @@ const agentNameLabels: Record<string, string> = {
   'Vision Agent': 'Verificare foto',
   'Triage Agent': 'Triere',
   'Duplicate Agent': 'Verificare duplicate',
-  'Mission Agent': 'Misiune',
+  'Mission Agent': 'Eveniment',
   'Reward Agent': 'Puncte si recompense',
   'City Agent': 'Harta live',
 }
@@ -315,7 +315,7 @@ export function roAgentMessage(value: string | null | undefined) {
     .replace(/^Found who can help: (.+)\.$/, 'A gasit cine poate ajuta: $1.')
     .replace(/^Checked nearby reports: no duplicate found\.$/, 'A verificat rapoartele din apropiere: nu a gasit duplicat.')
     .replace(/^Possible duplicate detected nearby\.$/, 'A detectat un posibil duplicat in apropiere.')
-    .replace(/^Created (.+)\.$/, 'A creat misiunea $1.')
+    .replace(/^Created (.+)\.$/, 'A creat evenimentul comunitar $1.')
     .replace(/^Matched (.+)\.$/, 'A potrivit recompensa $1.')
 
   return Object.entries(humanizedLabels)

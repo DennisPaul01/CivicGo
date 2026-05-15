@@ -62,10 +62,9 @@ export const civicMapItems: CivicMapItem[] = [
     zone: 'Complex',
     coordinates: [21.2325, 45.7531],
     meta: '2 cetateni au raportat un context similar',
-    impact: 'Actiune comunitara posibila',
+    impact: 'Rutare civica pregatita',
     pointsEarned: 20,
     responsibleActor: 'Comunitate si primarie',
-    relatedMission: 'Verificare accesibilitate Complex',
   },
   {
     id: 'issue-ai-fabric',
@@ -82,7 +81,6 @@ export const civicMapItems: CivicMapItem[] = [
     meta: 'Iluminat public',
     impact: 'Trimis catre primarie pentru inspectie',
     responsibleActor: 'Primarie',
-    relatedMission: 'Tur de siguranta Fabric',
   },
   {
     id: 'issue-progress-girocului',
@@ -92,14 +90,13 @@ export const civicMapItems: CivicMapItem[] = [
     label: 'In lucru: drum deteriorat in Girocului',
     title: 'Drum deteriorat in Girocului',
     description:
-      'Problema este verificata si legata de o misiune locala de siguranta rutiera.',
+      'Problema este verificata si rutata catre primarie pentru interventie tehnica.',
     statusLabel: 'In lucru',
     zone: 'Girocului',
     coordinates: [21.2114, 45.7339],
     meta: 'Alocat primariei - 2 duplicate in apropiere',
-    impact: '+80 puncte de impact civic in lucru',
+    impact: 'Rutare civica pregatita pentru primarie',
     responsibleActor: 'Primarie',
-    relatedMission: 'Siguranta rutiera Girocului',
   },
   {
     id: 'issue-resolved-central',
@@ -109,7 +106,7 @@ export const civicMapItems: CivicMapItem[] = [
     label: 'Rezolvat: deseuri abandonate langa Parcul Central',
     title: 'Deseuri abandonate langa Parcul Central',
     description:
-      'O gramada de deseuri raportata a fost curatata printr-o misiune comunitara si o recompensa de la partener.',
+      'O gramada de deseuri raportata a fost curatata printr-un eveniment comunitar si o recompensa de la partener.',
     statusLabel: 'Rezolvat',
     zone: 'Parcul Central',
     coordinates: [21.2201, 45.7578],
@@ -129,15 +126,15 @@ export const civicMapItems: CivicMapItem[] = [
     kind: 'mission',
     source: 'demo',
     createdAt: minutesAgo(460),
-    label: 'Misiune activa: verificare spatiu verde in Soarelui',
-    title: 'Verificare spatiu verde in Soarelui',
+    label: 'Eveniment comunitar activ: curatenie deseuri voluminoase in Soarelui',
+    title: 'Curatenie deseuri voluminoase in Soarelui',
     description:
-      'O misiune comunitara este activa pentru verificarea bancilor deteriorate si a zonelor verzi.',
-    statusLabel: 'Misiune activa',
+      'Un eveniment comunitar este activ pentru documentarea si curatarea unor deseuri mari abandonate.',
+    statusLabel: 'Eveniment activ',
     zone: 'Soarelui',
     coordinates: [21.2468, 45.7366],
     meta: '5 inscrisi - sunt necesari 8 participanti',
-    impact: '+95 puncte de impact pentru misiune',
+    impact: '+95 puncte de impact pentru eveniment',
     reward: 'Abonament de o zi Local Gym disponibil',
   },
   {
@@ -148,11 +145,11 @@ export const civicMapItems: CivicMapItem[] = [
     label: 'Recompensa disponibila: CoffeeLab langa Unirii',
     title: 'Recompensa CoffeeLab langa Unirii',
     description:
-      'O recompensa de la partener este disponibila pentru cetatenii care finalizeaza misiuni eligibile de curatenie.',
+      'O recompensa de la partener este disponibila pentru cetatenii care participa la evenimente eligibile de curatenie.',
     statusLabel: 'Recompensa disponibila',
     zone: 'Unirii',
     coordinates: [21.2289, 45.757],
-    meta: 'Necesita misiune finalizata si 300 puncte civice',
+    meta: 'Necesita eveniment finalizat si 300 puncte civice',
     impact: 'Recompensa de partener disponibila',
     reward: 'Cappuccino gratuit',
   },
@@ -193,12 +190,7 @@ function formatApiValue(value: string | null | undefined, fallback: string) {
 }
 
 function isCitizenActionIssue(issue: IssueResponse) {
-  return (
-    issue.rewardEligible ||
-    issue.responsibleActor === 'community' ||
-    issue.responsibleActor === 'community_and_city_hall' ||
-    Boolean(issue.relatedMission)
-  )
+  return Boolean(issue.relatedMission)
 }
 
 function isCityHallIssue(issue: IssueResponse) {
@@ -295,11 +287,11 @@ function getIssueImpact(issue: IssueResponse, pointsEarned?: number) {
   }
 
   if (issue.relatedMission) {
-    return 'Task comunitar conectat pe harta'
+    return 'Eveniment comunitar conectat pe harta'
   }
 
   if (pointsEarned !== undefined) {
-    return 'Task comunitar in generare'
+    return 'Rutare civica pregatita'
   }
 
   if (isCityHallIssue(issue)) {
@@ -353,7 +345,7 @@ export function mapIssueResponseToCivicMapItem(
     relatedMission:
       relatedMission?.title ??
       (isCitizenActionIssue(issue) && !isCityHallIssue(issue)
-        ? 'Task comunitar in generare'
+        ? 'Eveniment comunitar conectat'
         : undefined),
     reward: issue.relatedReward
       ? formatRewardLabel(issue.relatedReward.title, issue.relatedReward.partnerName)
@@ -434,17 +426,17 @@ export function mapMissionResponseToCivicMapItem(
     kind: 'mission',
     source: 'api',
     createdAt: mission.createdAt,
-    label: `Misiune activa: ${mission.title}`,
+    label: `Eveniment comunitar activ: ${mission.title}`,
     title: mission.title,
     description: mission.description,
     statusLabel:
       mission.status === 'active'
-        ? 'Misiune activa'
-        : roStatus(mission.status, 'Misiune'),
+        ? 'Eveniment activ'
+        : roStatus(mission.status, 'Eveniment'),
     zone: mission.zoneName ?? 'Timisoara',
     coordinates: [mission.longitude + 0.0012, mission.latitude + 0.0012],
     meta: `${mission.participantsJoined}/${mission.participantsNeeded} inscrisi · ${formatMissionDate(mission.startsAt)}`,
-    impact: `+${mission.impactPoints} puncte de impact pentru misiune`,
+    impact: `+${mission.impactPoints} puncte de impact pentru eveniment`,
     missionId: mission.id,
     participantsNeeded: mission.participantsNeeded,
     participantsJoined: mission.participantsJoined,

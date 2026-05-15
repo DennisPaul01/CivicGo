@@ -21,5 +21,6 @@ public sealed record MissionResponse(
     DateTimeOffset CreatedAt,
     DateTimeOffset? CompletedAt,
     IReadOnlyList<Guid> RelatedIssueIds,
-    RewardSummaryResponse? Reward
+    RewardSummaryResponse? Reward,
+    bool IsJoinedByCurrentUser
 );

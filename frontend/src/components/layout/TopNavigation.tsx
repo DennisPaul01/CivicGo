@@ -7,6 +7,7 @@ import {
   Flag,
   Gift,
   MapPinned,
+  Medal,
   Menu,
   Plus,
   Trophy,
@@ -18,12 +19,13 @@ import { Link, useLocation } from 'react-router-dom'
 const navItems = [
   { label: 'Harta', href: '/#map', icon: MapPinned, match: '/' },
   {
-    label: 'Misiuni',
+    label: 'Evenimente',
     href: '/missions',
     icon: Flag,
     match: '/missions',
   },
   { label: 'Recompense', href: '/rewards', icon: Gift, match: '/rewards' },
+  { label: 'Clasament', href: '/leaderboard', icon: Medal, match: '/leaderboard' },
   { label: 'Zone', href: '/zones', icon: Trophy, match: '/zones' },
 ]
 

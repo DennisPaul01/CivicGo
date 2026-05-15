@@ -45,7 +45,8 @@ builder.Services.AddCors(options =>
     options.AddPolicy(
         "Frontend",
         policy => policy
-            .WithOrigins(allowedOrigins)
+            .SetIsOriginAllowed(origin =>
+                IsAllowedFrontendOrigin(origin, allowedOrigins, builder.Environment.IsDevelopment()))
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials()
@@ -78,6 +79,10 @@ builder.Services.Configure<OpenAiOptions>(options =>
         "gpt-4o-mini";
 });
 builder.Services.AddHttpClient<IssueAiAnalysisService>(client =>
+{
+    client.BaseAddress = new Uri("https://api.openai.com/v1/");
+});
+builder.Services.AddHttpClient<IssueResolutionVerificationService>(client =>
 {
     client.BaseAddress = new Uri("https://api.openai.com/v1/");
 });
@@ -172,6 +177,40 @@ app.MapMissionEndpoints();
 app.MapRewardEndpoints();
 app.MapZoneEndpoints();
 app.MapDashboardEndpoints();
+app.MapGamificationEndpoints();
 app.MapHub<CivicHub>("/civic-hub");
 
 app.Run();
+
+static bool IsAllowedFrontendOrigin(string origin, string[] allowedOrigins, bool isDevelopment)
+{
+    if (allowedOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase))
+    {
+        return true;
+    }
+
+    if (!isDevelopment || !Uri.TryCreate(origin, UriKind.Absolute, out var uri))
+    {
+        return false;
+    }
+
+    if (uri.Scheme is not ("http" or "https") || uri.Port is < 5173 or > 5179)
+    {
+        return false;
+    }
+
+    return uri.Host is "localhost" or "127.0.0.1" ||
+           uri.Host.StartsWith("192.168.", StringComparison.OrdinalIgnoreCase) ||
+           uri.Host.StartsWith("10.", StringComparison.OrdinalIgnoreCase) ||
+           IsPrivate172Address(uri.Host);
+}
+
+static bool IsPrivate172Address(string host)
+{
+    var parts = host.Split('.');
+
+    return parts.Length == 4 &&
+           parts[0] == "172" &&
+           int.TryParse(parts[1], out var secondOctet) &&
+           secondOctet is >= 16 and <= 31;
+}

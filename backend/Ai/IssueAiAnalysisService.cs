@@ -351,6 +351,7 @@ public sealed class IssueAiAnalysisService(
             {
                 source = "openai",
                 category = isValidIssue ? category : IssueCategories.Other,
+                extra = dto.ExtraFields,
                 severity = isValidIssue ? severity : "low",
                 summary = Truncate(
                     dto.Summary,
@@ -1080,5 +1081,8 @@ public sealed class IssueAiAnalysisService(
 
         [JsonPropertyName("invalidReason")]
         public string? InvalidReason { get; init; }
+
+        [JsonExtensionData]
+        public Dictionary<string, JsonElement>? ExtraFields { get; init; }
     }
 }

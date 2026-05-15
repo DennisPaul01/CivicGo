@@ -1,4 +1,3 @@
-using System.Text.Json;
 using CivicGo.Api.Agents;
 using CivicGo.Api.Data;
 using CivicGo.Api.Data.Entities;
@@ -11,11 +10,6 @@ public sealed class RewardMatchingService(
     ILogger<RewardMatchingService> logger
 )
 {
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
-    {
-        WriteIndented = false
-    };
-
     public async Task<RewardSummaryResponse?> MatchRewardForMissionAsync(
         Guid missionId,
         RuntimeAgentConfig? agentConfig,
@@ -76,8 +70,6 @@ public sealed class RewardMatchingService(
             RelatedZoneId = mission.ZoneId,
             CreatedAt = now
         });
-
-        AddRewardAgentStep(mission, selectedReward, agentConfig, now);
 
         if (!await TrySaveRewardMatchAsync(mission.Id, cancellationToken))
         {
@@ -211,59 +203,4 @@ public sealed class RewardMatchingService(
         return $"{sponsor} a potrivit {reward.Title} cu {mission.Title}.";
     }
 
-    private static void AddRewardAgentStep(
-        MissionEntity mission,
-        RewardEntity reward,
-        RuntimeAgentConfig? agentConfig,
-        DateTimeOffset now
-    )
-    {
-        var issue = mission.CreatedFromIssue;
-        var latestRun = issue?.AgentRuns
-            .OrderByDescending(run => run.CreatedAt)
-            .FirstOrDefault();
-
-        if (latestRun is null ||
-            latestRun.AgentSteps.Any(step => step.AgentName == "Reward Agent"))
-        {
-            return;
-        }
-
-        var nextOrder = latestRun.AgentSteps.Count == 0
-            ? 1
-            : latestRun.AgentSteps.Max(step => step.Order) + 1;
-        latestRun.AgentSteps.Add(new AgentStepEntity
-        {
-            Id = Guid.NewGuid(),
-            AgentRunId = latestRun.Id,
-            AgentName = "Reward Agent",
-            Status = "completed",
-            InputJson = JsonSerializer.Serialize(new
-            {
-                mission.Id,
-                mission.Title,
-                mission.Zone?.Name,
-                issue?.Category,
-                mission.ImpactPoints,
-                adminInstructions = agentConfig?.Instructions,
-                configuredModel = agentConfig?.Model,
-                fallbackMode = agentConfig?.FallbackMode,
-                isEnabled = agentConfig?.IsEnabled ?? true
-            }, JsonOptions),
-            OutputJson = JsonSerializer.Serialize(new
-            {
-                mode = agentConfig?.FallbackMode ?? "Seeded system or partner reward matching.",
-                reward.Id,
-                reward.Type,
-                reward.Title,
-                partner = reward.Partner?.Name,
-                reward.RequiredPoints
-            }, JsonOptions),
-            Message = $"A potrivit recompensa {reward.Title}.",
-            StartedAt = now.AddMilliseconds(-160),
-            CompletedAt = now,
-            Order = nextOrder
-        });
-        latestRun.CompletedAt = now;
-    }
 }

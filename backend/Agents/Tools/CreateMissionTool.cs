@@ -23,7 +23,9 @@ public sealed class CreateMissionTool(MissionGenerationService missionGeneration
             ToolName,
             true,
             mission,
-            mission is null ? "Issue was not eligible for a community mission." : null
+            mission is null
+                ? "Raportul nu necesita o actiune comunitara; poate fi rezolvat individual sau trimis catre autoritatea potrivita."
+                : null
         );
     }
 }

@@ -19,7 +19,7 @@ export function AgentTimeline({ run }: AgentTimelineProps) {
 
   return (
     <motion.section
-      className="mt-4 rounded-lg border border-emerald-200 bg-white p-4 shadow-sm"
+      className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50/40 p-4"
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.28, ease: 'easeOut' }}
@@ -27,10 +27,10 @@ export function AgentTimeline({ run }: AgentTimelineProps) {
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
-            Timeline agenti
+            Verificari automate
           </p>
           <h3 className="mt-1 text-base font-semibold text-emerald-950">
-            AI-ul CiviTm a verificat raportul
+            Ce a verificat CiviTm
           </h3>
         </div>
         <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-teal-700">
@@ -61,9 +61,8 @@ export function AgentTimeline({ run }: AgentTimelineProps) {
       </motion.ol>
 
       {usedFallback && (
-        <p className="mt-3 rounded-lg border border-teal-100 bg-teal-50 px-3 py-2 text-xs leading-5 text-teal-800">
-          A fost folosit fallback-ul, astfel analiza ramane disponibila chiar daca
-          cererea AI live nu este disponibila.
+        <p className="mt-3 rounded-lg border border-teal-100 bg-white/75 px-3 py-2 text-xs leading-5 text-teal-800">
+          Verificarea a folosit modul demo, ca fluxul sa ramana disponibil.
         </p>
       )}
     </motion.section>

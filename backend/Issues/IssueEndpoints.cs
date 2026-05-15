@@ -296,6 +296,8 @@ public static class IssueEndpoints
             CivicGoDbContext dbContext,
             UserProfileService userProfileService,
             SupabaseStorageService storageService,
+            IssueResolutionVerificationService resolutionVerificationService,
+            GamificationService gamificationService,
             IHubContext<CivicHub> civicHub,
             IssueEventStreamService eventStream,
             CancellationToken cancellationToken
@@ -340,9 +342,9 @@ public static class IssueEndpoints
 
             var profile = await userProfileService.GetOrCreateAsync(principal);
 
-            if (!string.Equals(profile.Role, "admin", StringComparison.OrdinalIgnoreCase))
+            if (issue.Status is "resolved" or "issue_resolved" || issue.ResolvedAt is not null)
             {
-                return Results.Forbid();
+                return Results.BadRequest(new { message = "Aceasta problema este deja marcata ca rezolvata." });
             }
 
             var now = DateTimeOffset.UtcNow;
@@ -351,6 +353,26 @@ public static class IssueEndpoints
                 accessToken,
                 cancellationToken
             );
+            var verification = await resolutionVerificationService.VerifyAsync(
+                issue,
+                afterImageUrl,
+                resolutionNote.Trim(),
+                cancellationToken
+            );
+
+            if (!verification.IsResolved)
+            {
+                issue.UpdatedAt = now;
+                await dbContext.SaveChangesAsync(cancellationToken);
+
+                return Results.Ok(new ResolveIssueResponse(
+                    false,
+                    verification.Summary,
+                    ToResponse(issue),
+                    ToVerificationResponse(verification),
+                    null
+                ));
+            }
 
             issue.Status = "resolved";
             issue.AfterImageUrl = afterImageUrl;
@@ -369,6 +391,11 @@ public static class IssueEndpoints
             });
 
             await dbContext.SaveChangesAsync(cancellationToken);
+            var gamification = await gamificationService.ApplyResolutionRewardsAsync(
+                profile.Id,
+                issue.Id,
+                cancellationToken
+            );
             await PublishIssueStatusChangedAsync(
                 civicHub,
                 eventStream,
@@ -385,10 +412,23 @@ public static class IssueEndpoints
                 "issue.status.changed",
                 cancellationToken
             );
+            await PublishGamificationEventsAsync(
+                civicHub,
+                eventStream,
+                issue.Id,
+                gamification,
+                cancellationToken
+            );
 
-            return Results.Ok(ToResponse(issue));
+            return Results.Ok(new ResolveIssueResponse(
+                true,
+                "Problema a fost verificata si marcata ca rezolvata.",
+                ToResponse(issue, gamification),
+                ToVerificationResponse(verification),
+                gamification
+            ));
         })
-        .RequireAuthorization("AdminOnly")
+        .RequireAuthorization()
         .DisableAntiforgery()
         .WithName("ResolveIssue");
 
@@ -628,6 +668,42 @@ public static class IssueEndpoints
         .RequireAuthorization("AdminOnly")
         .WithName("AdminReopenIssue");
 
+        group.MapPost("/{id:guid}/admin/retry-agent-pipeline", async (
+            Guid id,
+            ClaimsPrincipal principal,
+            CivicGoDbContext dbContext,
+            UserProfileService userProfileService,
+            IssueAgentOrchestratorService agentOrchestrator,
+            CancellationToken cancellationToken
+        ) =>
+        {
+            var profile = await userProfileService.GetOrCreateAsync(principal);
+
+            if (!IsAdmin(profile))
+            {
+                return Results.Forbid();
+            }
+
+            var exists = await dbContext.Issues
+                .AsNoTracking()
+                .AnyAsync(item => item.Id == id, cancellationToken);
+
+            if (!exists)
+            {
+                return Results.NotFound();
+            }
+
+            agentOrchestrator.Enqueue(id);
+
+            return Results.Accepted($"/api/issues/{id}/agent-run", new
+            {
+                issueId = id,
+                status = "queued"
+            });
+        })
+        .RequireAuthorization("AdminOnly")
+        .WithName("AdminRetryIssueAgentPipeline");
+
         group.MapPost("/{id:guid}/admin/email-draft", async (
             Guid id,
             ClaimsPrincipal principal,
@@ -795,6 +871,89 @@ public static class IssueEndpoints
         await eventStream.PublishAsync(issue.Id, streamEventName, payload, cancellationToken);
     }
 
+    private static async Task PublishGamificationEventsAsync(
+        IHubContext<CivicHub> civicHub,
+        IssueEventStreamService eventStream,
+        Guid issueId,
+        GamificationAwardResponse gamification,
+        CancellationToken cancellationToken
+    )
+    {
+        if (gamification.PointsAwarded <= 0)
+        {
+            return;
+        }
+
+        var pointsPayload = new
+        {
+            issueId,
+            gamification.PointsAwarded,
+            gamification.TotalPoints,
+            rankName = gamification.CurrentRank.Name,
+            badges = gamification.UnlockedBadges.Select(badge => badge.Name).ToArray()
+        };
+
+        await civicHub.Clients.All.SendAsync(
+            "PointsAwarded",
+            pointsPayload,
+            cancellationToken
+        );
+        await eventStream.PublishAsync(issueId, "points.awarded", pointsPayload, cancellationToken);
+
+        foreach (var badge in gamification.UnlockedBadges)
+        {
+            var badgePayload = new
+            {
+                issueId,
+                badge.Id,
+                badge.Name,
+                badge.Description,
+                badge.Icon,
+                gamification.TotalPoints
+            };
+
+            await civicHub.Clients.All.SendAsync(
+                "BadgeUnlocked",
+                badgePayload,
+                cancellationToken
+            );
+            await eventStream.PublishAsync(issueId, "badge.unlocked", badgePayload, cancellationToken);
+        }
+
+        var rankPayload = new
+        {
+            issueId,
+            rankId = gamification.CurrentRank.Id,
+            rankName = gamification.CurrentRank.Name,
+            gamification.CurrentRank.MinPoints,
+            gamification.CurrentRank.MaxPoints,
+            gamification.CurrentRank.ProgressPercent,
+            gamification.TotalPoints,
+            nextRankName = gamification.NextRank?.Name
+        };
+
+        await civicHub.Clients.All.SendAsync(
+            "RankChanged",
+            rankPayload,
+            cancellationToken
+        );
+        await eventStream.PublishAsync(issueId, "rank.changed", rankPayload, cancellationToken);
+    }
+
+    private static IssueResolutionVerificationResponse ToVerificationResponse(
+        IssueResolutionVerificationResult verification
+    )
+    {
+        return new IssueResolutionVerificationResponse(
+            verification.IsResolved,
+            verification.Confidence,
+            verification.Summary,
+            verification.SuggestedAction,
+            verification.UsedFallback,
+            verification.Source
+        );
+    }
+
     private static AdminIssueEmailDraftResponse CreateAuthorityEmailDraft(
         IssueEntity issue,
         DateTimeOffset generatedAt
@@ -805,12 +964,16 @@ public static class IssueEndpoints
         var categoryLabel = IssueCategories.HumanizeRo(issue.Category);
         var severityRationale = CreateSeverityRationale(issue);
         var location = $"{zoneName}, coordonate {issue.Latitude:0.000000}, {issue.Longitude:0.000000}";
+        var isFallbackAuthority = authority.Email == "sesizari@primariatm.demo";
+        var redirectNote = isFallbackAuthority
+            ? "Daca sesizarea nu tine direct de departamentul dumneavoastra, va rugam sa o redirectionati catre structura competenta."
+            : string.Empty;
         var subject =
-            $"Sesizare CivicGO - {categoryLabel} in {zoneName} ({IssueCategories.HumanizeRo(issue.Severity)})";
+            $"Sesizare CiviTm - {categoryLabel} in {zoneName} ({IssueCategories.HumanizeRo(issue.Severity)})";
         var body = $"""
             Buna ziua,
 
-            Va transmitem o sesizare civic-tech generata din platforma CivicGO, cu rugamintea de a analiza si directiona cazul catre echipa competenta.
+            Va transmitem o sesizare generata prin platforma CiviTm, cu rugamintea de a analiza cazul si de a-l directiona catre echipa competenta.
 
             Problema raportata: {issue.Title}
             Tip problema: {categoryLabel}
@@ -818,7 +981,7 @@ public static class IssueEndpoints
             Motivul gravitatii: {severityRationale}
             Locatie: {location}
             Data raportarii: {issue.CreatedAt:dd.MM.yyyy HH:mm} UTC
-            Status curent in CivicGO: {issue.Status.Replace('_', ' ')}
+            Status curent in CiviTm: {issue.Status.Replace('_', ' ')}
             Actor responsabil estimat: {issue.ResponsibleActor.Replace('_', ' ')}
 
             Descriere:
@@ -827,10 +990,10 @@ public static class IssueEndpoints
             Dovada foto:
             {issue.ImageUrl}
 
-            Va rugam sa confirmati preluarea cazului si, daca este posibil, sa transmiteti un termen estimativ pentru verificare/interventie. In functie de situatie, comunitatea locala poate sustine documentarea sau actiunile non-riscante, insa interventiile tehnice si cele care tin de siguranta publica trebuie coordonate de autoritatea competenta.
+            Va rugam sa confirmati preluarea cazului si, daca este posibil, sa transmiteti un termen estimativ pentru verificare/interventie. {redirectNote}
 
             Multumim,
-            Echipa CivicGO
+            Echipa CiviTm
             """;
 
         return new AdminIssueEmailDraftResponse(
@@ -986,6 +1149,7 @@ public static class IssueEndpoints
             .Where(mission => mission is not null)
             .OrderByDescending(mission => mission!.CreatedAt)
             .FirstOrDefault();
+        var isValidIssue = ExtractIsValidIssue(latestAnalysis?.RawResponseJson);
 
         return new IssueResponse(
             issue.Id,
@@ -1009,6 +1173,8 @@ public static class IssueEndpoints
             latestAnalysis is null ? null : NormalizeConfidence(latestAnalysis.Confidence),
             latestAnalysis?.IsUrgent ?? false,
             latestAnalysis?.RewardEligible ?? false,
+            isValidIssue,
+            isValidIssue ? null : ExtractInvalidReason(latestAnalysis?.RawResponseJson),
             latestAnalysis?.CreatedAt,
             issue.DuplicateCount,
             IssueDuplicateMapper.GetNearestDuplicate(issue),
@@ -1019,6 +1185,48 @@ public static class IssueEndpoints
             issue.CreatedByUserId,
             issue.CreatedAt
         );
+    }
+
+    private static bool ExtractIsValidIssue(string? rawResponseJson)
+    {
+        if (string.IsNullOrWhiteSpace(rawResponseJson))
+        {
+            return true;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(rawResponseJson);
+
+            return !document.RootElement.TryGetProperty("isValidIssue", out var value) ||
+                value.ValueKind != JsonValueKind.False;
+        }
+        catch
+        {
+            return true;
+        }
+    }
+
+    private static string? ExtractInvalidReason(string? rawResponseJson)
+    {
+        if (string.IsNullOrWhiteSpace(rawResponseJson))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(rawResponseJson);
+
+            return document.RootElement.TryGetProperty("invalidReason", out var value) &&
+                value.ValueKind == JsonValueKind.String
+                    ? value.GetString()
+                    : null;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private static double NormalizeConfidence(double confidence)

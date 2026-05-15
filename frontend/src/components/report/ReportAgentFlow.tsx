@@ -7,6 +7,7 @@ import {
   Flag,
   Gift,
   GitBranch,
+  GitMerge,
   LoaderCircle,
   MapPin,
   Radar,
@@ -14,14 +15,23 @@ import {
   Trophy,
   Users,
 } from '@/components/icons/hugeicons'
+import visionAgentImage from '@/assets/ai-agents/01_vision_agent_square.png'
+import triageAgentImage from '@/assets/ai-agents/02_triage_agent_square.png'
+import duplicateAgentImage from '@/assets/ai-agents/03_duplicate_agent_square.png'
+import missionAgentImage from '@/assets/ai-agents/04_mission_agent_square.png'
+import rewardAgentImage from '@/assets/ai-agents/05_reward_agent_square.png'
+import cityAgentImage from '@/assets/ai-agents/06_city_agent_square.png'
+import authorityEmailAgentImage from '@/assets/ai-agents/07_authority_email_agent_square.png'
 import {
   useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from 'react'
+import { Link } from 'react-router-dom'
 import { AnimatePresence, motion } from 'motion/react'
 import { CivicMap } from '@/components/map/CivicMap'
+import { Button } from '@/components/ui/button'
 import type { ReportLocation } from '@/data/reportLocations'
 import { mapIssueResponseToCivicMapItem } from '@/data/civicMapData'
 import type { AgentStepResponse, IssueResponse } from '@/lib/api'
@@ -34,6 +44,7 @@ import {
   roRank,
   roReward,
   roSeverity,
+  roStatus,
 } from '@/lib/locale'
 import { cn } from '@/lib/utils'
 
@@ -94,7 +105,7 @@ const plannedSteps: DisplayStep[] = [
   {
     id: 'mission-pending',
     agentName: 'Mission Agent',
-    message: 'Pregateste actiunea civica potrivita pentru zona.',
+    message: 'Verifica daca semnalul are nevoie de un eveniment comunitar.',
     status: 'pending',
     order: 4,
     kind: 'mission',
@@ -102,7 +113,7 @@ const plannedSteps: DisplayStep[] = [
   {
     id: 'reward-pending',
     agentName: 'Reward Agent',
-    message: 'Asteapta misiunea ca sa potriveasca recompensa.',
+    message: 'Asteapta evenimentul comunitar ca sa potriveasca recompensa.',
     status: 'pending',
     order: 5,
     kind: 'mission',
@@ -118,8 +129,19 @@ const mapStep: DisplayStep = {
   kind: 'map',
 }
 
+const agentAvatarByName: Record<string, string> = {
+  'Vision Agent': visionAgentImage,
+  'Triage Agent': triageAgentImage,
+  'Duplicate Agent': duplicateAgentImage,
+  'Mission Agent': missionAgentImage,
+  'Reward Agent': rewardAgentImage,
+  'City Agent': cityAgentImage,
+  'Authority Email Agent': authorityEmailAgentImage,
+}
+
 const LIVE_STEP_DISPLAY_MS = 2200
 const CACHED_STEP_DISPLAY_MS = 1450
+const DUPLICATE_RESULT_DISPLAY_MS = 4200
 const MAP_STEP_INDEX = plannedSteps.length
 const TOTAL_DISPLAY_STEPS = plannedSteps.length + 1
 const MAP_MARKER_DELAY_MS = 1600
@@ -129,11 +151,13 @@ function hasPoints(issue: IssueResponse, streamState: ReportStreamState) {
 }
 
 function canRevealMap(issue: IssueResponse, streamState: ReportStreamState) {
+  if (issue.status === 'rejected' || issue.isValidIssue === false) {
+    return false
+  }
+
   return (
     hasPoints(issue, streamState) ||
-    streamState.zoneScoreUpdated ||
-    streamState.pipelineFailed ||
-    (streamState.rewardMatched && !issue.gamification)
+    streamState.zoneScoreUpdated
   )
 }
 
@@ -176,7 +200,8 @@ function getStepForDisplayIndex(
     return mapStep
   }
 
-  const plannedStep = plannedSteps[displayIndex] ?? plannedSteps[0]
+  const plannedStep =
+    plannedSteps[Math.min(displayIndex, plannedSteps.length - 1)] ?? plannedSteps[0]
   const completedStep = completedSteps.find(
     (step) => step.agentName === plannedStep.agentName,
   )
@@ -185,6 +210,10 @@ function getStepForDisplayIndex(
 }
 
 function getTargetDisplayIndex(issue: IssueResponse, streamState: ReportStreamState) {
+  if (issue.status === 'rejected' || issue.isValidIssue === false) {
+    return 0
+  }
+
   if (canRevealMap(issue, streamState)) {
     return MAP_STEP_INDEX
   }
@@ -196,7 +225,7 @@ function getTargetDisplayIndex(issue: IssueResponse, streamState: ReportStreamSt
     (step) => !completedNames.has(step.agentName),
   )
 
-  return nextStepIndex >= 0 ? nextStepIndex : plannedSteps.length
+  return nextStepIndex >= 0 ? nextStepIndex : plannedSteps.length - 1
 }
 
 function getVisualTargetDisplayIndex(
@@ -220,6 +249,23 @@ function getProgress(displayStepIndex: number, showMap: boolean) {
       )
 }
 
+function getStepDisplayDelayMs(
+  currentStep: DisplayStep,
+  issue: IssueResponse,
+  hasCachedResultForStep: boolean,
+) {
+  if (
+    currentStep.agentName === 'Duplicate Agent' &&
+    currentStep.status !== 'pending' &&
+    currentStep.status !== 'running' &&
+    (issue.duplicateCount > 0 || issue.nearestDuplicate)
+  ) {
+    return DUPLICATE_RESULT_DISPLAY_MS
+  }
+
+  return hasCachedResultForStep ? CACHED_STEP_DISPLAY_MS : LIVE_STEP_DISPLAY_MS
+}
+
 function getVisionCategoryLabel(issue: IssueResponse) {
   const category = roCategory(issue.category, '')
 
@@ -235,6 +281,10 @@ function getVisionSeverityLabel(issue: IssueResponse) {
 }
 
 function getVisionSummary(issue: IssueResponse) {
+  if (issue.status === 'rejected' || issue.isValidIssue === false) {
+    return issue.invalidReason || 'Imaginea nu confirma o problema civica raportabila.'
+  }
+
   return issue.aiSummary?.trim() || 'Analiza vizuala este in curs.'
 }
 
@@ -247,7 +297,7 @@ function getAgentWorkText(agentName: string) {
     case 'Duplicate Agent':
       return 'Compara semnalul cu rapoartele apropiate ca sa evite dublurile.'
     case 'Mission Agent':
-      return 'Transforma problema intr-o actiune concreta pentru comunitate.'
+      return 'Creeaza eveniment comunitar doar cand problema are nevoie de mai multi oameni.'
     case 'Reward Agent':
       return 'Calculeaza punctele, badge-urile si recompensa potrivita.'
     case 'City Agent':
@@ -264,6 +314,10 @@ function getAgentReturnText(
 ) {
   switch (currentStep.agentName) {
     case 'Vision Agent': {
+      if (issue.status === 'rejected' || issue.isValidIssue === false) {
+        return `Nu putem confirma problema din imagine. ${getVisionSummary(issue)}`
+      }
+
       const confidence =
         issue.aiConfidence !== null
           ? ` Incredere ${Math.round(issue.aiConfidence * 100)}%.`
@@ -279,12 +333,12 @@ function getAgentReturnText(
         : 'Nu a gasit duplicate relevante in apropiere.'
     case 'Mission Agent':
       return issue.relatedMission
-        ? `${issue.relatedMission.title} · ${issue.relatedMission.participantsJoined}/${issue.relatedMission.participantsNeeded} inscrisi · +${issue.relatedMission.impactPoints} impact.`
+        ? `Eveniment comunitar generat: ${issue.relatedMission.title} · ${issue.relatedMission.participantsJoined}/${issue.relatedMission.participantsNeeded} inscrisi · +${issue.relatedMission.impactPoints} impact.`
         : issue.duplicateCount > 0
-          ? 'A oprit misiunea noua pentru ca raportul pare duplicat.'
+          ? 'Nu creeaza eveniment nou pentru ca raportul pare duplicat.'
           : issue.isUrgent
-            ? 'A sarit misiunea comunitara pentru ca semnalul necesita escaladare.'
-            : 'A decis ca raportul nu are nevoie de o misiune comunitara.'
+            ? 'Nu creeaza eveniment comunitar pentru ca semnalul necesita escaladare.'
+            : 'Nu necesita eveniment comunitar; ramane problema activa sau rutata.'
     case 'Reward Agent': {
       const pointsAwarded = issue.gamification?.pointsAwarded ?? streamState.pointsAwarded
       const rankName = issue.gamification?.currentRank.name ?? streamState.rankName
@@ -296,7 +350,7 @@ function getAgentReturnText(
         ? `+${pointsAwarded} puncte${rankName ? ` · ${roRank(rankName) || rankName}` : ''}${reward}.`
         : issue.relatedMission
           ? `Punctele si recompensa se sincronizeaza${reward}.`
-          : 'Fara misiune noua, se pastreaza doar punctele potrivite raportului.'
+          : 'Fara eveniment comunitar nou, se pastreaza punctele potrivite raportului.'
     }
     case 'City Agent':
       return 'Semnalul este pregatit pentru harta live.'
@@ -329,6 +383,21 @@ function getAgentResultFacts(
 
   switch (currentStep.agentName) {
     case 'Vision Agent':
+      if (issue.status === 'rejected' || issue.isValidIssue === false) {
+        return [
+          {
+            label: 'Decizie',
+            value: 'Imagine respinsa pentru raport civic',
+            tone: 'warning',
+          },
+          {
+            label: 'Motiv',
+            value: getVisionSummary(issue),
+            tone: 'warning',
+          },
+        ]
+      }
+
       return [
         { label: 'Problema', value: getVisionCategoryLabel(issue), tone: 'success' },
         { label: 'Prioritate', value: getVisionSeverityLabel(issue) },
@@ -370,7 +439,7 @@ function getAgentResultFacts(
     case 'Mission Agent':
       return issue.relatedMission
         ? [
-            { label: 'Misiune', value: issue.relatedMission.title, tone: 'success' },
+            { label: 'Eveniment', value: issue.relatedMission.title, tone: 'success' },
             {
               label: 'Participanti',
               value: `${issue.relatedMission.participantsJoined}/${issue.relatedMission.participantsNeeded}`,
@@ -382,10 +451,10 @@ function getAgentResultFacts(
               label: 'Decizie',
               value:
                 issue.duplicateCount > 0
-                  ? 'Raport duplicat: nu se creeaza misiune noua.'
+                  ? 'Raport duplicat: nu se creeaza eveniment nou.'
                   : issue.isUrgent
-                    ? 'Semnal urgent: se sare peste misiunea comunitara.'
-                    : 'Nu este nevoie de o misiune comunitara pentru acest semnal.',
+                    ? 'Semnal urgent: nu se creeaza eveniment comunitar.'
+                    : 'Nu este nevoie de un eveniment comunitar pentru acest semnal.',
               tone: 'neutral',
             },
           ]
@@ -498,82 +567,126 @@ function MobileAnalysisLightScene({
   const resultFacts = getAgentResultFacts(currentStep, issue, streamState, isWaiting)
     .filter((fact) => fact.label !== 'Status')
     .slice(0, 2)
+  const isVision = currentStep.agentName === 'Vision Agent'
+  const isTriage = currentStep.agentName === 'Triage Agent'
+  const isDuplicate = currentStep.agentName === 'Duplicate Agent'
+  const routeOptions = [
+    { id: 'community', label: 'Comunitate', icon: Users },
+    { id: 'city_hall', label: 'Primarie', icon: Building2 },
+    { id: 'community_and_city_hall', label: 'Ambele', icon: GitBranch },
+  ]
 
   return (
-    <div className="relative min-h-[22rem] overflow-hidden rounded-b-xl bg-slate-950 sm:min-h-[28rem]">
-      {imagePreviewUrl ? (
-        <motion.img
-          src={imagePreviewUrl}
-          alt=""
-          className="absolute inset-0 h-full w-full object-cover"
-          initial={{ scale: 1.01 }}
-          animate={{ scale: isWaiting ? [1.01, 1.025, 1.015] : 1.01 }}
-          transition={{
-            duration: 7,
-            repeat: isWaiting ? Infinity : 0,
-            ease: 'easeInOut',
-          }}
-        />
-      ) : (
-        <div className="absolute inset-0 bg-emerald-950" />
-      )}
+    <div className="overflow-hidden rounded-xl bg-white">
+      <div className="relative h-56 overflow-hidden bg-slate-950">
+        {imagePreviewUrl ? (
+          <motion.img
+            src={imagePreviewUrl}
+            alt=""
+            className="h-full w-full object-contain"
+            initial={{ scale: 1.01 }}
+            animate={{ scale: isWaiting ? [1.01, 1.025, 1.015] : 1.01 }}
+            transition={{
+              duration: 7,
+              repeat: isWaiting ? Infinity : 0,
+              ease: 'easeInOut',
+            }}
+          />
+        ) : (
+          <div className="h-full w-full bg-emerald-950" />
+        )}
 
-      <div className="absolute inset-0 bg-gradient-to-b from-slate-950/18 via-slate-950/6 to-slate-950/72" />
-      <motion.div
-        className="absolute -inset-y-16 left-[-34%] w-[30%] rotate-12 bg-gradient-to-r from-transparent via-teal-100/36 to-transparent blur-sm"
-        animate={{ x: isWaiting ? ['0%', '340%'] : '340%', opacity: isWaiting ? [0, 0.42, 0.08] : 0 }}
-        transition={{
-          duration: 3.6,
-          repeat: isWaiting ? Infinity : 0,
-          ease: 'easeInOut',
-        }}
-      />
-      <motion.div
-        className="absolute left-1/2 top-[42%] size-28 -translate-x-1/2 -translate-y-1/2 rounded-full bg-teal-200/12 blur-2xl"
-        animate={{
-          scale: isWaiting ? [0.82, 1.05, 0.9] : 0.9,
-          opacity: isWaiting ? [0.16, 0.3, 0.18] : 0.22,
-        }}
-        transition={{
-          duration: 3.2,
-          repeat: isWaiting ? Infinity : 0,
-          ease: 'easeInOut',
-        }}
-      />
-      <motion.div
-        className="absolute inset-x-10 top-[38%] h-px bg-gradient-to-r from-transparent via-white/48 to-transparent shadow-[0_0_18px_rgba(153,246,228,.45)]"
-        animate={{ y: isWaiting ? ['-3rem', '5.5rem', '-3rem'] : 0 }}
-        transition={{
-          duration: 4,
-          repeat: isWaiting ? Infinity : 0,
-          ease: 'easeInOut',
-        }}
-      />
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/10 via-transparent to-slate-950/28" />
 
-      <div className="absolute left-3 right-3 top-3 flex items-center justify-between gap-3">
-        <span className="inline-flex min-w-0 items-center gap-2 rounded-full border border-white/22 bg-white/92 px-3 py-2 text-xs font-semibold text-emerald-950 shadow-lg shadow-slate-950/18 backdrop-blur">
-          {isWaiting ? (
-            <LoaderCircle className="size-4 animate-spin text-teal-700" aria-hidden="true" />
-          ) : (
-            <Check className="size-4 text-emerald-700" aria-hidden="true" />
-          )}
-          <span className="truncate">
-            {isWaiting ? 'Analizam fotografia' : 'Verificare finalizata'}
+        {isVision && (
+          <motion.div
+            className="absolute inset-x-7 top-1/2 h-px bg-gradient-to-r from-transparent via-white/62 to-transparent shadow-[0_0_18px_rgba(153,246,228,.45)]"
+            animate={{ y: isWaiting ? ['-3.25rem', '3.5rem', '-3.25rem'] : 0 }}
+            transition={{
+              duration: 4,
+              repeat: isWaiting ? Infinity : 0,
+              ease: 'easeInOut',
+            }}
+          />
+        )}
+
+        {isTriage && (
+          <div className="absolute inset-x-3 bottom-3 grid grid-cols-3 gap-2">
+            {routeOptions.map((option, index) => {
+              const Icon = option.icon
+              const isActive =
+                issue.responsibleActor === option.id ||
+                (option.id === 'community_and_city_hall' &&
+                  issue.responsibleActor === 'unknown')
+
+              return (
+                <motion.span
+                  key={option.id}
+                  className={cn(
+                    'min-w-0 rounded-lg border px-2 py-2 text-center text-[0.68rem] font-semibold backdrop-blur',
+                    isActive
+                      ? 'border-teal-200 bg-teal-300 text-teal-950 shadow-lg shadow-teal-950/20'
+                      : 'border-white/20 bg-slate-950/62 text-white',
+                  )}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: isActive ? -4 : 0 }}
+                  transition={{ delay: index * 0.12, duration: 0.38, ease: 'easeOut' }}
+                >
+                  <Icon className="mx-auto mb-1 size-4" aria-hidden="true" />
+                  <span className="block truncate">{option.label}</span>
+                </motion.span>
+              )
+            })}
+          </div>
+        )}
+
+        {isDuplicate && (
+          <div className="absolute left-1/2 top-1/2 size-28 -translate-x-1/2 -translate-y-1/2">
+            {[0, 1, 2].map((index) => (
+              <motion.span
+                key={index}
+                className="absolute inset-0 rounded-full border border-teal-200/70"
+                initial={{ scale: 0.25, opacity: 0.7 }}
+                animate={{ scale: 1.45, opacity: 0 }}
+                transition={{
+                  delay: index * 0.5,
+                  duration: 2.2,
+                  repeat: isWaiting ? Infinity : 0,
+                  ease: 'easeOut',
+                }}
+              />
+            ))}
+            <span className="absolute left-1/2 top-1/2 flex size-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-teal-300 text-teal-950 shadow-lg shadow-teal-950/30">
+              <Radar className="size-5" aria-hidden="true" />
+            </span>
+          </div>
+        )}
+
+        <div className="absolute left-3 right-3 top-3 flex items-center justify-between gap-3">
+          <span className="inline-flex min-w-0 items-center gap-2 rounded-full border border-white/28 bg-white/94 px-3 py-2 text-xs font-semibold text-emerald-950 shadow-lg shadow-slate-950/18 backdrop-blur">
+            {isWaiting ? (
+              <LoaderCircle className="size-4 animate-spin text-teal-700" aria-hidden="true" />
+            ) : (
+              <Check className="size-4 text-emerald-700" aria-hidden="true" />
+            )}
+            <span className="truncate">
+              {isWaiting ? 'Analizam fotografia' : 'Verificare finalizata'}
+            </span>
           </span>
-        </span>
-        <span className="rounded-full bg-slate-950/55 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur">
-          {Math.min(currentStep.order, TOTAL_DISPLAY_STEPS)}/{TOTAL_DISPLAY_STEPS}
-        </span>
+          <span className="rounded-full bg-slate-950/58 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur">
+            {Math.min(currentStep.order, TOTAL_DISPLAY_STEPS)}/{TOTAL_DISPLAY_STEPS}
+          </span>
+        </div>
       </div>
 
-      <div className="absolute inset-x-3 bottom-3 rounded-2xl border border-white/18 bg-white/92 p-3 shadow-2xl shadow-slate-950/20 backdrop-blur-xl">
+      <div className="grid min-w-0 gap-3 p-3">
         <p className="text-xs font-semibold uppercase tracking-wide text-teal-700">
           {roAgentName(currentStep.agentName)}
         </p>
-        <p className="mt-1 line-clamp-3 text-[0.95rem] font-semibold leading-snug text-emerald-950">
+        <p className="break-words text-[0.95rem] font-semibold leading-snug text-emerald-950">
           {getAgentReturnText(currentStep, issue, streamState)}
         </p>
-        <div className="mt-3 grid grid-cols-6 gap-1.5">
+        <div className="grid grid-cols-6 gap-1.5">
           {Array.from({ length: TOTAL_DISPLAY_STEPS }).map((_, index) => (
             <span
               key={index}
@@ -585,7 +698,7 @@ function MobileAnalysisLightScene({
           ))}
         </div>
         {resultFacts.length > 0 && (
-          <div className="mt-3 grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             {resultFacts.map((fact) => (
               <span
                 key={`${fact.label}-${fact.value}`}
@@ -594,7 +707,7 @@ function MobileAnalysisLightScene({
                 <span className="block text-[0.62rem] font-semibold uppercase text-emerald-700">
                   {fact.label}
                 </span>
-                <span className="mt-0.5 block line-clamp-2 text-xs font-semibold leading-snug text-emerald-950">
+                <span className="mt-0.5 block max-h-9 overflow-hidden break-words text-xs font-semibold leading-snug text-emerald-950">
                   {fact.value}
                 </span>
               </span>
@@ -815,18 +928,18 @@ function MissionCreationScene({
   const checks = hasMission
     ? [
         'Locatia intra in zona de actiune',
-        'Misiune pregatita pentru comunitate',
+        'Eveniment pregatit pentru comunitate',
         `Impact estimat +${mission?.impactPoints ?? 0}`,
       ]
     : isWaiting
       ? [
-          'Verific daca problema are nevoie de actiune',
+          'Verific daca problema cere un grup',
           'Caut rolul potrivit pentru comunitate',
           'Astept rezultatul de triere',
         ]
       : [
           'Semnalul ramane problema activa pe harta',
-          'Nu necesita misiune comunitara separata',
+          'Nu necesita eveniment comunitar separat',
           `Responsabil: ${roActor(issue.responsibleActor)}`,
         ]
 
@@ -877,12 +990,12 @@ function MissionCreationScene({
           transition={{ delay: 0.55, duration: 0.45, ease: 'easeOut' }}
         />
         <p className="text-xs font-semibold uppercase text-emerald-700">
-          {hasMission ? 'Misiune generata' : isWaiting ? 'Decizie in curs' : 'Fara misiune separata'}
+          {hasMission ? 'Eveniment comunitar generat' : isWaiting ? 'Decizie in curs' : 'Fara eveniment separat'}
         </p>
         <h3 className="mt-1 text-lg font-semibold leading-tight text-emerald-950">
           {mission?.title ??
             (isWaiting
-              ? 'Se verifica daca e nevoie de o actiune civica'
+              ? 'Se verifica daca e nevoie de comunitate'
               : 'Problema ramane activa pe harta')}
         </h3>
         {hasMission && (
@@ -1026,6 +1139,26 @@ function RewardGenerationScene({
   )
 }
 
+function getFinalCategoryLabel(issue: IssueResponse) {
+  const category = roCategory(issue.category, '')
+
+  if (!category || category === 'alta problema' || category === 'problema') {
+    return 'Tip in confirmare'
+  }
+
+  return category
+}
+
+function getFinalActorLabel(issue: IssueResponse) {
+  const actor = roActor(issue.responsibleActor, '')
+
+  if (!actor || actor === 'neclar' || actor === 'unknown') {
+    return 'Rutare civica'
+  }
+
+  return actor
+}
+
 function AgentScene({
   currentStep,
   issue,
@@ -1081,10 +1214,12 @@ function FinalMapReveal({
   issue,
   location,
   description,
+  streamState,
 }: {
   issue: IssueResponse
   location: ReportLocation
   description: string
+  streamState: ReportStreamState
 }) {
   const mapItem = useMemo(() => mapIssueResponseToCivicMapItem(issue), [issue])
   const [selectedMapItemId, setSelectedMapItemId] = useState<string | null>(null)
@@ -1092,6 +1227,31 @@ function FinalMapReveal({
     null,
   )
   const [showMapMarker, setShowMapMarker] = useState(false)
+  const pointsAwarded = issue.gamification?.pointsAwarded ?? streamState.pointsAwarded
+  const resultCards = [
+    {
+      label: 'Tip',
+      value: getFinalCategoryLabel(issue),
+      icon: GitBranch,
+      className: 'text-teal-950',
+      iconClassName: 'bg-teal-50 text-teal-700 ring-teal-100',
+    },
+    {
+      label: 'Responsabil',
+      value: getFinalActorLabel(issue),
+      icon: Building2,
+      className: 'text-emerald-950',
+      iconClassName: 'bg-emerald-50 text-emerald-700 ring-emerald-100',
+    },
+    {
+      label: 'Puncte',
+      value: pointsAwarded !== null ? `+${pointsAwarded}` : 'Se adauga',
+      icon: Trophy,
+      className: 'text-lime-950',
+      iconClassName: 'bg-lime-50 text-lime-700 ring-lime-100',
+    },
+  ]
+
   useEffect(() => {
     const resetTimeout = window.setTimeout(() => {
       setSelectedMapItemId(null)
@@ -1113,15 +1273,15 @@ function FinalMapReveal({
 
   return (
     <motion.section
-      className="overflow-hidden rounded-lg border border-emerald-200 bg-white shadow-sm"
+      className="min-w-0 overflow-hidden rounded-xl border border-emerald-200 bg-white shadow-sm"
       initial={{ opacity: 0, y: 22 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
       transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
     >
-      <div className="p-3">
+      <div className="grid min-w-0 gap-0 p-2 sm:gap-3 sm:p-3 lg:p-4">
         <motion.div
-          className="h-[22rem] min-h-[20rem] overflow-hidden rounded-lg border border-emerald-200 bg-white shadow-sm sm:h-[26rem] lg:h-[30rem]"
+          className="relative z-0 h-[calc(100dvh-14rem)] min-h-[29rem] min-w-0 overflow-hidden rounded-t-xl bg-white sm:h-[28rem] sm:min-h-0 sm:rounded-xl lg:h-[34rem]"
           initial={{ opacity: 0, y: 18, scale: 0.98 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ delay: 0.16, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
@@ -1138,17 +1298,70 @@ function FinalMapReveal({
         </motion.div>
 
         <motion.div
-          className="mt-3 rounded-lg border border-slate-200 bg-white p-3 text-sm"
+          className="relative z-30 -mt-28 rounded-t-2xl border border-emerald-100 bg-white p-4 text-sm shadow-xl shadow-slate-900/12 sm:mt-0 sm:rounded-xl sm:border-emerald-200 sm:p-5 sm:shadow-sm sm:shadow-emerald-900/8 lg:p-6"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.45, duration: 0.45, ease: 'easeOut' }}
         >
-          <span className="flex items-center gap-2 font-semibold text-emerald-950">
-            <MapPin className="size-4 text-rose-600" aria-hidden="true" />
-            {location.name}
-          </span>
-          <p className="mt-1 text-slate-600">{location.address}</p>
-          {description && <p className="mt-2 text-slate-700">{description}</p>}
+          <span className="mx-auto mb-3 block h-1 w-10 rounded-full bg-emerald-200 sm:hidden" />
+          <div className="flex items-start gap-3 sm:gap-4">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-rose-50 text-rose-600 sm:size-12">
+              <MapPin className="size-4 sm:size-5" aria-hidden="true" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <span className="block truncate text-base font-bold text-emerald-950 sm:text-lg">
+                {location.name}
+              </span>
+              <p className="mt-1 line-clamp-2 text-sm leading-6 text-slate-600 sm:text-base">
+                {location.address}
+              </p>
+              {description && (
+                <p className="mt-2 hidden text-sm leading-6 text-slate-700 sm:block">
+                  {description}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-2 rounded-xl border border-emerald-100 bg-emerald-50/55 p-2 sm:grid-cols-3 sm:gap-2 sm:border-emerald-200 sm:bg-emerald-50/70 sm:p-2.5 lg:gap-3 lg:p-3">
+            {resultCards.map((item, index) => {
+              const Icon = item.icon
+
+              return (
+                <motion.span
+                  key={item.label}
+                  className={cn(
+                    'flex min-w-0 items-center gap-2.5 rounded-lg bg-white px-3 py-2.5 shadow-sm shadow-emerald-900/5 lg:gap-3 lg:px-4 lg:py-3',
+                    item.className,
+                  )}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{
+                    delay: 0.55 + index * 0.1,
+                    duration: 0.32,
+                    ease: 'easeOut',
+                  }}
+                >
+                  <span
+                    className={cn(
+                      'flex size-9 shrink-0 items-center justify-center rounded-lg ring-1 lg:size-10',
+                      item.iconClassName,
+                    )}
+                  >
+                    <Icon className="size-4 lg:size-5" aria-hidden="true" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-[0.65rem] font-bold uppercase text-emerald-700 lg:text-[0.7rem]">
+                      {item.label}
+                    </span>
+                    <span className="mt-0.5 block truncate text-sm font-bold leading-snug text-slate-800 lg:text-base">
+                      {item.value}
+                    </span>
+                  </span>
+                </motion.span>
+              )
+            })}
+          </div>
         </motion.div>
       </div>
     </motion.section>
@@ -1168,6 +1381,10 @@ function AnalysisStep({
 }) {
   const isWaiting = currentStep.status === 'pending' || currentStep.status === 'running'
   const resultFacts = getAgentResultFacts(currentStep, issue, streamState, isWaiting)
+  const showDuplicateResult =
+    currentStep.agentName === 'Duplicate Agent' &&
+    !isWaiting &&
+    (issue.duplicateCount > 0 || Boolean(issue.nearestDuplicate))
 
   return (
     <motion.div
@@ -1187,13 +1404,19 @@ function AnalysisStep({
             transition={{ duration: 0.38, ease: 'easeOut' }}
           >
             <div className="lg:hidden">
-              <MobileAnalysisLightScene
-                imagePreviewUrl={imagePreviewUrl}
-                currentStep={currentStep}
-                issue={issue}
-                streamState={streamState}
-                isWaiting={isWaiting}
-              />
+              {currentStep.agentName === 'Mission Agent' ? (
+                <MissionCreationScene issue={issue} isWaiting={isWaiting} />
+              ) : currentStep.agentName === 'Reward Agent' ? (
+                <RewardGenerationScene issue={issue} streamState={streamState} />
+              ) : (
+                <MobileAnalysisLightScene
+                  imagePreviewUrl={imagePreviewUrl}
+                  currentStep={currentStep}
+                  issue={issue}
+                  streamState={streamState}
+                  isWaiting={isWaiting}
+                />
+              )}
             </div>
             <div className="hidden lg:block">
               <AgentScene
@@ -1283,6 +1506,92 @@ function AnalysisStep({
         </div>
       </div>
       </div>
+      {showDuplicateResult && <DuplicateFlowCard issue={issue} streamState={streamState} />}
+    </motion.div>
+  )
+}
+
+function DuplicateFlowCard({
+  issue,
+  streamState,
+}: {
+  issue: IssueResponse
+  streamState: ReportStreamState
+}) {
+  const duplicatePoints =
+    issue.gamification?.pointsAwarded ?? streamState.pointsAwarded
+
+  return (
+    <motion.div
+      className="border-t border-amber-100 bg-amber-50/80 p-3 sm:p-4"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.26, ease: 'easeOut' }}
+    >
+      <div className="flex min-w-0 items-start gap-3">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-amber-500 text-white">
+          <GitMerge className="size-5" aria-hidden="true" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">
+            Rezultatul verificarii duplicate
+          </p>
+          <h3 className="mt-1 text-base font-semibold leading-tight text-emerald-950 sm:text-lg">
+            Problema pare deja raportata
+          </h3>
+          <p className="mt-1 text-sm leading-6 text-slate-700">
+            Am gasit un raport similar in apropiere. Semnalul tau ramane ca
+            o confirmare care creste prioritatea problemei existente.
+          </p>
+
+          <div className="mt-3 grid gap-2 text-sm sm:grid-cols-3">
+            <span className="rounded-lg border border-white/85 bg-white/75 px-3 py-2">
+              <span className="block text-[0.68rem] font-semibold uppercase text-slate-500">
+                Rapoarte similare
+              </span>
+              <span className="font-semibold text-emerald-950">
+                {Math.max(issue.duplicateCount, 1)}
+              </span>
+            </span>
+            <span className="rounded-lg border border-white/85 bg-white/75 px-3 py-2">
+              <span className="block text-[0.68rem] font-semibold uppercase text-slate-500">
+                Cel mai apropiat
+              </span>
+              <span className="font-semibold text-emerald-950">
+                {issue.nearestDuplicate
+                  ? `${issue.nearestDuplicate.distanceMeters}m`
+                  : 'in apropiere'}
+              </span>
+            </span>
+            <span className="rounded-lg border border-white/85 bg-white/75 px-3 py-2">
+              <span className="block text-[0.68rem] font-semibold uppercase text-slate-500">
+                Puncte
+              </span>
+              <span className="font-semibold text-emerald-950">
+                {duplicatePoints !== null ? `+${duplicatePoints}` : 'confirmare'}
+              </span>
+            </span>
+          </div>
+
+          {issue.nearestDuplicate && (
+            <div className="mt-3 flex flex-col gap-2 rounded-lg border border-white/85 bg-white/75 p-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-emerald-950">
+                  {issue.nearestDuplicate.title}
+                </p>
+                <p className="mt-0.5 text-xs text-slate-600">
+                  Status: {roStatus(issue.nearestDuplicate.status)}
+                </p>
+              </div>
+              <Button asChild size="sm" variant="outline" className="shrink-0">
+                <Link to={`/issues/${issue.nearestDuplicate.issueId}`}>
+                  Vezi raportul existent
+                </Link>
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
     </motion.div>
   )
 }
@@ -1314,7 +1623,7 @@ function AgentTrackPanel({
         </span>
       </div>
 
-      <div className="mt-3 flex snap-x gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] lg:grid lg:grid-cols-1 lg:overflow-visible lg:pb-0 [&::-webkit-scrollbar]:hidden">
+      <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-1">
         {steps.map((step, index) => {
           const StepIcon =
             step.kind === 'photo'
@@ -1324,6 +1633,7 @@ function AgentTrackPanel({
                 : step.kind === 'map'
                   ? MapPin
                   : Bot
+          const stepAvatar = agentAvatarByName[step.agentName]
           const isDone = showMap || index < displayStepIndex
           const isActive = !showMap && index === displayStepIndex
 
@@ -1331,7 +1641,7 @@ function AgentTrackPanel({
             <motion.div
               key={step.id}
               className={cn(
-                'flex min-w-[8.75rem] snap-start items-center gap-2 rounded-lg border px-2.5 py-2 transition lg:min-w-0 lg:px-3',
+                'flex min-w-0 items-center gap-2 rounded-lg border px-2.5 py-2 transition lg:px-3',
                 isActive
                   ? 'border-teal-300 bg-teal-50 text-teal-950 shadow-sm'
                   : isDone
@@ -1359,6 +1669,12 @@ function AgentTrackPanel({
                   <Check className="size-4" aria-hidden="true" />
                 ) : isActive ? (
                   <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
+                ) : stepAvatar ? (
+                  <img
+                    src={stepAvatar}
+                    alt=""
+                    className="size-4 rounded-sm object-cover"
+                  />
                 ) : (
                   <StepIcon className="size-4" aria-hidden="true" />
                 )}
@@ -1425,9 +1741,11 @@ export function ReportAgentFlow({
     const hasCachedResultForStep =
       readyForMap ||
       completedSteps.some((step) => getStepIndexByAgentName(step.agentName) >= displayStepIndex)
-    const stepDelayMs = hasCachedResultForStep
-      ? CACHED_STEP_DISPLAY_MS
-      : LIVE_STEP_DISPLAY_MS
+    const stepDelayMs = getStepDisplayDelayMs(
+      currentStep,
+      issue,
+      hasCachedResultForStep,
+    )
 
     const timeout = window.setTimeout(() => {
       setDisplayStepIndex((currentIndex) =>
@@ -1436,7 +1754,7 @@ export function ReportAgentFlow({
     }, stepDelayMs)
 
     return () => window.clearTimeout(timeout)
-  }, [completedSteps, completedStepsKey, displayStepIndex, readyForMap, targetDisplayIndex])
+  }, [completedSteps, completedStepsKey, currentStep, displayStepIndex, issue, readyForMap, targetDisplayIndex])
 
   return (
     <div className="bg-gradient-to-b from-emerald-50/70 to-white p-2.5 sm:bg-none sm:p-5">
@@ -1497,14 +1815,16 @@ export function ReportAgentFlow({
       </section>
 
       <div className="grid min-w-0 gap-2.5 sm:mt-3 sm:gap-3 lg:grid-cols-[18rem_minmax(0,1fr)] lg:items-start">
-        <div className="lg:hidden">
-          <AgentTrackPanel
-            steps={completedTrack}
-            displayStepIndex={displayStepIndex}
-            showMap={showMap}
-            className="rounded-xl border-emerald-100/90 bg-white/96 p-3"
-          />
-        </div>
+        {!showMap && (
+          <div className="lg:hidden">
+            <AgentTrackPanel
+              steps={completedTrack}
+              displayStepIndex={displayStepIndex}
+              showMap={showMap}
+              className="rounded-xl border-emerald-100/90 bg-white/96 p-3"
+            />
+          </div>
+        )}
 
         <div className="hidden lg:block">
           <AgentTrackPanel
@@ -1543,6 +1863,7 @@ export function ReportAgentFlow({
                 issue={issue}
                 location={location}
                 description={description}
+                streamState={streamState}
               />
             ) : (
               <AnalysisStep

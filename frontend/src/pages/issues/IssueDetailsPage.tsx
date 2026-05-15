@@ -1,17 +1,29 @@
+import { type ChangeEvent, type FormEvent, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type UseMutationResult,
+} from '@tanstack/react-query'
 import type { LucideIcon } from '@/components/icons/hugeicons'
 import {
   ArrowLeft,
   Bot,
+  Camera,
+  CheckCircle2,
   CopyCheck,
   ExternalLink,
   Flag,
   Gift,
   ImageOff,
+  ImagePlus,
+  Loader2,
   MapPin,
   Sparkles,
+  Trophy,
   TriangleAlert,
+  Upload,
 } from '@/components/icons/hugeicons'
 import { motion } from 'motion/react'
 import { AgentTimeline } from '@/components/agents/AgentTimeline'
@@ -21,10 +33,13 @@ import { DemoSkeletonGrid, DemoState } from '@/components/ui/demo-state'
 import {
   fetchIssueById,
   isApiConfigured,
+  resolveIssue,
+  type ResolveIssueResponse,
   type IssueResponse,
 } from '@/lib/api'
-import { issueQueryKey } from '@/lib/queryClient'
+import { issueQueryKey, issuesQueryKey, publicActivityQueryKey } from '@/lib/queryClient'
 import { roActor, roCategory, roReward, roSeverity, roStatus } from '@/lib/locale'
+import { useAuthStore } from '@/stores/authStore'
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat('ro-RO', {
@@ -76,7 +91,40 @@ export function IssueDetailsPage() {
 }
 
 function IssueDetails({ issue }: { issue: IssueResponse }) {
+  const queryClient = useQueryClient()
+  const session = useAuthStore((state) => state.session)
+  const authStatus = useAuthStore((state) => state.status)
+  const profile = useAuthStore((state) => state.profile)
+  const setProfile = useAuthStore((state) => state.setProfile)
   const imageUrls = issue.imageUrls.length > 0 ? issue.imageUrls : [issue.imageUrl].filter(Boolean)
+  const isRejected = issue.status === 'rejected' || issue.isValidIssue === false
+  const isResolved = issue.status === 'resolved' || issue.status === 'issue_resolved' || Boolean(issue.afterImageUrl)
+  const invalidReason =
+    issue.invalidReason ??
+    'AI-ul nu a putut confirma o problema civica reala din imaginea incarcata.'
+  const resolveMutation = useMutation({
+    mutationFn: (input: { afterImage: File; resolutionNote: string }) =>
+      resolveIssue({
+        issueId: issue.id,
+        afterImage: input.afterImage,
+        resolutionNote: input.resolutionNote,
+        accessToken: session?.access_token ?? '',
+      }),
+    onSuccess: (resolution) => {
+      queryClient.setQueryData(issueQueryKey(issue.id), resolution.issue)
+      queryClient.invalidateQueries({ queryKey: issuesQueryKey })
+      queryClient.invalidateQueries({ queryKey: publicActivityQueryKey(48, 50) })
+      queryClient.invalidateQueries({ queryKey: publicActivityQueryKey(168, 80) })
+
+      if (profile && resolution.gamification) {
+        setProfile({
+          ...profile,
+          points: resolution.gamification.totalPoints,
+          rankName: resolution.gamification.currentRank.name,
+        })
+      }
+    },
+  })
 
   return (
     <main className="min-h-svh overflow-x-hidden bg-orange-50 px-4 py-5 text-slate-950 sm:px-6 lg:px-8">
@@ -94,7 +142,7 @@ function IssueDetails({ issue }: { issue: IssueResponse }) {
             </span>
             <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
-                Problema publica
+                {isRejected ? 'Raport respins' : 'Problema publica'}
               </p>
               <h1 className="text-2xl font-semibold leading-tight text-emerald-950">
                 {issue.title}
@@ -113,7 +161,7 @@ function IssueDetails({ issue }: { issue: IssueResponse }) {
               <Button asChild size="sm" className="bg-emerald-600 text-white hover:bg-emerald-700">
                 <Link to={`/missions/${issue.relatedMission.id}`}>
                   <Flag data-icon="inline-start" aria-hidden="true" />
-                  Misiune
+                  Eveniment
                 </Link>
               </Button>
             )}
@@ -124,11 +172,11 @@ function IssueDetails({ issue }: { issue: IssueResponse }) {
           <section className="min-w-0 space-y-4">
             <div className="overflow-hidden rounded-lg border border-emerald-200 bg-white shadow-sm">
               {issue.imageUrl ? (
-                <div>
+                <div className="bg-slate-100">
                   <img
                     src={imageUrls[0]}
                     alt=""
-                    className="h-72 w-full object-cover sm:h-96"
+                    className="mx-auto max-h-[32rem] w-full object-contain"
                   />
                   {imageUrls.length > 1 && (
                     <div className="grid grid-cols-3 gap-2 border-t border-emerald-100 bg-emerald-50/40 p-2 sm:grid-cols-6">
@@ -150,7 +198,7 @@ function IssueDetails({ issue }: { issue: IssueResponse }) {
               )}
               <div className="p-4">
                 <div className="flex flex-wrap gap-2">
-                  <StatusBadge label={roStatus(issue.status)} tone="emerald" />
+                  <StatusBadge label={roStatus(issue.status)} tone={isRejected ? 'rose' : 'emerald'} />
                   <StatusBadge label={roSeverity(issue.severity)} tone="amber" />
                   <StatusBadge label={roCategory(issue.category)} tone="slate" />
                 </div>
@@ -160,15 +208,25 @@ function IssueDetails({ issue }: { issue: IssueResponse }) {
               </div>
             </div>
 
+            {isRejected && (
+              <InfoCard
+                icon={TriangleAlert}
+                title="Raport respins de AI"
+                tone="amber"
+                body={invalidReason}
+                footer="Incearca din nou cu o poza clara a problemei, zona afectata vizibila si o descriere scurta."
+              />
+            )}
+
             {issue.aiSummary && (
               <InfoCard
                 icon={Bot}
-                title="Rezumat AI"
+                title="Ce a inteles CiviTm"
                 tone="teal"
                 body={issue.aiSummary}
                 footer={
                   issue.aiConfidence !== null
-                    ? `Incredere ${Math.round(issue.aiConfidence * 100)}%`
+                    ? `Verificare automata ${Math.round(issue.aiConfidence * 100)}%`
                     : undefined
                 }
               />
@@ -194,10 +252,40 @@ function IssueDetails({ issue }: { issue: IssueResponse }) {
               </section>
             )}
 
-            <AgentTimeline run={issue.agentRun} />
+            <section className="rounded-lg border border-emerald-200 bg-white p-4 shadow-sm">
+              <div className="flex items-center gap-3">
+                <span className="flex size-10 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
+                  <Bot className="size-5" aria-hidden="true" />
+                </span>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                    Istoric verificari
+                  </p>
+                  <h2 className="text-lg font-semibold text-emerald-950">
+                    CiviTm a analizat raportul
+                  </h2>
+                </div>
+              </div>
+              <p className="mt-3 text-sm leading-6 text-slate-600">
+                Pasii de mai jos arata pe scurt cum a fost verificata problema.
+              </p>
+              <div className="mt-4">
+                <AgentTimeline run={issue.agentRun} />
+              </div>
+            </section>
           </section>
 
           <aside className="space-y-4 lg:sticky lg:top-5 lg:self-start">
+            {!isRejected && (
+              <ResolutionPanel
+                issue={issue}
+                isResolved={isResolved}
+                authStatus={authStatus}
+                isAuthenticated={Boolean(session?.access_token)}
+                mutation={resolveMutation}
+              />
+            )}
+
             <section className="rounded-lg border border-emerald-200 bg-white p-4 shadow-sm">
               <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
                 Rutare civica
@@ -210,22 +298,25 @@ function IssueDetails({ issue }: { issue: IssueResponse }) {
                 />
                 <DetailRow label="Responsabil" value={roActor(issue.responsibleActor)} />
                 <DetailRow label="Creat" value={formatDate(issue.createdAt)} />
-                <DetailRow
-                  label="Eligibil recompensa"
-                  value={issue.rewardEligible ? 'Da' : 'Nu inca'}
-                />
+                {!isRejected && (
+                  <DetailRow
+                    label="Eveniment comunitar"
+                    value={issue.relatedMission ? 'Conectat' : 'Nu este necesar'}
+                  />
+                )}
               </dl>
             </section>
 
-            {issue.relatedMission && (
+            {!isRejected && issue.relatedMission && (
               <section className="rounded-lg border border-lime-200 bg-white p-4 shadow-sm">
                 <span className="flex size-10 items-center justify-center rounded-lg bg-lime-50 text-lime-700">
                   <Flag className="size-5" aria-hidden="true" />
                 </span>
                 <h2 className="mt-4 text-lg font-semibold text-emerald-950">
-                  {issue.relatedMission.title}
+                  Eveniment comunitar
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-slate-600">
+                  {issue.relatedMission.title} ·{' '}
                   {issue.relatedMission.participantsJoined}/
                   {issue.relatedMission.participantsNeeded} inscrisi · +
                   {issue.relatedMission.impactPoints} puncte de impact
@@ -233,13 +324,13 @@ function IssueDetails({ issue }: { issue: IssueResponse }) {
                 <Button asChild variant="outline" size="sm" className="mt-4 w-full">
                   <Link to={`/missions/${issue.relatedMission.id}`}>
                     <ExternalLink data-icon="inline-start" aria-hidden="true" />
-                    Vezi misiunea
+                    Vezi evenimentul
                   </Link>
                 </Button>
               </section>
             )}
 
-            {issue.relatedReward && (
+            {!isRejected && issue.relatedReward && (
               <section className="rounded-lg border border-yellow-200 bg-white p-4 shadow-sm">
                 <span className="flex size-10 items-center justify-center rounded-lg bg-yellow-50 text-yellow-700">
                   <Gift className="size-5" aria-hidden="true" />
@@ -281,6 +372,200 @@ function DemoStatePage({
         />
       </section>
     </main>
+  )
+}
+
+function ResolutionPanel({
+  issue,
+  isResolved,
+  authStatus,
+  isAuthenticated,
+  mutation,
+}: {
+  issue: IssueResponse
+  isResolved: boolean
+  authStatus: 'loading' | 'authenticated' | 'unauthenticated'
+  isAuthenticated: boolean
+  mutation: UseMutationResult<
+    ResolveIssueResponse,
+    Error,
+    { afterImage: File; resolutionNote: string }
+  >
+}) {
+  const [afterImage, setAfterImage] = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [resolutionNote, setResolutionNote] = useState('')
+  const canSubmit = Boolean(afterImage) && resolutionNote.trim().length >= 8 && !mutation.isPending
+  const verified = mutation.data?.verified === true
+  const rejected = mutation.data?.verified === false
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl)
+      }
+    }
+  }, [previewUrl])
+
+  function handleImageChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] ?? null
+
+    setAfterImage(file)
+    setPreviewUrl((current) => {
+      if (current) {
+        URL.revokeObjectURL(current)
+      }
+
+      return file ? URL.createObjectURL(file) : null
+    })
+    mutation.reset()
+  }
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    if (!afterImage || !canSubmit) {
+      return
+    }
+
+    mutation.mutate({
+      afterImage,
+      resolutionNote,
+    })
+  }
+
+  if (isResolved) {
+    return (
+      <section className="rounded-lg border border-emerald-200 bg-white p-4 shadow-sm">
+        <span className="flex size-10 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
+          <CheckCircle2 className="size-5" aria-hidden="true" />
+        </span>
+        <h2 className="mt-4 text-lg font-semibold text-emerald-950">
+          Problema este rezolvata
+        </h2>
+        <p className="mt-2 text-sm leading-6 text-slate-600">
+          CiviTm pastreaza poza inainte/dupa si impactul este vizibil pe harta.
+        </p>
+      </section>
+    )
+  }
+
+  if (authStatus !== 'loading' && !isAuthenticated) {
+    return (
+      <section className="rounded-lg border border-emerald-200 bg-white p-4 shadow-sm">
+        <span className="flex size-10 items-center justify-center rounded-lg bg-orange-50 text-emerald-700">
+          <Camera className="size-5" aria-hidden="true" />
+        </span>
+        <h2 className="mt-4 text-lg font-semibold text-emerald-950">
+          Ai rezolvat problema?
+        </h2>
+        <p className="mt-2 text-sm leading-6 text-slate-600">
+          Autentifica-te ca sa incarci poza de dupa, sa porneasca agentul de verificare si sa primesti puncte.
+        </p>
+        <Button asChild size="sm" className="mt-4 w-full bg-emerald-600 text-white hover:bg-emerald-700">
+          <Link to={`/login?returnTo=/issues/${issue.id}`}>
+            <Upload data-icon="inline-start" aria-hidden="true" />
+            Intra in cont
+          </Link>
+        </Button>
+      </section>
+    )
+  }
+
+  return (
+    <section className="rounded-lg border border-emerald-200 bg-white p-4 shadow-sm">
+      <span className="flex size-10 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
+        <ImagePlus className="size-5" aria-hidden="true" />
+      </span>
+      <h2 className="mt-4 text-lg font-semibold text-emerald-950">
+        Am rezolvat problema
+      </h2>
+      <p className="mt-2 text-sm leading-6 text-slate-600">
+        Incarca o poza clara de dupa interventie. Resolution Agent verifica imaginea si acorda punctele doar daca problema pare rezolvata.
+      </p>
+
+      <form className="mt-4 space-y-3" onSubmit={handleSubmit}>
+        <label className="block">
+          <span className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+            Poza de dupa
+          </span>
+          <span className="mt-2 flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-emerald-300 bg-emerald-50/60 px-3 py-4 text-center text-sm text-emerald-800 transition hover:bg-emerald-50">
+            {previewUrl ? (
+              <img
+                src={previewUrl}
+                alt="Previzualizare poza dupa"
+                className="max-h-44 w-full rounded-md object-cover"
+              />
+            ) : (
+              <>
+                <Upload className="size-6" aria-hidden="true" />
+                <span className="mt-2 font-semibold">Alege imagine</span>
+                <span className="mt-1 text-xs text-slate-500">JPG sau PNG, zona rezolvata vizibila</span>
+              </>
+            )}
+          </span>
+          <input
+            type="file"
+            accept="image/*"
+            className="sr-only"
+            onChange={handleImageChange}
+          />
+        </label>
+
+        <label className="block">
+          <span className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+            Ce ai facut?
+          </span>
+          <textarea
+            value={resolutionNote}
+            onChange={(event) => {
+              setResolutionNote(event.target.value)
+              mutation.reset()
+            }}
+            rows={3}
+            className="mt-2 w-full resize-none rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+            placeholder="Ex: Am strans deseurile si zona este libera acum."
+          />
+        </label>
+
+        {mutation.isError && (
+          <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700">
+            {mutation.error.message}
+          </p>
+        )}
+
+        {rejected && (
+          <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800">
+            {mutation.data?.message}
+          </p>
+        )}
+
+        {verified && mutation.data?.gamification && (
+          <div className="rounded-lg border border-lime-200 bg-lime-50 px-3 py-3 text-sm text-lime-900">
+            <div className="flex items-center gap-2 font-semibold">
+              <Trophy className="size-4" aria-hidden="true" />
+              +{mutation.data.gamification.pointsAwarded} puncte civice
+            </div>
+            <p className="mt-1 text-lime-800">
+              Total {mutation.data.gamification.totalPoints} puncte · {mutation.data.gamification.currentRank.name}
+            </p>
+          </div>
+        )}
+
+        <Button
+          type="submit"
+          disabled={!canSubmit}
+          className="w-full bg-emerald-600 text-white hover:bg-emerald-700"
+        >
+          {mutation.isPending ? (
+            <Loader2 data-icon="inline-start" className="animate-spin" aria-hidden="true" />
+          ) : (
+            <Sparkles data-icon="inline-start" aria-hidden="true" />
+          )}
+          Trimite la verificare
+        </Button>
+      </form>
+    </section>
   )
 }
 

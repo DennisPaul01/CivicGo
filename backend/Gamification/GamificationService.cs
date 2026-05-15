@@ -10,6 +10,8 @@ public sealed class GamificationService(CivicGoDbContext dbContext)
     private const int AiAcceptedReportPoints = 10;
     private const int DuplicateReportPoints = 8;
     private const int DuplicateAiCheckedPoints = 2;
+    private const int AfterPhotoUploadedPoints = 40;
+    private const int IssueResolvedPoints = 50;
 
     public async Task<GamificationAwardResponse> ApplyReportRewardsAsync(
         Guid issueId,
@@ -89,6 +91,113 @@ public sealed class GamificationService(CivicGoDbContext dbContext)
         if (firstReporterBadge is not null)
         {
             unlockedBadges.Add(firstReporterBadge);
+        }
+
+        var ranks = await dbContext.Ranks
+            .OrderBy(rank => rank.MinPoints)
+            .ToListAsync(cancellationToken);
+        var currentRank = ResolveRank(ranks, user.Points);
+
+        if (currentRank is not null && user.RankId != currentRank.Id)
+        {
+            user.RankId = currentRank.Id;
+            user.UpdatedAt = now;
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        currentRank ??= await EnsureFallbackRankAsync(cancellationToken);
+        var nextRank = ranks
+            .Where(rank => rank.MinPoints > user.Points)
+            .OrderBy(rank => rank.MinPoints)
+            .FirstOrDefault();
+
+        return new GamificationAwardResponse(
+            pointAwards.Sum(award => award.Points),
+            user.Points,
+            ToRankProgress(currentRank, nextRank, user.Points),
+            nextRank is null ? null : ToRankProgress(nextRank, null, user.Points),
+            unlockedBadges,
+            pointAwards
+        );
+    }
+
+    public async Task<GamificationAwardResponse> ApplyResolutionRewardsAsync(
+        Guid userId,
+        Guid issueId,
+        CancellationToken cancellationToken
+    )
+    {
+        var user = await dbContext.Users
+            .FirstOrDefaultAsync(item => item.Id == userId, cancellationToken);
+
+        if (user is null)
+        {
+            throw new KeyNotFoundException($"User {userId} was not found.");
+        }
+
+        var pointAwards = new List<PointAwardResponse>();
+        var unlockedBadges = new List<BadgeResponse>();
+        var now = DateTimeOffset.UtcNow;
+
+        if (await TryAddPointsAsync(
+            user,
+            AfterPhotoUploadedPoints,
+            "After photo uploaded",
+            "after_photo_uploaded",
+            issueId,
+            now,
+            cancellationToken
+        ))
+        {
+            pointAwards.Add(new PointAwardResponse(
+                AfterPhotoUploadedPoints,
+                "After photo uploaded",
+                "after_photo_uploaded"
+            ));
+        }
+
+        if (await TryAddPointsAsync(
+            user,
+            IssueResolvedPoints,
+            "Issue resolved by citizen",
+            "issue_resolved_by_citizen",
+            issueId,
+            now,
+            cancellationToken
+        ))
+        {
+            pointAwards.Add(new PointAwardResponse(
+                IssueResolvedPoints,
+                "Issue resolved by citizen",
+                "issue_resolved_by_citizen"
+            ));
+        }
+
+        var beforeAfterBadge = await TryUnlockBadgeAsync(
+            user.Id,
+            issueId,
+            "Before/After Hero",
+            "after_photo_uploaded",
+            now,
+            cancellationToken
+        );
+        if (beforeAfterBadge is not null)
+        {
+            unlockedBadges.Add(beforeAfterBadge);
+        }
+
+        var problemSolverBadge = await TryUnlockBadgeAsync(
+            user.Id,
+            issueId,
+            "Problem Solver",
+            "issue_resolved_by_citizen",
+            now,
+            cancellationToken
+        );
+        if (problemSolverBadge is not null)
+        {
+            unlockedBadges.Add(problemSolverBadge);
         }
 
         var ranks = await dbContext.Ranks
@@ -209,6 +318,46 @@ public sealed class GamificationService(CivicGoDbContext dbContext)
             UnlockedAt = now,
             SourceEvent = "valid_report",
             SourceId = issueId
+        });
+
+        return ToBadgeResponse(badge);
+    }
+
+    private async Task<BadgeResponse?> TryUnlockBadgeAsync(
+        Guid userId,
+        Guid sourceId,
+        string badgeName,
+        string sourceEvent,
+        DateTimeOffset now,
+        CancellationToken cancellationToken
+    )
+    {
+        var badge = await dbContext.Badges
+            .FirstOrDefaultAsync(item => item.Name == badgeName, cancellationToken);
+
+        if (badge is null)
+        {
+            return null;
+        }
+
+        var alreadyUnlocked = await dbContext.UserBadges.AnyAsync(
+            item => item.UserId == userId && item.BadgeId == badge.Id,
+            cancellationToken
+        );
+
+        if (alreadyUnlocked)
+        {
+            return null;
+        }
+
+        dbContext.UserBadges.Add(new UserBadgeEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            BadgeId = badge.Id,
+            UnlockedAt = now,
+            SourceEvent = sourceEvent,
+            SourceId = sourceId
         });
 
         return ToBadgeResponse(badge);

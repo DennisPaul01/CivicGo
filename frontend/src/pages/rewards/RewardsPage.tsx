@@ -591,7 +591,7 @@ export function RewardsPage() {
   const queryClient = useQueryClient()
   const session = useAuthStore((state) => state.session)
   const profile = useAuthStore((state) => state.profile)
-  const [activeTab, setActiveTab] = useState<RewardsTab>('system')
+  const [activeTab, setActiveTab] = useState<RewardsTab>('ranks')
   const points = profile?.points ?? 0
   const currentRank = getCurrentRank(points)
   const nextRank = getNextRank(points)
@@ -641,6 +641,10 @@ export function RewardsPage() {
         ),
       )
     : 100
+  const orderedRankThresholds = useMemo(
+    () => [...rankThresholds].sort((first, second) => first.minPoints - second.minPoints),
+    [],
+  )
 
   return (
     <motion.main
@@ -649,10 +653,10 @@ export function RewardsPage() {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.35, ease: 'easeOut' }}
     >
-      <section className="mx-auto grid w-full max-w-[calc(100vw-2rem)] gap-4 pb-24 sm:max-w-[calc(100vw-3rem)] sm:gap-5 sm:pb-0 lg:max-w-7xl">
+      <section className="mx-auto grid min-w-0 w-full max-w-[calc(100vw-2rem)] gap-4 pb-24 sm:max-w-[calc(100vw-3rem)] sm:gap-5 sm:pb-0 lg:max-w-7xl">
         <TopNavigation />
 
-        <div className="relative grid w-full gap-4 overflow-hidden rounded-2xl border border-emerald-100/80 bg-white/82 p-4 shadow-[0_14px_38px_rgba(15,23,42,0.06)] ring-1 ring-white/80 backdrop-blur lg:grid-cols-[minmax(0,1.45fr)_minmax(22rem,0.75fr)] lg:p-5">
+        <div className="relative grid min-w-0 w-full gap-4 overflow-hidden rounded-2xl border border-emerald-100/80 bg-white/82 p-4 shadow-[0_14px_38px_rgba(15,23,42,0.06)] ring-1 ring-white/80 backdrop-blur lg:grid-cols-[minmax(0,1.45fr)_minmax(22rem,0.75fr)] lg:p-5">
           <div
             className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-emerald-300/70 to-transparent"
             aria-hidden="true"
@@ -668,18 +672,18 @@ export function RewardsPage() {
                   <Gift className="size-4" aria-hidden="true" />
                   Recompense CiviTm
                 </p>
-                <h1 className="mt-3 max-w-2xl text-[1.85rem] font-bold leading-[1.08] tracking-normal text-slate-950 min-[430px]:text-[2.15rem] sm:text-[2.55rem] lg:text-[2.85rem]">
+                <h1 className="mt-3 max-w-[18rem] text-balance text-[1.5rem] font-bold leading-[1.12] tracking-normal text-slate-950 min-[380px]:text-[1.65rem] min-[430px]:max-w-2xl min-[430px]:text-[2.15rem] sm:text-[2.55rem] lg:text-[2.85rem]">
                   Puncte civice si recompense locale
                 </h1>
                 <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-slate-600 sm:text-[0.95rem]">
                   Foloseste punctele castigate din rapoarte, misiuni si impact pe zone
                   pentru badge-uri, rankuri si recompense locale.
                 </p>
-                <div className="mt-3 flex flex-wrap gap-2">
+                <div className="mt-3 flex snap-x gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-wrap sm:overflow-visible sm:pb-0 [&::-webkit-scrollbar]:hidden">
                   {['Badge-uri vizuale', 'Rank progress', 'Oferte locale'].map((label) => (
                     <span
                       key={label}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-emerald-100 bg-white/76 px-2.5 py-1 text-xs font-bold text-slate-700 shadow-sm shadow-slate-900/5"
+                      className="inline-flex shrink-0 snap-start items-center gap-1.5 rounded-full border border-emerald-100 bg-white/76 px-2.5 py-1 text-xs font-bold text-slate-700 shadow-sm shadow-slate-900/5"
                     >
                       <CheckCircle2 className="size-3.5 text-emerald-600" aria-hidden="true" />
                       {label}
@@ -692,7 +696,7 @@ export function RewardsPage() {
                 <Button
                   asChild
                   variant="outline"
-                  className="h-10 border-slate-200 bg-white px-4 text-slate-900 shadow-sm shadow-slate-900/5 hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800"
+                  className="h-10 w-full border-slate-200 bg-white px-4 text-slate-900 shadow-sm shadow-slate-900/5 hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800 min-[440px]:w-auto"
                 >
                   <Link to="/">
                     <ArrowLeft data-icon="inline-start" aria-hidden="true" />
@@ -701,7 +705,7 @@ export function RewardsPage() {
                 </Button>
                 <Button
                   asChild
-                  className="h-10 border border-emerald-600 bg-emerald-600 px-4 text-white shadow-md shadow-emerald-900/16 hover:bg-emerald-700"
+                  className="h-10 w-full border border-emerald-600 bg-emerald-600 px-4 text-white shadow-md shadow-emerald-900/16 hover:bg-emerald-700 min-[440px]:w-auto"
                 >
                   <Link to="/report">
                     <Leaf data-icon="inline-start" aria-hidden="true" />
@@ -774,14 +778,14 @@ export function RewardsPage() {
           </aside>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white/92 p-1.5 shadow-sm shadow-slate-900/8 backdrop-blur">
-          <div className="grid grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="min-w-0 overflow-x-auto rounded-2xl border border-slate-200 bg-white/92 p-1.5 shadow-sm shadow-slate-900/8 backdrop-blur [-ms-overflow-style:none] [scrollbar-width:none] sm:overflow-visible [&::-webkit-scrollbar]:hidden">
+          <div className="flex w-max min-w-full snap-x gap-1 pb-1 sm:grid sm:w-full sm:grid-cols-3 sm:pb-0 lg:grid-cols-5">
             {rewardTabs.map((tab) => (
               <button
                 key={tab.id}
                 type="button"
                 className={cn(
-                  'inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-2.5 text-center text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-emerald-300/60 sm:text-sm',
+                  'inline-flex min-h-11 min-w-[8.35rem] snap-start items-center justify-center gap-2 rounded-xl px-3 text-center text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-emerald-300/60 sm:min-w-0 sm:text-sm',
                   activeTab === tab.id
                     ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-900/16'
                     : 'text-slate-600 hover:bg-emerald-50 hover:text-emerald-800',
@@ -834,7 +838,7 @@ export function RewardsPage() {
         )}
 
         {activeTab === 'badges' && (
-          <div className="grid auto-rows-fr gap-4 sm:gap-5 md:grid-cols-2 xl:grid-cols-4">
+          <div className="grid min-w-0 gap-3 sm:gap-4 md:auto-rows-fr md:grid-cols-2 xl:grid-cols-4">
             {badgeItems.map((badge) => {
               const unlocked = points >= badge.unlockedAtPoints
 
@@ -842,7 +846,7 @@ export function RewardsPage() {
                 <motion.article
                   key={badge.name}
                   className={cn(
-                    'group relative flex min-h-full flex-col overflow-hidden rounded-xl border bg-white/94 p-4 shadow-sm shadow-slate-900/5 transition duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-900/8 sm:p-5',
+                    'group relative grid min-h-[8.75rem] min-w-0 grid-cols-[5.5rem_minmax(0,1fr)] items-center gap-3 overflow-hidden rounded-xl border bg-white/94 p-3 shadow-sm shadow-slate-900/5 transition duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-900/8 sm:grid-cols-[6rem_minmax(0,1fr)] sm:p-4 md:flex md:min-h-full md:flex-col md:items-stretch md:p-5',
                     unlocked
                       ? 'border-emerald-200 ring-1 ring-emerald-100/90'
                       : 'border-slate-200',
@@ -859,14 +863,14 @@ export function RewardsPage() {
                     className="pointer-events-none absolute inset-x-5 top-0 h-px bg-gradient-to-r from-transparent via-emerald-300/70 to-transparent"
                     aria-hidden="true"
                   />
-                  <div className="relative z-10 flex flex-1 flex-col">
-                    <div className="flex items-start justify-between gap-3">
+                  <div className="relative z-10 contents md:flex md:flex-1 md:flex-col">
+                    <div className="flex items-center justify-center md:items-start md:justify-between md:gap-3">
                       <div
                         className={cn(
-                          'flex size-28 shrink-0 items-center justify-center overflow-hidden rounded-full border bg-white p-2 shadow-lg shadow-slate-900/10 ring-4 transition duration-300 group-hover:scale-105 sm:size-32',
+                          'flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white bg-white p-1.5 shadow-sm shadow-slate-900/5 ring-4 ring-white transition duration-300 group-hover:scale-105 sm:size-24 md:size-32 md:p-2',
                           unlocked
-                            ? 'border-emerald-100 ring-emerald-100/80'
-                            : 'border-slate-100 ring-slate-100/80',
+                            ? 'outline outline-1 outline-emerald-100'
+                            : 'outline outline-1 outline-slate-100',
                         )}
                       >
                         <img
@@ -874,24 +878,26 @@ export function RewardsPage() {
                           alt={`Badge ${roBadge(badge.name)}`}
                           className={cn(
                             'h-full w-full object-contain',
-                            !unlocked && 'grayscale opacity-60',
+                            unlocked
+                              ? 'contrast-105 saturate-110'
+                              : 'grayscale opacity-60',
                           )}
                           loading="lazy"
                         />
                       </div>
                       <badge.icon
                         className={cn(
-                          'mt-1 size-5 shrink-0',
+                          'absolute right-3 top-3 size-4 shrink-0 md:relative md:right-auto md:top-auto md:mt-1 md:size-5',
                           unlocked ? 'text-emerald-600' : 'text-slate-400',
                         )}
                         aria-hidden="true"
                       />
                     </div>
 
-                    <div className="mt-5 flex min-w-0 flex-1 flex-col justify-between gap-5">
+                    <div className="flex min-w-0 flex-1 flex-col justify-center gap-2 pr-5 md:mt-5 md:justify-between md:gap-5 md:pr-0">
                       <span
                         className={cn(
-                          'inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ring-1 backdrop-blur',
+                          'inline-flex min-h-8 w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ring-1 backdrop-blur',
                           unlocked
                             ? 'bg-emerald-50/90 text-emerald-800 ring-emerald-200'
                             : 'bg-white/90 text-slate-700 ring-slate-200',
@@ -906,10 +912,10 @@ export function RewardsPage() {
                       </span>
 
                       <div>
-                        <h2 className="text-xl font-bold leading-tight text-slate-950">
+                        <h2 className="break-words text-[1.05rem] font-bold leading-tight text-slate-950 sm:text-lg md:text-xl">
                           {roBadge(badge.name)}
                         </h2>
-                        <p className="mt-2 text-sm font-medium leading-6 text-slate-600">
+                        <p className="mt-1.5 break-words text-sm font-medium leading-5 text-slate-600 md:mt-2 md:leading-6">
                           {badge.description}
                         </p>
                       </div>
@@ -922,45 +928,53 @@ export function RewardsPage() {
         )}
 
         {activeTab === 'ranks' && (
-          <div className="grid auto-rows-fr gap-4 sm:gap-5 md:grid-cols-2 xl:grid-cols-4">
-            {rankThresholds.map((rank) => {
+          <div className="grid min-w-0 gap-3 sm:gap-4 md:auto-rows-fr md:grid-cols-2 xl:grid-cols-4">
+            {orderedRankThresholds.map((rank) => {
               const unlocked = points >= rank.minPoints
               const isCurrent = currentRank.name === rank.name
+              const isNext = !unlocked && nextRank?.name === rank.name
               const RankIcon = rank.icon
 
               return (
                 <motion.article
                   key={rank.name}
                   className={cn(
-                    'group relative flex min-h-full flex-col overflow-hidden rounded-xl border bg-white/94 p-4 shadow-sm shadow-slate-900/5 transition duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-900/8 sm:p-5',
+                    'group relative grid min-h-[9.25rem] min-w-0 grid-cols-[5.75rem_minmax(0,1fr)] items-center gap-3 overflow-hidden rounded-xl border bg-white p-3 shadow-sm shadow-slate-900/5 transition duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-900/8 sm:grid-cols-[6.25rem_minmax(0,1fr)] sm:p-4 md:flex md:min-h-full md:flex-col md:items-stretch md:p-5',
                     isCurrent
-                      ? 'border-yellow-300 ring-2 ring-yellow-100'
+                      ? 'border-yellow-300 bg-[linear-gradient(135deg,#fffdf4_0%,#ffffff_46%,#f0fdfa_100%)] shadow-md shadow-yellow-900/8 ring-2 ring-yellow-200'
+                      : isNext
+                        ? 'border-emerald-200 bg-[linear-gradient(135deg,#f0fdfa_0%,#ffffff_58%)] ring-2 ring-emerald-100/80'
                       : unlocked
-                        ? 'border-emerald-200 ring-1 ring-emerald-100'
-                        : 'border-slate-200',
+                        ? 'border-emerald-200 bg-white shadow-md shadow-emerald-900/6 ring-1 ring-emerald-100'
+                        : 'border-slate-200 bg-white/82',
                   )}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.24, ease: 'easeOut' }}
                 >
                   <span
-                    className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(236,253,245,0.86)_0%,rgba(255,255,255,0)_60%)]"
+                    className={cn(
+                      'pointer-events-none absolute inset-0',
+                      unlocked
+                        ? 'bg-[linear-gradient(135deg,rgba(240,253,250,0.58)_0%,rgba(255,255,255,0)_62%)]'
+                        : 'bg-[linear-gradient(135deg,rgba(248,250,252,0.8)_0%,rgba(255,255,255,0)_60%)]',
+                    )}
                     aria-hidden="true"
                   />
                   <span
                     className="pointer-events-none absolute inset-x-5 top-0 h-px bg-gradient-to-r from-transparent via-yellow-300/80 to-transparent"
                     aria-hidden="true"
                   />
-                  <div className="relative z-10 flex flex-1 flex-col">
-                    <div className="flex items-start justify-between gap-3">
+                  <div className="relative z-10 contents md:flex md:flex-1 md:flex-col">
+                    <div className="flex items-center justify-center md:items-start md:justify-between md:gap-3">
                       <div
                         className={cn(
-                          'flex size-32 shrink-0 items-center justify-center overflow-hidden rounded-full border bg-white p-2 shadow-lg shadow-slate-900/10 ring-4 transition duration-300 group-hover:scale-105 sm:size-36',
+                          'flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white bg-white p-1.5 shadow-sm ring-4 ring-white transition duration-300 group-hover:scale-105 sm:size-24 md:size-36 md:p-2',
                           isCurrent
-                            ? 'border-yellow-100 ring-yellow-100'
+                            ? 'shadow-yellow-900/5 outline outline-1 outline-yellow-200'
                             : unlocked
-                              ? 'border-emerald-100 ring-emerald-100/80'
-                              : 'border-slate-100 ring-slate-100/80',
+                              ? 'shadow-emerald-900/5 outline outline-1 outline-emerald-100'
+                              : 'shadow-slate-900/5 outline outline-1 outline-slate-100',
                         )}
                       >
                         <img
@@ -968,15 +982,19 @@ export function RewardsPage() {
                           alt={`Rank ${roRank(rank.name)}`}
                           className={cn(
                             'h-full w-full object-contain',
-                            !unlocked && 'grayscale opacity-55',
+                            unlocked
+                              ? 'contrast-105 saturate-110'
+                              : 'grayscale opacity-55',
                           )}
                           loading="lazy"
                         />
                       </div>
                       <span
                         className={cn(
-                          'flex size-9 shrink-0 items-center justify-center rounded-lg',
-                          unlocked
+                          'absolute right-3 top-3 flex size-8 shrink-0 items-center justify-center rounded-lg md:relative md:right-auto md:top-auto md:size-9',
+                          isCurrent
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : unlocked
                             ? 'bg-yellow-50 text-yellow-700'
                             : 'bg-slate-50 text-slate-500',
                         )}
@@ -985,13 +1003,15 @@ export function RewardsPage() {
                       </span>
                     </div>
 
-                    <div className="mt-5 flex min-w-0 flex-1 flex-col justify-between gap-5">
+                    <div className="flex min-w-0 flex-1 flex-col justify-center gap-2 pr-4 md:mt-5 md:justify-between md:gap-5 md:pr-0">
                       <div className="flex flex-wrap items-start justify-between gap-2">
                         <span
                           className={cn(
                             'inline-flex min-h-8 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ring-1 backdrop-blur',
                             isCurrent
                               ? 'bg-yellow-50/95 text-yellow-800 ring-yellow-200'
+                              : isNext
+                                ? 'bg-emerald-50/95 text-emerald-800 ring-emerald-200'
                               : unlocked
                                 ? 'bg-emerald-50/95 text-emerald-800 ring-emerald-200'
                                 : 'bg-white/95 text-slate-700 ring-slate-200',
@@ -999,25 +1019,50 @@ export function RewardsPage() {
                         >
                           {isCurrent ? (
                             <Trophy className="size-4" aria-hidden="true" />
+                          ) : isNext ? (
+                            <Star className="size-4" aria-hidden="true" />
                           ) : unlocked ? (
                             <CheckCircle2 className="size-4" aria-hidden="true" />
                           ) : (
                             <LockKeyhole className="size-4" aria-hidden="true" />
                           )}
-                          {isCurrent ? 'Rank curent' : unlocked ? 'Deblocat' : `${rank.minPoints} pct`}
+                          {isCurrent
+                            ? 'Rank curent'
+                            : isNext
+                              ? 'Urmatorul'
+                              : unlocked
+                                ? 'Deblocat'
+                                : `${rank.minPoints} pct`}
                         </span>
                       </div>
 
                       <div>
-                        <h2 className="text-xl font-bold leading-tight text-slate-950">
+                        <h2
+                          className={cn(
+                            'break-words text-[1.05rem] font-bold leading-tight sm:text-lg md:text-xl',
+                            unlocked ? 'text-slate-950' : 'text-slate-500',
+                          )}
+                        >
                           {roRank(rank.name)}
                         </h2>
-                        <p className="mt-2 text-sm font-medium leading-6 text-slate-600">
+                        <p
+                          className={cn(
+                            'mt-1.5 break-words text-sm font-medium leading-5 md:mt-2 md:leading-6',
+                            unlocked ? 'text-slate-700' : 'text-slate-500',
+                          )}
+                        >
                           {rank.description}
                         </p>
                       </div>
 
-                      <div className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600 ring-1 ring-slate-100">
+                      <div
+                        className={cn(
+                          'rounded-lg px-3 py-2 text-sm ring-1',
+                          unlocked
+                            ? 'bg-white text-slate-700 ring-emerald-100'
+                            : 'bg-slate-50 text-slate-500 ring-slate-100',
+                        )}
+                      >
                         <div className="flex items-center justify-between gap-3">
                           <span className="inline-flex items-center gap-2 font-semibold text-emerald-800">
                             <Star className="size-4" aria-hidden="true" />

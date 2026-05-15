@@ -1,4 +1,3 @@
-using System.Text.Json;
 using CivicGo.Api.Agents;
 using CivicGo.Api.Data;
 using CivicGo.Api.Data.Entities;
@@ -12,25 +11,63 @@ public sealed class MissionGenerationService(
     ILogger<MissionGenerationService> logger
 )
 {
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
-    {
-        WriteIndented = false
-    };
-
-    private static readonly HashSet<string> MissionFriendlyCategories = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly HashSet<string> LargeWasteMissionCategories = new(StringComparer.OrdinalIgnoreCase)
     {
         IssueCategories.SanitationPestSnow,
-        IssueCategories.EnvironmentPlaygroundsGreenSpaces,
-        IssueCategories.GaragesCemeteriesPublicToilets,
-        IssueCategories.PublicOrder,
         "waste",
-        "graffiti",
-        "green_space_issue",
-        "green_space",
-        "blocked_sidewalk",
-        "accessibility_issue",
-        "damaged_public_furniture"
+        "abandoned_object"
     };
+
+    private static readonly string[] LargeWasteSignals =
+    [
+        "moloz",
+        "sac",
+        "saci",
+        "gramada",
+        "gramezi",
+        "deseuri voluminoase",
+        "deseuri mari",
+        "gunoi mult",
+        "gunoaie multe",
+        "mobila",
+        "canapea",
+        "saltea",
+        "dulap",
+        "frigider",
+        "electrocasnice",
+        "containere pline",
+        "container plin",
+        "cosuri pline",
+        "depozit ilegal",
+        "depozitare ilegala",
+        "resturi constructii",
+        "resturi de constructii",
+        "morman",
+        "abandonate",
+        "abandonata",
+        "abandonat"
+    ];
+
+    private static readonly string[] SmallWasteSignals =
+    [
+        "o sticla",
+        "sticla pe",
+        "un ambalaj",
+        "ambalaj",
+        "hartie",
+        "hirtie",
+        "o hartie",
+        "doza",
+        "o doza",
+        "gunoi mic",
+        "un gunoi",
+        "un pet",
+        "pet pe",
+        "mucuri",
+        "muc de tigara",
+        "punga",
+        "servetel"
+    ];
 
     public async Task<MissionResponse?> EnsureMissionForIssueAsync(
         Guid issueId,
@@ -131,8 +168,6 @@ public sealed class MissionGenerationService(
             CreatedAt = now
         });
 
-        AddMissionAgentStep(issue, mission, missionPlan, agentConfig, now);
-
         if (!await TrySaveMissionAsync(issue.Id, cancellationToken))
         {
             return null;
@@ -172,24 +207,47 @@ public sealed class MissionGenerationService(
 
     private static bool IsMissionEligible(IssueEntity issue)
     {
-        if (issue.Status is not "ai_analyzed" and not "mission_created")
+        if (issue.Status is not "ai_analyzed" and not "duplicate_detected" and not "mission_created")
         {
             return false;
         }
 
-        if (issue.ResponsibleActor == "emergency" || issue.Severity == "critical")
+        if (issue.Severity == "critical" ||
+            issue.ResponsibleActor is not ("community" or "community_and_city_hall"))
         {
             return false;
         }
 
-        var latestAnalysis = issue.AiAnalyses
-            .OrderByDescending(analysis => analysis.CreatedAt)
-            .FirstOrDefault();
-        var hasCommunityActor = issue.ResponsibleActor is "community" or "community_and_city_hall";
-        var hasMissionFriendlyCategory = MissionFriendlyCategories.Contains(issue.Category);
+        return IsLargeWasteIssue(issue);
+    }
 
-        return hasCommunityActor &&
-            (hasMissionFriendlyCategory || latestAnalysis?.RewardEligible == true);
+    private static bool IsLargeWasteIssue(IssueEntity issue)
+    {
+        if (!LargeWasteMissionCategories.Contains(issue.Category))
+        {
+            return false;
+        }
+
+        var text = $"{issue.Title} {issue.Description}".ToLowerInvariant();
+        var hasLargeWasteSignal = ContainsAny(text, LargeWasteSignals);
+
+        if (issue.Category.Equals("abandoned_object", StringComparison.OrdinalIgnoreCase) &&
+            !hasLargeWasteSignal)
+        {
+            return false;
+        }
+
+        if (ContainsAny(text, SmallWasteSignals) && !hasLargeWasteSignal)
+        {
+            return false;
+        }
+
+        return issue.Severity switch
+        {
+            "high" => true,
+            "medium" => hasLargeWasteSignal,
+            _ => false
+        };
     }
 
     private static MissionPlan CreateMissionPlan(
@@ -201,38 +259,17 @@ public sealed class MissionGenerationService(
         var title = issue.Category switch
         {
             "waste" => $"Curatenie comunitara in {zoneName}",
-            "graffiti" => $"Curatare graffiti in {zoneName}",
-            "green_space_issue" or "green_space" or IssueCategories.EnvironmentPlaygroundsGreenSpaces =>
-                $"Verificare spatiu verde in {zoneName}",
-            "blocked_sidewalk" or "accessibility_issue" => $"Verificare accesibilitate in {zoneName}",
-            "broken_lighting" or IssueCategories.PublicLighting => $"Tur de siguranta in {zoneName}",
-            "road_damage" or IssueCategories.StreetsSidewalks or IssueCategories.RoadTrafficSigns =>
-                $"Verificare siguranta drum in {zoneName}",
-            "damaged_public_furniture" => $"Verificare mobilier urban in {zoneName}",
+            "abandoned_object" => $"Ridicare deseuri voluminoase in {zoneName}",
             IssueCategories.SanitationPestSnow =>
                 $"Curatenie comunitara in {zoneName}",
-            IssueCategories.PublicOrder =>
-                $"Verificare ordine publica in {zoneName}",
-            IssueCategories.GaragesCemeteriesPublicToilets =>
-                $"Verificare toalete publice in {zoneName}",
-            IssueCategories.PublicTransport =>
-                $"Verificare transport public in {zoneName}",
             _ => $"Verificare civica in {zoneName}"
         };
         var description = issue.Category switch
         {
-            "waste" or IssueCategories.SanitationPestSnow =>
-                $"Misiune comunitara de curatenie generata din raportul de deseuri din {zoneName}. Voluntarii pot documenta zona, strange deseuri vizibile unde este sigur si pregati cazul pentru primarie.",
-            "broken_lighting" or IssueCategories.PublicLighting =>
-                $"Tur de siguranta generat dintr-un raport de iluminat in {zoneName}. Participantii pot verifica luminile din apropiere, documenta zonele intunecate si ajuta la prioritizarea solicitarii.",
-            "road_damage" or IssueCategories.StreetsSidewalks or IssueCategories.RoadTrafficSigns =>
-                $"Verificare de siguranta rutiera generata din raportul din {zoneName}. Cetatenii pot strange fotografii suplimentare si marca segmentul afectat pentru primarie.",
-            "blocked_sidewalk" or "accessibility_issue" =>
-                $"Verificare de accesibilitate generata din raportul din {zoneName}. Misiunea se concentreaza pe documentarea obstacolului si confirmarea impactului asupra pietonilor.",
-            IssueCategories.EnvironmentPlaygroundsGreenSpaces =>
-                $"Misiune comunitara pentru spatii verzi si locuri de joaca in {zoneName}. Participantii pot documenta problema si confirma ce interventie este necesara.",
+            "waste" or "abandoned_object" or IssueCategories.SanitationPestSnow =>
+                $"Misiune comunitara de curatenie generata din raportul de deseuri mari din {zoneName}. Voluntarii pot documenta zona, strange deseuri vizibile unde este sigur si pregati cazul pentru primarie.",
             _ =>
-                $"Misiune civica usoara generata din problema raportata in {zoneName}. Participantii pot verifica locatia, adauga context si ajuta problema sa avanseze spre rezolvare."
+                $"Misiune comunitara generata dintr-o problema mare de salubrizare in {zoneName}. Participantii pot verifica locatia, adauga context si ajuta problema sa avanseze spre rezolvare."
         };
         var configuredInstructions = agentConfig?.Instructions?.Trim();
         if (!string.IsNullOrWhiteSpace(configuredInstructions))
@@ -257,8 +294,8 @@ public sealed class MissionGenerationService(
         return issue.Severity switch
         {
             "high" => 10,
-            "medium" => issue.Category is "waste" or "graffiti" or IssueCategories.SanitationPestSnow ? 8 : 6,
-            _ => 4
+            "medium" => 8,
+            _ => 6
         };
     }
 
@@ -287,62 +324,6 @@ public sealed class MissionGenerationService(
         );
     }
 
-    private static void AddMissionAgentStep(
-        IssueEntity issue,
-        MissionEntity mission,
-        MissionPlan plan,
-        RuntimeAgentConfig? agentConfig,
-        DateTimeOffset now
-    )
-    {
-        var latestRun = issue.AgentRuns
-            .OrderByDescending(run => run.CreatedAt)
-            .FirstOrDefault();
-
-        if (latestRun is null ||
-            latestRun.AgentSteps.Any(step => step.AgentName == "Mission Agent"))
-        {
-            return;
-        }
-
-        var nextOrder = latestRun.AgentSteps.Count == 0
-            ? 1
-            : latestRun.AgentSteps.Max(step => step.Order) + 1;
-        latestRun.AgentSteps.Add(new AgentStepEntity
-        {
-            Id = Guid.NewGuid(),
-            AgentRunId = latestRun.Id,
-            AgentName = "Mission Agent",
-            Status = "completed",
-            InputJson = JsonSerializer.Serialize(new
-            {
-                issue.Id,
-                issue.Category,
-                issue.Severity,
-                issue.ResponsibleActor,
-                zone = issue.Zone?.Name,
-                adminInstructions = agentConfig?.Instructions,
-                configuredModel = agentConfig?.Model,
-                fallbackMode = agentConfig?.FallbackMode,
-                isEnabled = agentConfig?.IsEnabled ?? true
-            }, JsonOptions),
-            OutputJson = JsonSerializer.Serialize(new
-            {
-                mode = agentConfig?.FallbackMode ?? "Template mission based on category and zone.",
-                mission.Id,
-                mission.Title,
-                mission.ParticipantsNeeded,
-                mission.ImpactPoints,
-                plan.StartsAt
-            }, JsonOptions),
-            Message = $"A creat misiunea {mission.Title}.",
-            StartedAt = now.AddMilliseconds(-180),
-            CompletedAt = now,
-            Order = nextOrder
-        });
-        latestRun.CompletedAt = now;
-    }
-
     private sealed record MissionPlan(
         string Title,
         string Description,
@@ -360,5 +341,10 @@ public sealed class MissionGenerationService(
         }
 
         return $"{value[..Math.Max(0, maxLength - 1)]}.";
+    }
+
+    private static bool ContainsAny(string value, IEnumerable<string> signals)
+    {
+        return signals.Any(signal => value.Contains(signal, StringComparison.OrdinalIgnoreCase));
     }
 }

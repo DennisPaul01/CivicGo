@@ -1,4 +1,7 @@
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
+using CivicGo.Api.Agents;
 using CivicGo.Api.Data.Entities;
 using CivicGo.Api.Issues;
 using Microsoft.EntityFrameworkCore;
@@ -18,6 +21,7 @@ public static class SeedData
         await EnsureAgentConfigsAsync(dbContext);
         await EnsureDemoIssuesAsync(dbContext);
         await EnsureBadgesAsync(dbContext);
+        await EnsureDemoLeaderboardUsersAsync(dbContext);
         await EnsurePartnersAsync(dbContext);
         await EnsureRewardsAsync(dbContext);
         await EnsureDemoMissionsAsync(dbContext);
@@ -31,77 +35,77 @@ public static class SeedData
             CreateAgentConfig(
                 "vision",
                 "Vision Agent",
-                "Photo and issue classifier",
-                "Reads the uploaded photo, description and coordinates, then returns category, severity, summary, confidence and urgency.",
-                "Classify the civic report using the Timisoara taxonomy. Prefer specific categories, keep summaries short and flag urgent safety risks.",
+                AgentDefaultInstructions.VisionRole,
+                AgentDefaultInstructions.VisionDescription,
+                AgentDefaultInstructions.VisionInstructions,
                 "gpt-4o-mini",
-                "Keyword and description fallback with medium confidence.",
+                AgentDefaultInstructions.VisionFallback,
                 1,
                 now
             ),
             CreateAgentConfig(
                 "triage",
                 "Triage Agent",
-                "Responsible actor router",
-                "Chooses whether the report belongs to city hall, community action, partners or a mixed route.",
-                "Use the category, severity and location context to pick the most practical responsible actor for demo follow-up.",
+                AgentDefaultInstructions.TriageRole,
+                AgentDefaultInstructions.TriageDescription,
+                AgentDefaultInstructions.TriageInstructions,
                 "gpt-4o-mini",
-                "Rule-based actor mapping by category.",
+                AgentDefaultInstructions.TriageFallback,
                 2,
                 now
             ),
             CreateAgentConfig(
                 "duplicate",
                 "Duplicate Agent",
-                "Nearby report checker",
-                "Checks active nearby reports and marks likely duplicate clusters before a mission is generated.",
-                "Compare distance, category and unresolved status. Only mark a duplicate when the match is clear enough for an admin to review.",
+                AgentDefaultInstructions.DuplicateRole,
+                AgentDefaultInstructions.DuplicateDescription,
+                AgentDefaultInstructions.DuplicateInstructions,
                 "deterministic",
-                "Numeric latitude/longitude radius check.",
+                AgentDefaultInstructions.DuplicateFallback,
                 3,
                 now
             ),
             CreateAgentConfig(
                 "mission",
                 "Mission Agent",
-                "Community mission planner",
-                "Turns eligible issues into small civic missions with participants, impact points and timing.",
-                "Generate compact, local, actionable missions that fit a Friday HackTM demo and avoid production-heavy workflows.",
+                AgentDefaultInstructions.MissionRole,
+                AgentDefaultInstructions.MissionDescription,
+                AgentDefaultInstructions.MissionInstructions,
                 "gpt-4o-mini",
-                "Template mission based on category and zone.",
+                AgentDefaultInstructions.MissionFallback,
                 4,
                 now
             ),
             CreateAgentConfig(
                 "reward",
                 "Reward Agent",
-                "Reward matcher",
-                "Matches missions and reports to system or partner rewards where appropriate.",
-                "Prefer relevant partner rewards, keep required points realistic and fall back to system rewards when no partner fits.",
+                AgentDefaultInstructions.RewardRole,
+                AgentDefaultInstructions.RewardDescription,
+                AgentDefaultInstructions.RewardInstructions,
                 "deterministic",
-                "Seeded system reward or CoffeeLab demo reward.",
+                AgentDefaultInstructions.RewardFallback,
                 5,
                 now
             ),
             CreateAgentConfig(
                 "city",
                 "City Agent",
-                "Zone impact analyst",
-                "Updates city-level insight and zone impact signals for admin overview and demo storytelling.",
-                "Summarize the strongest active city signal and suggest the next visible action for the admin dashboard.",
+                AgentDefaultInstructions.CityRole,
+                AgentDefaultInstructions.CityDescription,
+                AgentDefaultInstructions.CityInstructions,
                 "deterministic",
-                "Static summary generated from top zone and category counts.",
+                AgentDefaultInstructions.CityFallback,
                 6,
                 now
             ),
             CreateAgentConfig(
                 "authority_email",
                 "Authority Email Agent",
-                "Local authority email drafter",
-                "Prepares a clear email draft for the right local authority based on issue type, severity, location, date and photo evidence.",
-                "Write concise Romanian authority emails. Include the issue context, severity rationale, exact location, report date, photo URL and requested next action.",
+                AgentDefaultInstructions.AuthorityEmailRole,
+                AgentDefaultInstructions.AuthorityEmailDescription,
+                AgentDefaultInstructions.AuthorityEmailInstructions,
                 "deterministic",
-                "Template email based on category, responsible actor and severity.",
+                AgentDefaultInstructions.AuthorityEmailFallback,
                 7,
                 now
             )
@@ -118,6 +122,19 @@ public static class SeedData
             }
 
             var changed = false;
+
+            if (ShouldRefreshDefaultAgentConfig(existing))
+            {
+                existing.Name = agentConfig.Name;
+                existing.Role = agentConfig.Role;
+                existing.Description = agentConfig.Description;
+                existing.Instructions = agentConfig.Instructions;
+                existing.Model = agentConfig.Model;
+                existing.FallbackMode = agentConfig.FallbackMode;
+                existing.SortOrder = agentConfig.SortOrder;
+                existing.UpdatedAt = now;
+                continue;
+            }
 
             if (string.IsNullOrWhiteSpace(existing.Name))
             {
@@ -168,6 +185,21 @@ public static class SeedData
         }
 
         await dbContext.SaveChangesAsync();
+    }
+
+    private static bool ShouldRefreshDefaultAgentConfig(AgentConfigEntity agent)
+    {
+        return agent.Instructions switch
+        {
+            "Classify the civic report using the Timisoara taxonomy. Prefer specific categories, keep summaries short and flag urgent safety risks." => true,
+            "Use the category, severity and location context to pick the most practical responsible actor for demo follow-up." => true,
+            "Compare distance, category and unresolved status. Only mark a duplicate when the match is clear enough for an admin to review." => true,
+            "Generate compact, local, actionable missions that fit a Friday HackTM demo and avoid production-heavy workflows." => true,
+            "Prefer relevant partner rewards, keep required points realistic and fall back to system rewards when no partner fits." => true,
+            "Summarize the strongest active city signal and suggest the next visible action for the admin dashboard." => true,
+            "Write concise Romanian authority emails. Include the issue context, severity rationale, exact location, report date, photo URL and requested next action." => true,
+            _ => false
+        };
     }
 
     private static AgentConfigEntity CreateAgentConfig(
@@ -665,6 +697,317 @@ public static class SeedData
 
         dbContext.Badges.AddRange(missingBadges);
         await dbContext.SaveChangesAsync();
+    }
+
+    private static async Task EnsureDemoLeaderboardUsersAsync(CivicGoDbContext dbContext)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var ranks = await dbContext.Ranks
+            .OrderBy(rank => rank.MinPoints)
+            .ToListAsync();
+        var badges = await dbContext.Badges
+            .ToDictionaryAsync(badge => badge.Name, StringComparer.OrdinalIgnoreCase);
+        var demoUsers = new[]
+        {
+            new DemoLeaderboardUserSeed(
+                "demo-leaderboard-ana-popescu",
+                "ana.popescu@civicgo.demo",
+                "Ana Popescu",
+                1840,
+                430,
+                96,
+                ["First Reporter", "AI Scout", "Trusted Reporter", "Zone Champion"]
+            ),
+            new DemoLeaderboardUserSeed(
+                "demo-leaderboard-andrei-ionescu",
+                "andrei.ionescu@civicgo.demo",
+                "Andrei Ionescu",
+                1515,
+                510,
+                91,
+                ["First Reporter", "Clean-up Hero", "Problem Solver"]
+            ),
+            new DemoLeaderboardUserSeed(
+                "demo-leaderboard-mara-dumitrescu",
+                "mara.dumitrescu@civicgo.demo",
+                "Mara Dumitrescu",
+                980,
+                280,
+                88,
+                ["First Reporter", "AI Scout", "Before/After Hero"]
+            ),
+            new DemoLeaderboardUserSeed(
+                "demo-leaderboard-vlad-stoica",
+                "vlad.stoica@civicgo.demo",
+                "Vlad Stoica",
+                760,
+                190,
+                84,
+                ["First Reporter", "Clean-up Hero"]
+            ),
+            new DemoLeaderboardUserSeed(
+                "demo-leaderboard-irina-matei",
+                "irina.matei@civicgo.demo",
+                "Irina Matei",
+                620,
+                340,
+                90,
+                ["First Reporter", "AI Scout", "Problem Solver"]
+            ),
+            new DemoLeaderboardUserSeed(
+                "demo-leaderboard-razvan-munteanu",
+                "razvan.munteanu@civicgo.demo",
+                "Razvan Munteanu",
+                440,
+                145,
+                79,
+                ["First Reporter", "Trusted Reporter"]
+            ),
+            new DemoLeaderboardUserSeed(
+                "demo-leaderboard-elena-radu",
+                "elena.radu@civicgo.demo",
+                "Elena Radu",
+                365,
+                210,
+                82,
+                ["First Reporter", "AI Scout"]
+            ),
+            new DemoLeaderboardUserSeed(
+                "demo-leaderboard-paul-cretu",
+                "paul.cretu@civicgo.demo",
+                "Paul Cretu",
+                285,
+                115,
+                74,
+                ["First Reporter"]
+            ),
+            new DemoLeaderboardUserSeed(
+                "demo-leaderboard-bianca-marin",
+                "bianca.marin@civicgo.demo",
+                "Bianca Marin",
+                230,
+                230,
+                81,
+                ["First Reporter", "Clean-up Hero"]
+            ),
+            new DemoLeaderboardUserSeed(
+                "demo-leaderboard-calin-pavel",
+                "calin.pavel@civicgo.demo",
+                "Calin Pavel",
+                170,
+                70,
+                69,
+                ["First Reporter"]
+            ),
+            new DemoLeaderboardUserSeed(
+                "demo-leaderboard-simona-lazar",
+                "simona.lazar@civicgo.demo",
+                "Simona Lazar",
+                120,
+                95,
+                72,
+                ["First Reporter", "AI Scout"]
+            ),
+            new DemoLeaderboardUserSeed(
+                "demo-leaderboard-dan-bota",
+                "dan.bota@civicgo.demo",
+                "Dan Bota",
+                60,
+                60,
+                64,
+                ["First Reporter"]
+            )
+        };
+        var demoSupabaseIds = demoUsers.Select(user => user.SupabaseUserId).ToArray();
+        var existingUsers = await dbContext.Users
+            .Where(user => demoSupabaseIds.Contains(user.SupabaseUserId))
+            .ToDictionaryAsync(user => user.SupabaseUserId, StringComparer.OrdinalIgnoreCase);
+        var changedUsers = false;
+
+        foreach (var seed in demoUsers)
+        {
+            var rank = ResolveRank(ranks, seed.TotalPoints);
+            var userChanged = false;
+
+            if (!existingUsers.TryGetValue(seed.SupabaseUserId, out var user))
+            {
+                user = new UserEntity
+                {
+                    Id = Guid.NewGuid(),
+                    SupabaseUserId = seed.SupabaseUserId,
+                    Email = seed.Email,
+                    FullName = seed.FullName,
+                    AvatarUrl = CreateDemoAvatarUrl(seed.FullName),
+                    Role = "citizen",
+                    Points = seed.TotalPoints,
+                    RankId = rank?.Id,
+                    TrustScore = seed.TrustScore,
+                    CreatedAt = now.AddDays(-80),
+                    UpdatedAt = now
+                };
+                dbContext.Users.Add(user);
+                existingUsers[seed.SupabaseUserId] = user;
+                changedUsers = true;
+                continue;
+            }
+
+            if (user.Email != seed.Email)
+            {
+                user.Email = seed.Email;
+                userChanged = true;
+            }
+
+            if (user.FullName != seed.FullName)
+            {
+                user.FullName = seed.FullName;
+                userChanged = true;
+            }
+
+            if (string.IsNullOrWhiteSpace(user.AvatarUrl))
+            {
+                user.AvatarUrl = CreateDemoAvatarUrl(seed.FullName);
+                userChanged = true;
+            }
+
+            if (user.Role != "citizen")
+            {
+                user.Role = "citizen";
+                userChanged = true;
+            }
+
+            if (user.Points != seed.TotalPoints)
+            {
+                user.Points = seed.TotalPoints;
+                userChanged = true;
+            }
+
+            if (rank is not null && user.RankId != rank.Id)
+            {
+                user.RankId = rank.Id;
+                userChanged = true;
+            }
+
+            if (user.TrustScore != seed.TrustScore)
+            {
+                user.TrustScore = seed.TrustScore;
+                userChanged = true;
+            }
+
+            if (userChanged)
+            {
+                user.UpdatedAt = now;
+                changedUsers = true;
+            }
+        }
+
+        if (changedUsers)
+        {
+            await dbContext.SaveChangesAsync();
+        }
+
+        var demoUserIds = existingUsers.Values.Select(user => user.Id).ToArray();
+        var existingPointSources = (await dbContext.UserPointsHistory
+            .Where(history => demoUserIds.Contains(history.UserId))
+            .Select(history => new
+            {
+                history.UserId,
+                history.SourceType,
+                history.SourceId
+            })
+            .ToListAsync())
+            .Select(history => CreatePointHistoryKey(history.UserId, history.SourceType, history.SourceId))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var pointHistory = new List<UserPointsHistoryEntity>();
+
+        foreach (var seed in demoUsers)
+        {
+            var user = existingUsers[seed.SupabaseUserId];
+            var olderPoints = Math.Max(0, seed.TotalPoints - seed.ThirtyDayPoints);
+            var awards = new[]
+            {
+                new DemoPointAwardSeed("demo_leaderboard_legacy", olderPoints, "Previous civic impact", now.AddDays(-45)),
+                new DemoPointAwardSeed("demo_leaderboard_recent_one", Math.Max(0, seed.ThirtyDayPoints / 2), "Recent reports and confirmations", now.AddDays(-21)),
+                new DemoPointAwardSeed("demo_leaderboard_recent_two", seed.ThirtyDayPoints - Math.Max(0, seed.ThirtyDayPoints / 2), "Recent mission activity", now.AddDays(-7))
+            };
+
+            foreach (var award in awards.Where(award => award.Points > 0))
+            {
+                var sourceId = CreateStableGuid($"{seed.SupabaseUserId}:{award.SourceType}");
+                var key = CreatePointHistoryKey(user.Id, award.SourceType, sourceId);
+
+                if (existingPointSources.Contains(key))
+                {
+                    continue;
+                }
+
+                pointHistory.Add(new UserPointsHistoryEntity
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = user.Id,
+                    Points = award.Points,
+                    Reason = award.Reason,
+                    SourceType = award.SourceType,
+                    SourceId = sourceId,
+                    CreatedAt = award.CreatedAt
+                });
+                existingPointSources.Add(key);
+            }
+        }
+
+        if (pointHistory.Count > 0)
+        {
+            dbContext.UserPointsHistory.AddRange(pointHistory);
+            await dbContext.SaveChangesAsync();
+        }
+
+        var existingUserBadgeKeys = (await dbContext.UserBadges
+            .Where(userBadge => demoUserIds.Contains(userBadge.UserId))
+            .Select(userBadge => new
+            {
+                userBadge.UserId,
+                userBadge.BadgeId
+            })
+            .ToListAsync())
+            .Select(userBadge => $"{userBadge.UserId:N}:{userBadge.BadgeId:N}")
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var userBadges = new List<UserBadgeEntity>();
+
+        foreach (var seed in demoUsers)
+        {
+            var user = existingUsers[seed.SupabaseUserId];
+
+            foreach (var badgeName in seed.BadgeNames)
+            {
+                if (!badges.TryGetValue(badgeName, out var badge))
+                {
+                    continue;
+                }
+
+                var key = $"{user.Id:N}:{badge.Id:N}";
+
+                if (existingUserBadgeKeys.Contains(key))
+                {
+                    continue;
+                }
+
+                userBadges.Add(new UserBadgeEntity
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = user.Id,
+                    BadgeId = badge.Id,
+                    UnlockedAt = now.AddDays(-20 + userBadges.Count % 14),
+                    SourceEvent = "demo_leaderboard",
+                    SourceId = CreateStableGuid($"{seed.SupabaseUserId}:{badge.Name}")
+                });
+                existingUserBadgeKeys.Add(key);
+            }
+        }
+
+        if (userBadges.Count > 0)
+        {
+            dbContext.UserBadges.AddRange(userBadges);
+            await dbContext.SaveChangesAsync();
+        }
     }
 
     private static async Task EnsurePartnersAsync(CivicGoDbContext dbContext)
@@ -1169,6 +1512,31 @@ public static class SeedData
         };
     }
 
+    private static RankEntity? ResolveRank(IReadOnlyList<RankEntity> ranks, int points)
+    {
+        return ranks
+            .Where(rank => points >= rank.MinPoints)
+            .OrderByDescending(rank => rank.MinPoints)
+            .FirstOrDefault();
+    }
+
+    private static string CreateDemoAvatarUrl(string fullName)
+    {
+        return $"https://api.dicebear.com/9.x/initials/svg?seed={Uri.EscapeDataString(fullName)}&backgroundColor=d1fae5,fef3c7,ccfbf1&fontFamily=Arial";
+    }
+
+    private static Guid CreateStableGuid(string value)
+    {
+        var bytes = MD5.HashData(Encoding.UTF8.GetBytes(value));
+
+        return new Guid(bytes);
+    }
+
+    private static string CreatePointHistoryKey(Guid userId, string sourceType, Guid? sourceId)
+    {
+        return $"{userId:N}:{sourceType}:{sourceId?.ToString("N") ?? "none"}";
+    }
+
     private static BadgeEntity CreateBadge(
         string name,
         string description,
@@ -1341,5 +1709,22 @@ public static class SeedData
         int ImpactPoints,
         DateTimeOffset StartsAt,
         DateTimeOffset EndsAt
+    );
+
+    private sealed record DemoLeaderboardUserSeed(
+        string SupabaseUserId,
+        string Email,
+        string FullName,
+        int TotalPoints,
+        int ThirtyDayPoints,
+        int TrustScore,
+        IReadOnlyList<string> BadgeNames
+    );
+
+    private sealed record DemoPointAwardSeed(
+        string SourceType,
+        int Points,
+        string Reason,
+        DateTimeOffset CreatedAt
     );
 }

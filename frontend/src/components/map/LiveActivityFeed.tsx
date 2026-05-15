@@ -38,8 +38,8 @@ const fallbackActivityItems: PublicActivityResponse[] = [
   {
     id: 'demo-activity-mission',
     type: 'mission_created',
-    title: 'Misiune activă',
-    message: 'Verificare spațiu verde începută în Soarelui',
+    title: 'Eveniment activ',
+    message: 'Curatenie pentru deseuri voluminoase inceputa in Soarelui',
     relatedIssueId: null,
     relatedMissionId: null,
     relatedRewardId: null,
@@ -79,8 +79,8 @@ const demoLiveActivityTemplates = [
   },
   {
     type: 'mission_created',
-    title: 'Misiune generata',
-    message: 'Misiune rapida pentru curatarea unui colt verde in Soarelui.',
+    title: 'Eveniment generat',
+    message: 'Eveniment comunitar pentru deseuri voluminoase in Soarelui.',
   },
   {
     type: 'reward_matched',
@@ -100,7 +100,7 @@ const demoLiveActivityTemplates = [
   {
     type: 'mission_created',
     title: 'Voluntari chemati',
-    message: 'Misiune noua pentru strangere de deseuri langa Bega.',
+    message: 'Eveniment nou pentru strangere de deseuri langa Bega.',
   },
   {
     type: 'reward_matched',
@@ -125,7 +125,7 @@ const demoLiveActivityTemplates = [
   {
     type: 'reward_matched',
     title: 'Partener activ',
-    message: 'Bookstore a potrivit un discount pentru o misiune din centru.',
+    message: 'Bookstore a potrivit un discount pentru un eveniment din centru.',
   },
   {
     type: 'issue_resolved',
@@ -160,7 +160,7 @@ function getActivityTone(type: string): ActivityTone {
       return {
         icon: Flag,
         className: 'bg-blue-50 text-blue-700',
-        eyebrow: 'Misiune activă',
+        eyebrow: 'Eveniment activ',
       }
     case 'reward_matched':
       return {
