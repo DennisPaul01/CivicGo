@@ -140,6 +140,28 @@ public static class RewardEndpoints
         .WithTags("Rewards")
         .WithName("GetMyRewardClaims");
 
+        app.MapGet("/api/partners/dashboard", async (
+            CivicGoDbContext dbContext,
+            CancellationToken cancellationToken
+        ) =>
+        {
+            var partnerRewards = await CreateRewardQuery(dbContext)
+                .Where(reward => reward.Type == "partner")
+                .OrderBy(reward => reward.RequiredPoints)
+                .ToListAsync(cancellationToken);
+
+            return Results.Ok(new
+            {
+                rewardCount = partnerRewards.Count,
+                claimedCount = partnerRewards.Sum(reward => reward.ClaimedCount),
+                activeRewardCount = partnerRewards.Count(reward => reward.Status == "available"),
+                rewards = partnerRewards.Select(RewardMapper.ToResponse).ToArray()
+            });
+        })
+        .RequireAuthorization("PartnerOnly")
+        .WithTags("Partners")
+        .WithName("GetPartnerDashboard");
+
         return app;
     }
 

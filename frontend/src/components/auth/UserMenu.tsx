@@ -1,5 +1,11 @@
 import { Link } from 'react-router-dom'
-import { Handshake, LayoutDashboard, LogOut, UserCircle } from 'lucide-react'
+import { DropdownMenu } from 'radix-ui'
+import {
+  Handshake,
+  LayoutDashboard,
+  LogOut,
+  UserCircle,
+} from '@/components/icons/hugeicons'
 import { Button } from '@/components/ui/button'
 import { isSupabaseConfigured, supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
@@ -19,58 +25,78 @@ export function UserMenu() {
   if (status === 'authenticated') {
     const isAdmin = profile?.role === 'admin'
     const isPartner = profile?.role === 'partner'
+    const displayName = profile?.fullName?.trim() || profile?.email || 'Profil'
 
     return (
-      <div className="flex shrink-0 items-center gap-1">
-        {isAdmin ? (
+      <DropdownMenu.Root>
+        <DropdownMenu.Trigger asChild>
           <Button
+            type="button"
             variant="outline"
-            size="icon-sm"
-            className="sm:h-7 sm:w-auto sm:px-2.5"
-            asChild
+            size="sm"
+            className="h-9 rounded-xl border-slate-200 bg-white px-3 text-slate-800 shadow-sm shadow-slate-900/4 hover:bg-emerald-50 hover:text-emerald-800"
+            aria-label="Deschide meniul de profil"
           >
-            <Link to="/admin/dashboard" aria-label="Deschide dashboard admin">
-              <LayoutDashboard aria-hidden="true" />
-              <span className="hidden sm:inline">Panou</span>
-            </Link>
+            <UserCircle className="size-4" data-icon="inline-start" aria-hidden="true" />
+            <span className="max-w-32 truncate">{displayName}</span>
           </Button>
-        ) : null}
-        {isPartner ? (
-          <Button
-            variant="outline"
-            size="icon-sm"
-            className="sm:h-7 sm:w-auto sm:px-2.5"
-            asChild
+        </DropdownMenu.Trigger>
+
+        <DropdownMenu.Portal>
+          <DropdownMenu.Content
+            align="end"
+            sideOffset={8}
+            className="z-50 min-w-52 rounded-xl border border-slate-200 bg-white p-1.5 text-sm text-slate-800 shadow-xl shadow-slate-900/12 outline-none"
           >
-            <Link to="/partner" aria-label="Deschide panoul de partener">
-              <Handshake aria-hidden="true" />
-              <span className="hidden sm:inline">Partner</span>
-            </Link>
-          </Button>
-        ) : null}
-        <Button
-          variant="outline"
-          size="icon-sm"
-          className="sm:h-7 sm:w-auto sm:px-2.5"
-          asChild
-        >
-            <Link to="/profile" aria-label="Deschide profilul">
-            <UserCircle data-icon="inline-start" aria-hidden="true" />
-            <span className="hidden max-w-32 truncate sm:inline">
-              {profile?.fullName ?? 'Profil'}
-            </span>
-          </Link>
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          aria-label="Deconectare"
-          onClick={handleLogout}
-        >
-          <LogOut aria-hidden="true" />
-        </Button>
-      </div>
+            <DropdownMenu.Item asChild>
+              <Link
+                to="/profile"
+                className="flex h-9 items-center gap-2 rounded-lg px-2.5 font-medium outline-none hover:bg-emerald-50 hover:text-emerald-800 focus:bg-emerald-50 focus:text-emerald-800"
+              >
+                <UserCircle className="size-4" aria-hidden="true" />
+                Profil
+              </Link>
+            </DropdownMenu.Item>
+
+            {isAdmin ? (
+              <DropdownMenu.Item asChild>
+                <Link
+                  to="/admin/dashboard"
+                  className="flex h-9 items-center gap-2 rounded-lg px-2.5 font-medium outline-none hover:bg-emerald-50 hover:text-emerald-800 focus:bg-emerald-50 focus:text-emerald-800"
+                >
+                  <LayoutDashboard className="size-4" aria-hidden="true" />
+                  Panou admin
+                </Link>
+              </DropdownMenu.Item>
+            ) : null}
+
+            {isPartner ? (
+              <DropdownMenu.Item asChild>
+                <Link
+                  to="/partner"
+                  className="flex h-9 items-center gap-2 rounded-lg px-2.5 font-medium outline-none hover:bg-emerald-50 hover:text-emerald-800 focus:bg-emerald-50 focus:text-emerald-800"
+                >
+                  <Handshake className="size-4" aria-hidden="true" />
+                  Panou partener
+                </Link>
+              </DropdownMenu.Item>
+            ) : null}
+
+            <DropdownMenu.Separator className="my-1 h-px bg-slate-100" />
+
+            <DropdownMenu.Item asChild>
+              <button
+                type="button"
+                className="flex h-9 w-full items-center gap-2 rounded-lg px-2.5 text-left font-medium text-slate-700 outline-none hover:bg-red-50 hover:text-red-700 focus:bg-red-50 focus:text-red-700"
+                onClick={handleLogout}
+              >
+                <LogOut className="size-4" aria-hidden="true" />
+                Logout
+              </button>
+            </DropdownMenu.Item>
+          </DropdownMenu.Content>
+        </DropdownMenu.Portal>
+      </DropdownMenu.Root>
     )
   }
 

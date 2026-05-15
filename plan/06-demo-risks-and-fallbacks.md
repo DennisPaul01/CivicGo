@@ -76,10 +76,10 @@ CivicGO does not just report problems. It shows what is happening in the city, w
 
 ## Fallback: Missing Mapbox key
 
-- [ ] Folosește un placeholder map panel cu fundal stilizat light.
-- [ ] Plasează marker-e absolute peste panel.
-- [ ] Păstrează aceleași interacțiuni: filtre, selected issue panel, bottom rail.
-- [ ] Marchează integrarea Mapbox ca pending pentru producție.
+- [x] Folosește un placeholder map panel cu fundal stilizat light.
+- [x] Plasează marker-e absolute peste panel.
+- [x] Păstrează aceleași interacțiuni: filtre, selected issue panel, bottom rail.
+- [x] Marchează integrarea Mapbox ca pending pentru producție.
 
 ## Fallback: Missing OpenAI key
 
@@ -135,7 +135,7 @@ CivicGO does not just report problems. It shows what is happening in the city, w
 - [x] Cel puțin 3 rewards vizibile.
 - [x] Cel puțin 5 activity feed items.
 - [ ] Fallback OpenAI verificat.
-- [ ] Fallback Mapbox verificat.
+- [x] Fallback Mapbox verificat.
 - [ ] Fallback auth verificat.
 - [ ] Screenshoturi pregătite.
 - [ ] Video backup pregătit.
@@ -145,6 +145,6 @@ CivicGO does not just report problems. It shows what is happening in the city, w
 - [ ] Verifică demo-ul cap-coadă cu Supabase, Mapbox și OpenAI configurate.
 - [ ] Implementează SignalR live events sau documentează fallback-ul React Query ca alegere de demo.
 - [ ] Implementează Duplicate Agent real sau marchează duplicate detection ca demo seed.
-- [ ] Implementează Mapbox fallback complet cu marker-e interactive.
+- [x] Implementează Mapbox fallback complet cu marker-e interactive.
 - [ ] Implementează `RoleProtectedRoute` înainte de demo dacă se arată admin/partner.
 - [ ] Decide dacă `/issues/:id`, `/missions`, `/missions/:id`, `/zones/:id`, `/command-center`, `/admin/issues` și partner dashboard intră în demo sau rămân backlog.

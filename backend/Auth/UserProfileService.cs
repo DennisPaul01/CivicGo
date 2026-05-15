@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using CivicGo.Api.Data;
 using CivicGo.Api.Data.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -33,27 +34,40 @@ public sealed class UserProfileService(CivicGoDbContext dbContext)
             principal.FindFirstValue(ClaimTypes.Email) ??
             principal.FindFirstValue("email") ??
             string.Empty;
-        var fullName =
-            principal.FindFirstValue("name") ??
-            principal.FindFirstValue("full_name") ??
-            CreateDisplayNameFromEmail(email);
+        var explicitFullName = ExtractExplicitFullName(principal);
+        var fullName = explicitFullName ?? CreateDisplayNameFromEmail(email);
         var existingUser = await dbContext.Users
             .Include(user => user.Rank)
             .FirstOrDefaultAsync(user => user.SupabaseUserId == supabaseUserId);
 
         if (existingUser is not null)
         {
+            var shouldSaveChanges = false;
+
+            if (!string.IsNullOrWhiteSpace(explicitFullName) &&
+                !string.Equals(existingUser.FullName, explicitFullName, StringComparison.Ordinal))
+            {
+                existingUser.FullName = explicitFullName;
+                existingUser.UpdatedAt = now;
+                shouldSaveChanges = true;
+            }
+
             if (IsDemoAdminEmail(existingUser.Email) && existingUser.Role != "admin")
             {
                 existingUser.Role = "admin";
                 existingUser.UpdatedAt = now;
-                await dbContext.SaveChangesAsync();
+                shouldSaveChanges = true;
             }
 
             if (IsDemoPartnerEmail(existingUser.Email) && existingUser.Role != "partner")
             {
                 existingUser.Role = "partner";
                 existingUser.UpdatedAt = now;
+                shouldSaveChanges = true;
+            }
+
+            if (shouldSaveChanges)
+            {
                 await dbContext.SaveChangesAsync();
             }
 
@@ -130,6 +144,67 @@ public sealed class UserProfileService(CivicGoDbContext dbContext)
         var namePart = email.Split('@', 2)[0].Replace('.', ' ').Replace('_', ' ');
 
         return string.IsNullOrWhiteSpace(namePart) ? "Civic citizen" : namePart;
+    }
+
+    private static string? ExtractExplicitFullName(ClaimsPrincipal principal)
+    {
+        var flatName = FirstNonEmpty(
+            principal.FindFirstValue("name"),
+            principal.FindFirstValue("full_name")
+        );
+
+        if (flatName is not null)
+        {
+            return flatName;
+        }
+
+        var userMetadata = principal.FindFirstValue("user_metadata");
+
+        if (string.IsNullOrWhiteSpace(userMetadata))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(userMetadata);
+
+            return FirstNonEmpty(
+                GetStringProperty(document.RootElement, "full_name"),
+                GetStringProperty(document.RootElement, "name")
+            );
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static string? GetStringProperty(JsonElement element, string propertyName)
+    {
+        if (element.ValueKind != JsonValueKind.Object ||
+            !element.TryGetProperty(propertyName, out var property) ||
+            property.ValueKind != JsonValueKind.String)
+        {
+            return null;
+        }
+
+        var value = property.GetString()?.Trim();
+
+        return string.IsNullOrWhiteSpace(value) ? null : value;
+    }
+
+    private static string? FirstNonEmpty(params string?[] values)
+    {
+        foreach (var value in values)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                return value.Trim();
+            }
+        }
+
+        return null;
     }
 
     private static bool IsDemoAdminEmail(string email)

@@ -15,11 +15,188 @@ public static class SeedData
         await EnsureZonesAsync(dbContext);
         await EnsureRanksAsync(dbContext);
         await EnsureDemoAdminAsync(dbContext);
+        await EnsureAgentConfigsAsync(dbContext);
         await EnsureDemoIssuesAsync(dbContext);
         await EnsureBadgesAsync(dbContext);
         await EnsurePartnersAsync(dbContext);
         await EnsureRewardsAsync(dbContext);
         await EnsureDemoMissionsAsync(dbContext);
+    }
+
+    private static async Task EnsureAgentConfigsAsync(CivicGoDbContext dbContext)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var agentConfigs = new[]
+        {
+            CreateAgentConfig(
+                "vision",
+                "Vision Agent",
+                "Photo and issue classifier",
+                "Reads the uploaded photo, description and coordinates, then returns category, severity, summary, confidence and urgency.",
+                "Classify the civic report using the Timisoara taxonomy. Prefer specific categories, keep summaries short and flag urgent safety risks.",
+                "gpt-4o-mini",
+                "Keyword and description fallback with medium confidence.",
+                1,
+                now
+            ),
+            CreateAgentConfig(
+                "triage",
+                "Triage Agent",
+                "Responsible actor router",
+                "Chooses whether the report belongs to city hall, community action, partners or a mixed route.",
+                "Use the category, severity and location context to pick the most practical responsible actor for demo follow-up.",
+                "gpt-4o-mini",
+                "Rule-based actor mapping by category.",
+                2,
+                now
+            ),
+            CreateAgentConfig(
+                "duplicate",
+                "Duplicate Agent",
+                "Nearby report checker",
+                "Checks active nearby reports and marks likely duplicate clusters before a mission is generated.",
+                "Compare distance, category and unresolved status. Only mark a duplicate when the match is clear enough for an admin to review.",
+                "deterministic",
+                "Numeric latitude/longitude radius check.",
+                3,
+                now
+            ),
+            CreateAgentConfig(
+                "mission",
+                "Mission Agent",
+                "Community mission planner",
+                "Turns eligible issues into small civic missions with participants, impact points and timing.",
+                "Generate compact, local, actionable missions that fit a Friday HackTM demo and avoid production-heavy workflows.",
+                "gpt-4o-mini",
+                "Template mission based on category and zone.",
+                4,
+                now
+            ),
+            CreateAgentConfig(
+                "reward",
+                "Reward Agent",
+                "Reward matcher",
+                "Matches missions and reports to system or partner rewards where appropriate.",
+                "Prefer relevant partner rewards, keep required points realistic and fall back to system rewards when no partner fits.",
+                "deterministic",
+                "Seeded system reward or CoffeeLab demo reward.",
+                5,
+                now
+            ),
+            CreateAgentConfig(
+                "city",
+                "City Agent",
+                "Zone impact analyst",
+                "Updates city-level insight and zone impact signals for admin overview and demo storytelling.",
+                "Summarize the strongest active city signal and suggest the next visible action for the admin dashboard.",
+                "deterministic",
+                "Static summary generated from top zone and category counts.",
+                6,
+                now
+            ),
+            CreateAgentConfig(
+                "authority_email",
+                "Authority Email Agent",
+                "Local authority email drafter",
+                "Prepares a clear email draft for the right local authority based on issue type, severity, location, date and photo evidence.",
+                "Write concise Romanian authority emails. Include the issue context, severity rationale, exact location, report date, photo URL and requested next action.",
+                "deterministic",
+                "Template email based on category, responsible actor and severity.",
+                7,
+                now
+            )
+        };
+        var existingByKey = await dbContext.AgentConfigs
+            .ToDictionaryAsync(agent => agent.Key, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var agentConfig in agentConfigs)
+        {
+            if (!existingByKey.TryGetValue(agentConfig.Key, out var existing))
+            {
+                dbContext.AgentConfigs.Add(agentConfig);
+                continue;
+            }
+
+            var changed = false;
+
+            if (string.IsNullOrWhiteSpace(existing.Name))
+            {
+                existing.Name = agentConfig.Name;
+                changed = true;
+            }
+
+            if (string.IsNullOrWhiteSpace(existing.Role))
+            {
+                existing.Role = agentConfig.Role;
+                changed = true;
+            }
+
+            if (string.IsNullOrWhiteSpace(existing.Description))
+            {
+                existing.Description = agentConfig.Description;
+                changed = true;
+            }
+
+            if (string.IsNullOrWhiteSpace(existing.Instructions))
+            {
+                existing.Instructions = agentConfig.Instructions;
+                changed = true;
+            }
+
+            if (string.IsNullOrWhiteSpace(existing.Model))
+            {
+                existing.Model = agentConfig.Model;
+                changed = true;
+            }
+
+            if (string.IsNullOrWhiteSpace(existing.FallbackMode))
+            {
+                existing.FallbackMode = agentConfig.FallbackMode;
+                changed = true;
+            }
+
+            if (existing.SortOrder == 0)
+            {
+                existing.SortOrder = agentConfig.SortOrder;
+                changed = true;
+            }
+
+            if (changed)
+            {
+                existing.UpdatedAt = now;
+            }
+        }
+
+        await dbContext.SaveChangesAsync();
+    }
+
+    private static AgentConfigEntity CreateAgentConfig(
+        string key,
+        string name,
+        string role,
+        string description,
+        string instructions,
+        string model,
+        string fallbackMode,
+        int sortOrder,
+        DateTimeOffset now
+    )
+    {
+        return new AgentConfigEntity
+        {
+            Id = Guid.NewGuid(),
+            Key = key,
+            Name = name,
+            Role = role,
+            Description = description,
+            Instructions = instructions,
+            Model = model,
+            FallbackMode = fallbackMode,
+            IsEnabled = true,
+            SortOrder = sortOrder,
+            CreatedAt = now,
+            UpdatedAt = now
+        };
     }
 
     private static async Task EnsureZonesAsync(CivicGoDbContext dbContext)

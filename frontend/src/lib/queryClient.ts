@@ -4,11 +4,14 @@ export const issuesQueryKey = ['issues'] as const
 export const issueQueryKey = (id: string) => ['issues', id] as const
 export const publicActivityQueryKey = (hours = 48, limit = 50) =>
   ['activity', hours, limit] as const
+export const adminAgentsQueryKey = ['admin', 'agents'] as const
 export const missionsQueryKey = ['missions'] as const
 export const missionQueryKey = (id: string) => ['missions', id] as const
 export const rewardClaimsQueryKey = ['reward-claims'] as const
 export const rewardsQueryKey = ['rewards'] as const
 export const zoneLeaderboardQueryKey = ['zones', 'leaderboard'] as const
+export const zonesQueryKey = ['zones'] as const
+export const zoneQueryKey = (id: string) => ['zones', id] as const
 
 export const queryClient = new QueryClient({
   defaultOptions: {

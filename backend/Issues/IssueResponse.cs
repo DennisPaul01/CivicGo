@@ -15,6 +15,7 @@ public sealed record IssueResponse(
     string Status,
     string ResponsibleActor,
     string ImageUrl,
+    IReadOnlyList<string> ImageUrls,
     string? AfterImageUrl,
     double Latitude,
     double Longitude,

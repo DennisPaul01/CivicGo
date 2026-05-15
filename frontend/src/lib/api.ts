@@ -10,6 +10,7 @@ export type AgentStepStatus =
   | 'completed'
   | 'failed'
   | 'fallback'
+  | 'skipped'
 
 export type AgentStepResponse = {
   id: string
@@ -33,6 +34,49 @@ export type AgentRunResponse = {
   createdAt: string
   steps: AgentStepResponse[]
 }
+
+export type AdminAgentResponse = {
+  id: string
+  key: string
+  name: string
+  role: string
+  description: string
+  instructions: string
+  model: string
+  fallbackMode: string
+  isEnabled: boolean
+  sortOrder: number
+  totalSteps: number
+  completedSteps: number
+  fallbackSteps: number
+  failedSteps: number
+  skippedSteps: number
+  lastRunAt: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type AdminIssueEmailDraftResponse = {
+  agentName: string
+  recipientName: string
+  recipientEmail: string
+  subject: string
+  body: string
+  imageUrl: string
+  severityRationale: string
+  generatedAt: string
+}
+
+export type UpdateAdminAgentInput = Pick<
+  AdminAgentResponse,
+  | 'name'
+  | 'role'
+  | 'description'
+  | 'instructions'
+  | 'model'
+  | 'fallbackMode'
+  | 'isEnabled'
+>
 
 export type PartnerResponse = {
   id: string
@@ -66,6 +110,13 @@ export type RewardResponse = {
   zoneId: string | null
   zoneName: string | null
   createdAt: string
+}
+
+export type PartnerDashboardResponse = {
+  rewardCount: number
+  claimedCount: number
+  activeRewardCount: number
+  rewards: RewardResponse[]
 }
 
 export type RewardClaimResponse = {
@@ -154,6 +205,7 @@ export type IssueResponse = {
   status: string
   responsibleActor: string
   imageUrl: string
+  imageUrls: string[]
   afterImageUrl: string | null
   latitude: number
   longitude: number
@@ -205,12 +257,51 @@ export type ZoneLeaderboardItemResponse = {
   calculatedAt: string | null
 }
 
+export type ZoneIssueSummaryResponse = {
+  id: string
+  title: string
+  category: string
+  severity: string
+  status: string
+  responsibleActor: string
+  imageUrl: string
+  duplicateCount: number
+  createdAt: string
+}
+
+export type ZoneDetailResponse = {
+  zone: ZoneLeaderboardItemResponse
+  issues: ZoneIssueSummaryResponse[]
+  missions: MissionSummaryResponse[]
+}
+
 type CreateIssueInput = {
-  image: File
+  images: File[]
   description: string
   latitude: number
   longitude: number
   zoneName: string
+  accessToken: string
+}
+
+export type AdminIssueUpdateInput = {
+  accessToken: string
+  issueId: string
+  title: string
+  description: string
+  category: string
+  severity: string
+  status: string
+  responsibleActor: string
+  zoneName: string
+  latitude: number
+  longitude: number
+}
+
+type ResolveIssueInput = {
+  issueId: string
+  afterImage: File
+  resolutionNote: string
   accessToken: string
 }
 
@@ -232,13 +323,67 @@ export async function fetchCurrentUserProfile(accessToken: string) {
   return (await response.json()) as LocalUserProfile
 }
 
+export async function fetchAdminAgents(accessToken: string | null) {
+  if (!isApiConfigured || !accessToken) {
+    return [] satisfies AdminAgentResponse[]
+  }
+
+  const response = await fetch(`${apiBaseUrl}/api/admin/agents`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  })
+
+  if (!response.ok) {
+    throw new Error('Unable to fetch admin agent configs.')
+  }
+
+  return (await response.json()) as AdminAgentResponse[]
+}
+
+export async function updateAdminAgent(
+  agentId: string,
+  input: UpdateAdminAgentInput,
+  accessToken: string,
+) {
+  if (!isApiConfigured) {
+    throw new Error('CiviTm API is not configured.')
+  }
+
+  const response = await fetch(`${apiBaseUrl}/api/admin/agents/${agentId}`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(input),
+  })
+
+  if (!response.ok) {
+    let message = 'Unable to update this agent.'
+
+    try {
+      const errorBody = (await response.json()) as { message?: string }
+      message = errorBody.message ?? message
+    } catch {
+      // Keep the friendly default when the backend returns a non-JSON error.
+    }
+
+    throw new Error(message)
+  }
+
+  return (await response.json()) as AdminAgentResponse
+}
+
 export async function createIssue(input: CreateIssueInput) {
   if (!isApiConfigured) {
     throw new Error('CiviTm API is not configured.')
   }
 
   const formData = new FormData()
-  formData.append('image', input.image)
+  input.images.forEach((image, index) => {
+    formData.append(index === 0 ? 'image' : 'images', image)
+  })
   formData.append('description', input.description)
   formData.append('latitude', String(input.latitude))
   formData.append('longitude', String(input.longitude))
@@ -314,15 +459,142 @@ export async function fetchIssueById(id: string) {
   return (await response.json()) as IssueResponse
 }
 
+export async function resolveIssue(input: ResolveIssueInput) {
+  if (!isApiConfigured) {
+    throw new Error('CiviTm API is not configured.')
+  }
+
+  const formData = new FormData()
+  formData.append('afterImage', input.afterImage)
+  formData.append('resolutionNote', input.resolutionNote)
+
+  const response = await fetch(`${apiBaseUrl}/api/issues/${input.issueId}/resolve`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${input.accessToken}`,
+    },
+    body: formData,
+  })
+
+  if (!response.ok) {
+    let message = 'Unable to mark this issue as resolved.'
+
+    try {
+      const errorBody = (await response.json()) as { message?: string }
+      message = errorBody.message ?? message
+    } catch {
+      // Keep the friendly default when the backend returns a non-JSON error.
+    }
+
+    throw new Error(message)
+  }
+
+  return (await response.json()) as IssueResponse
+}
+
+export async function updateAdminIssue(input: AdminIssueUpdateInput) {
+  if (!isApiConfigured) {
+    throw new Error('CiviTm API is not configured.')
+  }
+
+  const response = await fetch(`${apiBaseUrl}/api/issues/${input.issueId}/admin`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${input.accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      title: input.title,
+      description: input.description,
+      category: input.category,
+      severity: input.severity,
+      status: input.status,
+      responsibleActor: input.responsibleActor,
+      zoneName: input.zoneName,
+      latitude: input.latitude,
+      longitude: input.longitude,
+    }),
+  })
+
+  if (!response.ok) {
+    throw new Error('Unable to update this issue from admin.')
+  }
+
+  return (await response.json()) as IssueResponse
+}
+
+export async function closeAdminIssue(issueId: string, accessToken: string) {
+  if (!isApiConfigured) {
+    throw new Error('CiviTm API is not configured.')
+  }
+
+  const response = await fetch(`${apiBaseUrl}/api/issues/${issueId}/admin/close`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  })
+
+  if (!response.ok) {
+    throw new Error('Unable to close this issue from admin.')
+  }
+
+  return (await response.json()) as IssueResponse
+}
+
+export async function reopenAdminIssue(issueId: string, accessToken: string) {
+  if (!isApiConfigured) {
+    throw new Error('CiviTm API is not configured.')
+  }
+
+  const response = await fetch(`${apiBaseUrl}/api/issues/${issueId}/admin/reopen`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  })
+
+  if (!response.ok) {
+    throw new Error('Unable to reopen this issue from admin.')
+  }
+
+  return (await response.json()) as IssueResponse
+}
+
+export async function createAdminIssueEmailDraft(
+  issueId: string,
+  accessToken: string,
+) {
+  if (!isApiConfigured) {
+    throw new Error('CiviTm API is not configured.')
+  }
+
+  const response = await fetch(
+    `${apiBaseUrl}/api/issues/${issueId}/admin/email-draft`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    },
+  )
+
+  if (!response.ok) {
+    throw new Error('Unable to draft the authority email.')
+  }
+
+  return (await response.json()) as AdminIssueEmailDraftResponse
+}
+
 export async function fetchMissions() {
   if (!isApiConfigured) {
-    return [] satisfies MissionResponse[]
+    throw new Error('API-ul CiviTm nu este configurat.')
   }
 
   const response = await fetch(`${apiBaseUrl}/api/missions`)
 
   if (!response.ok) {
-    throw new Error('Unable to fetch CiviTm missions.')
+    throw new Error('Nu am putut incarca misiunile CiviTm.')
   }
 
   return (await response.json()) as MissionResponse[]
@@ -330,13 +602,13 @@ export async function fetchMissions() {
 
 export async function fetchMissionById(id: string) {
   if (!isApiConfigured) {
-    throw new Error('CiviTm API is not configured.')
+    throw new Error('API-ul CiviTm nu este configurat.')
   }
 
   const response = await fetch(`${apiBaseUrl}/api/missions/${id}`)
 
   if (!response.ok) {
-    throw new Error('Unable to fetch this CiviTm mission.')
+    throw new Error('Nu am putut incarca aceasta misiune CiviTm.')
   }
 
   return (await response.json()) as MissionResponse
@@ -344,7 +616,7 @@ export async function fetchMissionById(id: string) {
 
 export async function joinMission(missionId: string, accessToken: string) {
   if (!isApiConfigured) {
-    throw new Error('CiviTm API is not configured.')
+    throw new Error('API-ul CiviTm nu este configurat.')
   }
 
   const response = await fetch(`${apiBaseUrl}/api/missions/${missionId}/join`, {
@@ -355,13 +627,17 @@ export async function joinMission(missionId: string, accessToken: string) {
   })
 
   if (!response.ok) {
-    let message = 'Unable to join this mission.'
+    let message = 'Nu am putut face inscrierea la aceasta misiune.'
 
     try {
       const errorBody = (await response.json()) as { message?: string }
       message = errorBody.message ?? message
     } catch {
       // Keep the friendly default when the backend returns a non-JSON error.
+    }
+
+    if (message === 'Only active missions can be joined.') {
+      message = 'Te poti inscrie doar la misiuni active.'
     }
 
     throw new Error(message)
@@ -384,6 +660,34 @@ export async function fetchZoneLeaderboard() {
   return (await response.json()) as ZoneLeaderboardItemResponse[]
 }
 
+export async function fetchZones() {
+  if (!isApiConfigured) {
+    return [] satisfies ZoneLeaderboardItemResponse[]
+  }
+
+  const response = await fetch(`${apiBaseUrl}/api/zones`)
+
+  if (!response.ok) {
+    throw new Error('Unable to fetch CiviTm zones.')
+  }
+
+  return (await response.json()) as ZoneLeaderboardItemResponse[]
+}
+
+export async function fetchZoneById(id: string) {
+  if (!isApiConfigured) {
+    throw new Error('CiviTm API is not configured.')
+  }
+
+  const response = await fetch(`${apiBaseUrl}/api/zones/${id}`)
+
+  if (!response.ok) {
+    throw new Error('Unable to fetch this CiviTm zone.')
+  }
+
+  return (await response.json()) as ZoneDetailResponse
+}
+
 export async function fetchRewards() {
   if (!isApiConfigured) {
     return [] satisfies RewardResponse[]
@@ -396,6 +700,24 @@ export async function fetchRewards() {
   }
 
   return (await response.json()) as RewardResponse[]
+}
+
+export async function fetchPartnerDashboard(accessToken: string | null) {
+  if (!isApiConfigured || !accessToken) {
+    return null
+  }
+
+  const response = await fetch(`${apiBaseUrl}/api/partners/dashboard`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  })
+
+  if (!response.ok) {
+    throw new Error('Unable to fetch partner dashboard.')
+  }
+
+  return (await response.json()) as PartnerDashboardResponse
 }
 
 export async function fetchMyRewardClaims(accessToken: string | null) {

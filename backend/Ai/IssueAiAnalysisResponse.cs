@@ -11,5 +11,7 @@ public sealed record IssueAiAnalysisResponse(
     double Confidence,
     bool IsUrgent,
     bool RewardEligible,
+    bool IsValidIssue,
+    string? InvalidReason,
     DateTimeOffset CreatedAt
 );

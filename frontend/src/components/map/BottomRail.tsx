@@ -1,4 +1,4 @@
-import type { LucideIcon } from 'lucide-react'
+import type { LucideIcon } from '@/components/icons/hugeicons'
 import {
   ArrowRight,
   CheckCircle2,
@@ -6,7 +6,7 @@ import {
   Gift,
   MapPinned,
   Users,
-} from 'lucide-react'
+} from '@/components/icons/hugeicons'
 import { motion } from 'motion/react'
 import {
   civicMapItems,

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CivicGo.Api.Agents;
 using CivicGo.Api.Data;
 using CivicGo.Api.Data.Entities;
 using CivicGo.Api.Issues;
@@ -22,23 +23,18 @@ public sealed class MissionGenerationService(
         IssueCategories.EnvironmentPlaygroundsGreenSpaces,
         IssueCategories.GaragesCemeteriesPublicToilets,
         IssueCategories.PublicOrder,
-        IssueCategories.StreetsSidewalks,
-        IssueCategories.PublicLighting,
-        IssueCategories.RoadTrafficSigns,
-        IssueCategories.PublicTransport,
         "waste",
         "graffiti",
         "green_space_issue",
         "green_space",
         "blocked_sidewalk",
         "accessibility_issue",
-        "broken_lighting",
-        "road_damage",
         "damaged_public_furniture"
     };
 
     public async Task<MissionResponse?> EnsureMissionForIssueAsync(
         Guid issueId,
+        RuntimeAgentConfig? agentConfig,
         CancellationToken cancellationToken
     )
     {
@@ -88,7 +84,7 @@ public sealed class MissionGenerationService(
             return null;
         }
 
-        var missionPlan = CreateMissionPlan(issue);
+        var missionPlan = CreateMissionPlan(issue, agentConfig);
         var now = DateTimeOffset.UtcNow;
         var mission = new MissionEntity
         {
@@ -118,11 +114,7 @@ public sealed class MissionGenerationService(
 
         mission.MissionIssues.Add(missionIssue);
         issue.MissionIssues.Add(missionIssue);
-        if (issue.Status != "duplicate_detected")
-        {
-            issue.Status = "mission_created";
-        }
-
+        issue.Status = "mission_created";
         issue.UpdatedAt = now;
 
         dbContext.Missions.Add(mission);
@@ -139,7 +131,7 @@ public sealed class MissionGenerationService(
             CreatedAt = now
         });
 
-        AddMissionAgentStep(issue, mission, missionPlan, now);
+        AddMissionAgentStep(issue, mission, missionPlan, agentConfig, now);
 
         if (!await TrySaveMissionAsync(issue.Id, cancellationToken))
         {
@@ -147,6 +139,14 @@ public sealed class MissionGenerationService(
         }
 
         return MissionMapper.ToResponse(mission);
+    }
+
+    public Task<MissionResponse?> EnsureMissionForIssueAsync(
+        Guid issueId,
+        CancellationToken cancellationToken
+    )
+    {
+        return EnsureMissionForIssueAsync(issueId, null, cancellationToken);
     }
 
     private async Task<bool> TrySaveMissionAsync(Guid issueId, CancellationToken cancellationToken)
@@ -172,7 +172,7 @@ public sealed class MissionGenerationService(
 
     private static bool IsMissionEligible(IssueEntity issue)
     {
-        if (issue.Status is not "ai_analyzed" and not "duplicate_detected" and not "mission_created")
+        if (issue.Status is not "ai_analyzed" and not "mission_created")
         {
             return false;
         }
@@ -182,15 +182,20 @@ public sealed class MissionGenerationService(
             return false;
         }
 
-        return MissionFriendlyCategories.Contains(issue.Category) ||
-            issue.ResponsibleActor.Contains("community", StringComparison.OrdinalIgnoreCase) ||
-            issue.AiAnalyses
-                .OrderByDescending(analysis => analysis.CreatedAt)
-                .FirstOrDefault()
-                ?.RewardEligible == true;
+        var latestAnalysis = issue.AiAnalyses
+            .OrderByDescending(analysis => analysis.CreatedAt)
+            .FirstOrDefault();
+        var hasCommunityActor = issue.ResponsibleActor is "community" or "community_and_city_hall";
+        var hasMissionFriendlyCategory = MissionFriendlyCategories.Contains(issue.Category);
+
+        return hasCommunityActor &&
+            (hasMissionFriendlyCategory || latestAnalysis?.RewardEligible == true);
     }
 
-    private static MissionPlan CreateMissionPlan(IssueEntity issue)
+    private static MissionPlan CreateMissionPlan(
+        IssueEntity issue,
+        RuntimeAgentConfig? agentConfig
+    )
     {
         var zoneName = issue.Zone?.Name ?? "Timisoara";
         var title = issue.Category switch
@@ -229,6 +234,12 @@ public sealed class MissionGenerationService(
             _ =>
                 $"Misiune civica usoara generata din problema raportata in {zoneName}. Participantii pot verifica locatia, adauga context si ajuta problema sa avanseze spre rezolvare."
         };
+        var configuredInstructions = agentConfig?.Instructions?.Trim();
+        if (!string.IsNullOrWhiteSpace(configuredInstructions))
+        {
+            description = $"{description} Nota admin pentru agent: {Truncate(configuredInstructions, 220)}";
+        }
+
         var startsAt = NextSaturdayAtTen(DateTimeOffset.UtcNow);
 
         return new MissionPlan(
@@ -280,6 +291,7 @@ public sealed class MissionGenerationService(
         IssueEntity issue,
         MissionEntity mission,
         MissionPlan plan,
+        RuntimeAgentConfig? agentConfig,
         DateTimeOffset now
     )
     {
@@ -308,10 +320,15 @@ public sealed class MissionGenerationService(
                 issue.Category,
                 issue.Severity,
                 issue.ResponsibleActor,
-                zone = issue.Zone?.Name
+                zone = issue.Zone?.Name,
+                adminInstructions = agentConfig?.Instructions,
+                configuredModel = agentConfig?.Model,
+                fallbackMode = agentConfig?.FallbackMode,
+                isEnabled = agentConfig?.IsEnabled ?? true
             }, JsonOptions),
             OutputJson = JsonSerializer.Serialize(new
             {
+                mode = agentConfig?.FallbackMode ?? "Template mission based on category and zone.",
                 mission.Id,
                 mission.Title,
                 mission.ParticipantsNeeded,
@@ -334,4 +351,14 @@ public sealed class MissionGenerationService(
         DateTimeOffset StartsAt,
         DateTimeOffset EndsAt
     );
+
+    private static string Truncate(string value, int maxLength)
+    {
+        if (value.Length <= maxLength)
+        {
+            return value;
+        }
+
+        return $"{value[..Math.Max(0, maxLength - 1)]}.";
+    }
 }

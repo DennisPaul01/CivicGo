@@ -35,17 +35,17 @@
 - [x] `/login` - login page.
 - [x] `/register` - register page.
 - [x] `/report` - report issue flow.
-- [ ] `/command-center` - advanced map and command center.
-- [ ] `/issues/:id` - issue details.
-- [ ] `/missions` - mission list.
-- [ ] `/missions/:id` - mission details.
+- [x] `/command-center` - advanced map and command center.
+- [x] `/issues/:id` - issue details.
+- [x] `/missions` - mission list.
+- [x] `/missions/:id` - mission details.
 - [x] `/rewards` - rewards marketplace.
 - [x] `/zones` - zone leaderboard.
-- [ ] `/zones/:id` - zone details.
+- [x] `/zones/:id` - zone details.
 - [x] `/profile` - user profile.
-- [ ] `/partner` - partner dashboard.
+- [x] `/partner` - partner dashboard.
 - [x] `/admin/dashboard` - admin dashboard.
-- [ ] `/admin/issues` - admin issue management.
+- [x] `/admin/issues` - admin issue management.
 
 ## Layout components
 
@@ -53,7 +53,7 @@
 - [ ] `PublicLayout`.
 - [ ] `MapFirstLayout`.
 - [x] `ProtectedRoute`.
-- [ ] `RoleProtectedRoute`.
+- [x] `RoleProtectedRoute`.
 - [x] `TopNavigation`.
 - [x] `FloatingReportButton`.
 - [ ] `MobileBottomSheet`.
@@ -109,7 +109,7 @@ Auth behavior:
 - [x] Session persistence este gestionată de Supabase.
 - [x] Tokenul este trimis către API ca Bearer token.
 - [x] Protected routes redirecționează userul neautentificat la login.
-- [ ] Role protected routes blochează accesul neautorizat.
+- [x] Role protected routes blochează accesul neautorizat.
 
 ## Report flow
 
@@ -130,6 +130,7 @@ Flow:
 - [x] Userul apasă `Report an issue`.
 - [x] Dacă nu este logat, este trimis la login/register.
 - [x] Userul încarcă poză.
+- [x] Userul poate încărca mai multe poze pentru același raport.
 - [x] Userul adaugă descriere opțională.
 - [x] Userul selectează sau confirmă locația.
 - [x] Userul trimite raportul.
@@ -141,7 +142,7 @@ Flow:
 ## Issue components
 
 - [ ] `IssueCard`.
-- [ ] `IssueDetailsPage`.
+- [x] `IssueDetailsPage`.
 - [ ] `IssueStatusBadge`.
 - [ ] `IssueSeverityBadge`.
 - [ ] `IssueBeforeAfter`.
@@ -150,43 +151,44 @@ Flow:
 
 Issue detail shows:
 
-- [ ] Photo.
-- [ ] Title.
-- [ ] Description.
-- [ ] Category.
-- [ ] Severity.
-- [ ] Status.
-- [ ] Location.
-- [ ] Zone.
-- [ ] Responsible actor.
-- [ ] AI summary.
-- [ ] AI confidence.
-- [ ] Duplicate count.
-- [ ] Related mission.
-- [ ] Reward eligibility.
-- [ ] Before photo.
-- [ ] After photo.
+- [x] Photo.
+- [x] Galerie de fotografii când issue-ul are mai multe imagini.
+- [x] Title.
+- [x] Description.
+- [x] Category.
+- [x] Severity.
+- [x] Status.
+- [x] Location.
+- [x] Zone.
+- [x] Responsible actor.
+- [x] AI summary.
+- [x] AI confidence.
+- [x] Duplicate count.
+- [x] Related mission.
+- [x] Reward eligibility.
+- [x] Before photo.
+- [x] After photo.
 - [ ] Activity history.
 
 ## Missions components
 
-- [ ] `MissionCard`.
-- [ ] `MissionDetailsPage`.
+- [x] `MissionCard`.
+- [x] `MissionDetailsPage`.
 - [ ] `MissionProgress`.
-- [ ] `JoinMissionButton`.
-- [ ] `MissionParticipants`.
-- [ ] `MissionImpactCard`.
+- [x] `JoinMissionButton`.
+- [x] `MissionParticipants`.
+- [x] `MissionImpactCard`.
 
 Missions behavior:
 
-- [ ] Listă misiuni active.
-- [ ] Detalii misiune.
-- [ ] Join mission.
+- [x] Listă misiuni active.
+- [x] Detalii misiune.
+- [x] Join mission.
 - [ ] Leave mission.
-- [ ] Participants count.
-- [ ] Related issues.
-- [ ] Reward attached.
-- [ ] Impact points.
+- [x] Participants count.
+- [x] Related issues.
+- [x] Reward attached.
+- [x] Impact points.
 
 ## Rewards and gamification components
 
@@ -215,7 +217,7 @@ Rewards page tabs:
 
 ## Partner and admin components
 
-- [ ] `PartnerDashboard`.
+- [x] `PartnerDashboard`.
 - [ ] `PartnerRewardForm`.
 - [ ] `PartnerImpactCards`.
 - [ ] `PartnerRewardClaims`.
@@ -223,9 +225,9 @@ Rewards page tabs:
 - [x] `DashboardStats`.
 - [x] `DashboardCharts`.
 - [x] `AiCitySummary`.
-- [ ] `AdminIssueTable`.
-- [ ] `AdminStatusSelector`.
-- [ ] `DuplicateClustersPanel`.
+- [x] `AdminIssueTable`.
+- [x] `AdminStatusSelector`.
+- [x] `DuplicateClustersPanel`.
 
 ## Framer Motion checklist
 
@@ -271,38 +273,38 @@ Animation rules:
 
 ### SignalR client
 
-- [ ] Instalează și configurează `@microsoft/signalr`.
-- [ ] Creează client pentru `/civic-hub`.
-- [ ] Ascultă `IssueCreated`, `IssueAnalyzed`, `AgentStepCompleted`, `MissionCreated`, `RewardMatched`, `ZoneScoreUpdated`, `BadgeUnlocked`, `RankChanged` și `PointsAwarded`.
-- [ ] Invalidează query-urile React Query relevante la fiecare event.
-- [ ] Actualizează feed-ul public și selected issue panel din evenimente live.
+- [x] Instalează și configurează `@microsoft/signalr`.
+- [x] Creează client pentru `/civic-hub`.
+- [x] Ascultă `IssueCreated`, `IssueAnalyzed`, `AgentStepCompleted`, `MissionCreated`, `RewardMatched`, `ZoneScoreUpdated`, `BadgeUnlocked`, `RankChanged` și `PointsAwarded`.
+- [x] Invalidează query-urile React Query relevante la fiecare event.
+- [x] Actualizează feed-ul public și selected issue panel din evenimente live.
 
 ### Duplicate Agent UI
 
-- [ ] Afișează duplicate count în selected issue panel.
-- [ ] Adaugă stare `Possible duplicate` în issue details.
-- [ ] Afișează nearest duplicate match când backendul îl returnează.
+- [x] Afișează duplicate count în selected issue panel.
+- [x] Adaugă stare `Possible duplicate` în issue details.
+- [x] Afișează nearest duplicate match când backendul îl returnează.
 
 ### Mapbox fallback complet
 
-- [ ] Creează fallback map panel stilizat light când tokenul lipsește.
-- [ ] Randază marker-ele absolute peste fallback map.
-- [ ] Păstrează filtrele și selectarea markerelor în fallback.
-- [ ] Păstrează bottom rail și selected issue panel în fallback.
+- [x] Creează fallback map panel stilizat light când tokenul lipsește.
+- [x] Randază marker-ele absolute peste fallback map.
+- [x] Păstrează filtrele și selectarea markerelor în fallback.
+- [x] Păstrează bottom rail și selected issue panel în fallback.
 
 ### Role protected routes
 
-- [ ] Creează `RoleProtectedRoute`.
-- [ ] Restricționează `/admin/dashboard` și `/admin/issues` la `admin`.
-- [ ] Restricționează `/partner` la `partner`.
-- [ ] Adaugă pagină/stare de acces refuzat.
+- [x] Creează `RoleProtectedRoute`.
+- [x] Restricționează `/admin/dashboard` și `/admin/issues` la `admin`.
+- [x] Restricționează `/partner` la `partner`.
+- [x] Adaugă pagină/stare de acces refuzat.
 
 ### Rute lipsă
 
-- [ ] `/issues/:id` cu issue details complet.
-- [ ] `/command-center` cu hartă avansată și overview.
-- [ ] `/zones/:id` cu detalii zonă.
-- [ ] `/missions` cu listă misiuni active.
-- [ ] `/missions/:id` cu detalii, participants, reward și join.
-- [ ] `/admin/issues` cu tabel, status selector și duplicate clusters.
-- [ ] `/partner` dashboard real cu rewards, claims și impact.
+- [x] `/issues/:id` cu issue details complet.
+- [x] `/command-center` cu hartă avansată și overview.
+- [x] `/zones/:id` cu detalii zonă.
+- [x] `/missions` cu listă misiuni active.
+- [x] `/missions/:id` cu detalii, participants, reward și join.
+- [x] `/admin/issues` cu tabel, status selector și duplicate clusters.
+- [x] `/partner` dashboard real cu rewards, claims și impact.

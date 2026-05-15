@@ -6,7 +6,7 @@ import {
   Navigation,
   Search,
   TriangleAlert,
-} from 'lucide-react'
+} from '@/components/icons/hugeicons'
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 import {
@@ -328,19 +328,24 @@ export function LocationPicker({
   return (
     <section className="rounded-lg border border-emerald-200 bg-white p-3 shadow-sm sm:p-4">
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
-            Locatie
-          </p>
-          <h2 className="!mb-0 !mt-0.5 !text-base !leading-tight font-semibold text-emerald-950">
-            Unde este problema?
-          </h2>
-          <p className="mt-1 text-sm leading-5 text-slate-600">
-            Cauta o adresa, foloseste locatia curenta sau alege o zona
-            apropiata. CiviTm va pune raportul pe harta.
-          </p>
+        <div className="flex min-w-0 items-start gap-3">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-emerald-600 text-white">
+            3
+          </span>
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+              Locatie obligatorie
+            </p>
+            <h2 className="!mb-0 !mt-0.5 !text-base !leading-tight font-semibold text-emerald-950">
+              Fixeaza locul pe harta
+            </h2>
+            <p className="mt-1 text-sm leading-5 text-slate-600">
+              Cauta o adresa, foloseste locatia curenta sau alege o zona
+              apropiata. CiviTm va pune raportul pe harta.
+            </p>
+          </div>
         </div>
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
+        <span className="hidden size-8 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 sm:flex">
           <LocateFixed className="size-4.5" aria-hidden="true" />
         </span>
       </div>

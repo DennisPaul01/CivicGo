@@ -72,6 +72,7 @@ Taskuri:
 - [x] Creează `IssueDescriptionInput`.
 - [x] Creează `LocationPicker` cu hartă sau selector simplificat.
 - [x] Adaugă preview pentru poză.
+- [x] Permite atașarea mai multor fotografii la același raport.
 - [x] Adaugă validare minimă: poză și locație obligatorii.
 - [x] Adaugă stare de submit, success și error.
 
@@ -96,6 +97,7 @@ Taskuri:
 - [x] Configurează Supabase Storage pentru upload imagini.
 - [x] Creează endpointul `POST /api/issues`.
 - [x] Salvează imaginea în Supabase Storage.
+- [x] Salvează galeria de imagini pentru issue, păstrând `ImageUrl` ca imagine principală.
 - [x] Salvează issue-ul în database.
 - [x] Returnează issue-ul creat către frontend.
 
@@ -195,6 +197,7 @@ Taskuri:
 - [x] Seed badges MVP: First Reporter, AI Scout, Clean-up Hero, Before/After Hero.
 - [x] Acordă puncte pentru valid report.
 - [x] Acordă puncte pentru AI accepted report.
+- [x] Acordă puncte reduse pentru raport duplicat.
 - [x] Deblochează `First Reporter` după primul raport valid.
 - [x] Calculează rank curent pe baza punctelor.
 - [x] Afișează achievement card în frontend.
@@ -273,7 +276,7 @@ Taskuri:
 - [x] Seed rewards și badges.
 - [ ] Verifică flow-ul complet de demo.
 - [x] Pregătește fallback când OpenAI lipsește.
-- [ ] Pregătește fallback când Mapbox lipsește.
+- [x] Pregătește fallback când Mapbox lipsește.
 - [ ] Pregătește screenshoturi sau video backup.
 - [x] Optimizează loading states.
 - [x] Optimizează empty states.
@@ -290,42 +293,42 @@ Prioritate: P0/P1 după stabilizarea demo-ului de bază
 
 ### SignalR live events
 
-- [ ] Adaugă backend SignalR hub la `/civic-hub`.
-- [ ] Definește event payloads pentru `IssueCreated`, `IssueAnalyzed`, `AgentStepCompleted`, `MissionCreated`, `RewardMatched`, `ZoneScoreUpdated`, `BadgeUnlocked`, `RankChanged` și `PointsAwarded`.
-- [ ] Emite evenimente din flow-ul `POST /api/issues`, AI analysis, mission generation, reward matching, zone score și gamification.
-- [ ] Adaugă client SignalR în frontend.
-- [ ] La evenimente live, invalidează query-urile React Query relevante și actualizează map/feed/selected issue/dashboard.
-- [ ] Păstrează fallback-ul cu React Query invalidation/polling când hub-ul nu este disponibil.
+- [x] Adaugă backend SignalR hub la `/civic-hub`.
+- [x] Definește event payloads pentru `IssueCreated`, `IssueAnalyzed`, `AgentStepCompleted`, `MissionCreated`, `RewardMatched`, `ZoneScoreUpdated`, `BadgeUnlocked`, `RankChanged` și `PointsAwarded`.
+- [x] Emite evenimente din flow-ul `POST /api/issues`, AI analysis, mission generation, reward matching, zone score și gamification.
+- [x] Adaugă client SignalR în frontend.
+- [x] La evenimente live, invalidează query-urile React Query relevante și actualizează map/feed/selected issue/dashboard.
+- [x] Păstrează fallback-ul cu React Query invalidation/polling când hub-ul nu este disponibil.
 
 ### Duplicate Agent real
 
-- [ ] Creează serviciu backend `DuplicateDetectionService`.
-- [ ] Caută issues nerezolvate la 100-300 metri folosind lat/lng numeric pentru MVP.
-- [ ] Compară categorie, status și proximitate.
-- [ ] Actualizează `DuplicateCount` și statusul `duplicate_detected` când există match solid.
-- [ ] Adaugă `Duplicate Agent` în `AgentSteps`.
-- [ ] Afișează duplicate count și nearest match în selected issue/issue details.
+- [x] Creează serviciu backend `DuplicateDetectionService`.
+- [x] Caută issues nerezolvate la 100-300 metri folosind lat/lng numeric pentru MVP.
+- [x] Compară categorie, status și proximitate.
+- [x] Actualizează `DuplicateCount` și statusul `duplicate_detected` când există match solid.
+- [x] Adaugă `Duplicate Agent` în `AgentSteps`.
+- [x] Afișează duplicate count și nearest match în selected issue/issue details.
 
 ### Mapbox fallback complet
 
-- [ ] Înlocuiește placeholder-ul simplu cu panel hartă stilizat light când lipsește tokenul.
-- [ ] Randază aceleași marker-e absolute peste fallback map.
-- [ ] Păstrează filtrele, selected issue panel, bottom rail și click-ul pe marker.
-- [ ] Afișează mesaj discret că Mapbox token lipsește, fără să rupă demo-ul.
+- [x] Înlocuiește placeholder-ul simplu cu panel hartă stilizat light când lipsește tokenul.
+- [x] Randază aceleași marker-e absolute peste fallback map.
+- [x] Păstrează filtrele, selected issue panel, bottom rail și click-ul pe marker.
+- [x] Afișează mesaj discret că Mapbox token lipsește, fără să rupă demo-ul.
 
 ### Role protected routes
 
-- [ ] Creează `RoleProtectedRoute` în frontend.
-- [ ] Protejează `/admin/dashboard` și `/admin/issues` cu rol `admin`.
-- [ ] Protejează `/partner` cu rol `partner`.
-- [ ] Adaugă backend authorization policies pentru `admin` și `partner`.
-- [ ] Afișează stare friendly de acces neautorizat.
+- [x] Creează `RoleProtectedRoute` în frontend.
+- [x] Protejează `/admin/dashboard` și `/admin/issues` cu rol `admin`.
+- [x] Protejează `/partner` cu rol `partner`.
+- [x] Adaugă backend authorization policies pentru `admin` și `partner`.
+- [x] Afișează stare friendly de acces neautorizat.
 
 ### Rute și feature-uri lipsă
 
-- [ ] Creează `/issues/:id` pentru issue details public.
-- [ ] Creează `/command-center` ca advanced map/overview pentru demo extins.
-- [ ] Creează `/zones/:id` pentru detalii zonă.
-- [ ] Creează `/missions` și `/missions/:id` cu listă, detalii, participants, reward și join.
-- [ ] Creează `/admin/issues` cu issue table, status selector și duplicate clusters.
-- [ ] Creează partner dashboard real pentru rewards, claims și impact.
+- [x] Creează `/issues/:id` pentru issue details public.
+- [x] Creează `/command-center` ca advanced map/overview pentru demo extins.
+- [x] Creează `/zones/:id` pentru detalii zonă.
+- [x] Creează `/missions` și `/missions/:id` cu listă, detalii, participants, reward și join.
+- [x] Creează `/admin/issues` cu issue table, status selector și duplicate clusters.
+- [x] Creează partner dashboard real pentru rewards, claims și impact.

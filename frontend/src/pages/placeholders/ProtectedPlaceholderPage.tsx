@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { ShieldCheck } from 'lucide-react'
+import { ShieldCheck } from '@/components/icons/hugeicons'
 import { Button } from '@/components/ui/button'
 
 type ProtectedPlaceholderPageProps = {

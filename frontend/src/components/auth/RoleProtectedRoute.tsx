@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
-import { Leaf } from 'lucide-react'
+import { Leaf } from '@/components/icons/hugeicons'
 import { AccessDeniedPage } from '@/pages/auth/AccessDeniedPage'
 import { useAuthStore, type CivicRole } from '@/stores/authStore'
 

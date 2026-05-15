@@ -18,6 +18,7 @@ public sealed class IssueEntity
     public ZoneEntity? Zone { get; set; }
     public Guid CreatedByUserId { get; set; }
     public UserEntity? CreatedByUser { get; set; }
+    public List<IssueImageEntity> Images { get; set; } = [];
     public List<IssueAiAnalysisEntity> AiAnalyses { get; set; } = [];
     public List<AgentRunEntity> AgentRuns { get; set; } = [];
     public List<MissionIssueEntity> MissionIssues { get; set; } = [];

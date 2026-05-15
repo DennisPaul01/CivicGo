@@ -1,0 +1,4 @@
+interface:
+  display_name: "CivicGo MVP"
+  short_description: "Follow CivicGo MVP and map-first UI rules"
+  default_prompt: "Use $civicgo-mvp to implement a CivicGo feature according to the Friday MVP roadmap."

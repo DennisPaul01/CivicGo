@@ -5,7 +5,7 @@ import {
   Gift,
   type LucideIcon,
   TriangleAlert,
-} from 'lucide-react'
+} from '@/components/icons/hugeicons'
 import { motion } from 'motion/react'
 import { cn } from '@/lib/utils'
 
@@ -21,6 +21,7 @@ export type MapFilterKind = 'all' | MapMarkerKind
 type MapMarkerProps = {
   kind: MapMarkerKind
   label: string
+  duplicateCount?: number
   isSelected?: boolean
   isHighlighted?: boolean
   revealDelayMs?: number
@@ -59,6 +60,7 @@ const markerStyles: Record<
 export function MapMarker({
   kind,
   label,
+  duplicateCount = 0,
   isSelected = false,
   isHighlighted = false,
   revealDelayMs = 0,
@@ -102,6 +104,11 @@ export function MapMarker({
       }}
     >
       <Icon className="size-4.5" aria-hidden="true" />
+      {duplicateCount > 0 && (
+        <span className="absolute -right-1.5 -top-1.5 flex min-w-5 items-center justify-center rounded-full border-2 border-white bg-amber-400 px-1 text-[0.65rem] font-black leading-4 text-amber-950 shadow-sm">
+          +{duplicateCount}
+        </span>
+      )}
     </motion.button>
   )
 }

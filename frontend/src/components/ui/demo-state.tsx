@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import type { LucideIcon } from 'lucide-react'
+import type { LucideIcon } from '@/components/icons/hugeicons'
 import { motion } from 'motion/react'
 import { cn } from '@/lib/utils'
 

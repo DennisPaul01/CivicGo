@@ -1,6 +1,6 @@
 import { Link, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { LucideIcon } from 'lucide-react'
+import type { LucideIcon } from '@/components/icons/hugeicons'
 import {
   ArrowLeft,
   CalendarDays,
@@ -13,9 +13,10 @@ import {
   Sparkles,
   TriangleAlert,
   Users,
-} from 'lucide-react'
+} from '@/components/icons/hugeicons'
 import { motion } from 'motion/react'
 import { Button } from '@/components/ui/button'
+import { TopNavigation } from '@/components/layout/TopNavigation'
 import { DemoSkeletonGrid, DemoState } from '@/components/ui/demo-state'
 import {
   fetchMissionById,
@@ -29,7 +30,7 @@ import {
   missionQueryKey,
   missionsQueryKey,
 } from '@/lib/queryClient'
-import { roReward, roStatus } from '@/lib/locale'
+import { roMissionText, roReward, roStatus } from '@/lib/locale'
 import { useAuthStore } from '@/stores/authStore'
 
 function formatDate(value: string | null) {
@@ -123,11 +124,12 @@ function MissionDetails({
   return (
     <main className="min-h-svh overflow-x-hidden bg-orange-50 px-4 py-5 text-slate-950 sm:px-6 lg:px-8">
       <motion.section
-        className="mx-auto grid w-full max-w-6xl gap-5"
+        className="mx-auto grid w-full max-w-6xl gap-5 pb-24 sm:pb-0"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.25, ease: 'easeOut' }}
       >
+        <TopNavigation />
         <div className="flex flex-col gap-4 rounded-lg border border-emerald-200 bg-white p-4 shadow-sm lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-3">
             <span className="flex size-10 items-center justify-center rounded-lg bg-emerald-500 text-white">
@@ -138,7 +140,7 @@ function MissionDetails({
                 Detalii misiune
               </p>
               <h1 className="text-2xl font-semibold leading-tight text-emerald-950">
-                {mission.title}
+                {roMissionText(mission.title)}
               </h1>
             </div>
           </div>
@@ -170,7 +172,7 @@ function MissionDetails({
                 {mission.createdByAi && <Badge label="Generata de AI" tone="teal" />}
               </div>
               <p className="mt-5 text-base leading-7 text-slate-600">
-                {mission.description}
+                {roMissionText(mission.description)}
               </p>
             </article>
 

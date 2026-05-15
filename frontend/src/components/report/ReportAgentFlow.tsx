@@ -1,6 +1,7 @@
 import {
   Building2,
   Bot,
+  Camera,
   Check,
   CircleDashed,
   Flag,
@@ -12,7 +13,7 @@ import {
   Star,
   Trophy,
   Users,
-} from 'lucide-react'
+} from '@/components/icons/hugeicons'
 import {
   useEffect,
   useMemo,
@@ -117,7 +118,8 @@ const mapStep: DisplayStep = {
   kind: 'map',
 }
 
-const STEP_DISPLAY_MS = 1800
+const LIVE_STEP_DISPLAY_MS = 2200
+const CACHED_STEP_DISPLAY_MS = 1450
 const MAP_STEP_INDEX = plannedSteps.length
 const TOTAL_DISPLAY_STEPS = plannedSteps.length + 1
 const MAP_MARKER_DELAY_MS = 1600
@@ -166,11 +168,11 @@ function getStepIndexByAgentName(agentName: string) {
 function getStepForDisplayIndex(
   displayIndex: number,
   issue: IssueResponse,
-  _streamState: ReportStreamState,
+  streamState: ReportStreamState,
 ) {
   const completedSteps = getCompletedSteps(issue)
 
-  if (displayIndex >= MAP_STEP_INDEX) {
+  if (canRevealMap(issue, streamState) && displayIndex >= MAP_STEP_INDEX) {
     return mapStep
   }
 
@@ -278,7 +280,11 @@ function getAgentReturnText(
     case 'Mission Agent':
       return issue.relatedMission
         ? `${issue.relatedMission.title} · ${issue.relatedMission.participantsJoined}/${issue.relatedMission.participantsNeeded} inscrisi · +${issue.relatedMission.impactPoints} impact.`
-        : 'Misiunea este in pregatire pentru zona raportata.'
+        : issue.duplicateCount > 0
+          ? 'A oprit misiunea noua pentru ca raportul pare duplicat.'
+          : issue.isUrgent
+            ? 'A sarit misiunea comunitara pentru ca semnalul necesita escaladare.'
+            : 'A decis ca raportul nu are nevoie de o misiune comunitara.'
     case 'Reward Agent': {
       const pointsAwarded = issue.gamification?.pointsAwarded ?? streamState.pointsAwarded
       const rankName = issue.gamification?.currentRank.name ?? streamState.rankName
@@ -288,7 +294,9 @@ function getAgentReturnText(
 
       return pointsAwarded !== null
         ? `+${pointsAwarded} puncte${rankName ? ` · ${roRank(rankName) || rankName}` : ''}${reward}.`
-        : `Punctele si recompensa se sincronizeaza${reward}.`
+        : issue.relatedMission
+          ? `Punctele si recompensa se sincronizeaza${reward}.`
+          : 'Fara misiune noua, se pastreaza doar punctele potrivite raportului.'
     }
     case 'City Agent':
       return 'Semnalul este pregatit pentru harta live.'
@@ -313,7 +321,7 @@ function getAgentResultFacts(
     return [
       {
         label: 'Status',
-        value: 'Analiza este in curs. Rezultatul apare imediat ce agentul termina.',
+        value: 'Analiza este in curs. Rezultatul apare imediat ce verificarea termina.',
         tone: 'neutral',
       },
     ]
@@ -372,7 +380,12 @@ function getAgentResultFacts(
         : [
             {
               label: 'Decizie',
-              value: 'Nu este nevoie de o misiune comunitara pentru acest semnal.',
+              value:
+                issue.duplicateCount > 0
+                  ? 'Raport duplicat: nu se creeaza misiune noua.'
+                  : issue.isUrgent
+                    ? 'Semnal urgent: se sare peste misiunea comunitara.'
+                    : 'Nu este nevoie de o misiune comunitara pentru acest semnal.',
               tone: 'neutral',
             },
           ]
@@ -415,13 +428,13 @@ function PhotoSceneFrame({
   children: ReactNode
 }) {
   return (
-    <div className="relative overflow-hidden bg-slate-950">
+    <div className="relative w-full min-w-0 overflow-hidden bg-slate-950">
       {imagePreviewUrl ? (
-        <div className="flex aspect-[4/3] w-full items-center justify-center bg-slate-950">
+        <div className="flex h-64 w-full items-center justify-center bg-slate-950 sm:aspect-[4/3] sm:h-auto">
           <motion.img
             src={imagePreviewUrl}
             alt=""
-            className="max-h-full w-full object-contain opacity-95"
+            className="h-full w-full object-contain opacity-95"
             initial={{ scale: 1.005, x: 0, y: 0 }}
             animate={{
               scale: 1.035,
@@ -432,7 +445,7 @@ function PhotoSceneFrame({
           />
         </div>
       ) : (
-        <div className="aspect-[4/3] w-full bg-emerald-900" />
+        <div className="h-64 w-full bg-emerald-900 sm:aspect-[4/3] sm:h-auto" />
       )}
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_36%,rgba(2,6,23,.18)_68%,rgba(2,6,23,.72)_100%)]" />
       <div
@@ -451,8 +464,144 @@ function PhotoSceneFrame({
 
 function SceneStatusPill({ isWaiting }: { isWaiting: boolean }) {
   return (
-    <div className="absolute left-3 top-3 rounded-md bg-slate-950/75 px-2 py-1 text-xs font-semibold text-emerald-50 backdrop-blur">
-      {isWaiting ? 'Se proceseaza' : 'Raspuns primit'}
+    <div
+      className={cn(
+        'absolute left-3 top-3 inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold shadow-lg backdrop-blur',
+        isWaiting
+          ? 'border-teal-100/70 bg-white/92 text-teal-900 shadow-teal-950/15'
+          : 'border-emerald-100/70 bg-white/92 text-emerald-900 shadow-emerald-950/15',
+      )}
+    >
+      {isWaiting ? (
+        <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
+      ) : (
+        <Check className="size-4" aria-hidden="true" />
+      )}
+      {isWaiting ? 'Analizam fotografia' : 'Raspuns primit'}
+    </div>
+  )
+}
+
+function MobileAnalysisLightScene({
+  imagePreviewUrl,
+  currentStep,
+  issue,
+  streamState,
+  isWaiting,
+}: {
+  imagePreviewUrl: string
+  currentStep: DisplayStep
+  issue: IssueResponse
+  streamState: ReportStreamState
+  isWaiting: boolean
+}) {
+  const resultFacts = getAgentResultFacts(currentStep, issue, streamState, isWaiting)
+    .filter((fact) => fact.label !== 'Status')
+    .slice(0, 2)
+
+  return (
+    <div className="relative min-h-[22rem] overflow-hidden rounded-b-xl bg-slate-950 sm:min-h-[28rem]">
+      {imagePreviewUrl ? (
+        <motion.img
+          src={imagePreviewUrl}
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover"
+          initial={{ scale: 1.01 }}
+          animate={{ scale: isWaiting ? [1.01, 1.025, 1.015] : 1.01 }}
+          transition={{
+            duration: 7,
+            repeat: isWaiting ? Infinity : 0,
+            ease: 'easeInOut',
+          }}
+        />
+      ) : (
+        <div className="absolute inset-0 bg-emerald-950" />
+      )}
+
+      <div className="absolute inset-0 bg-gradient-to-b from-slate-950/18 via-slate-950/6 to-slate-950/72" />
+      <motion.div
+        className="absolute -inset-y-16 left-[-34%] w-[30%] rotate-12 bg-gradient-to-r from-transparent via-teal-100/36 to-transparent blur-sm"
+        animate={{ x: isWaiting ? ['0%', '340%'] : '340%', opacity: isWaiting ? [0, 0.42, 0.08] : 0 }}
+        transition={{
+          duration: 3.6,
+          repeat: isWaiting ? Infinity : 0,
+          ease: 'easeInOut',
+        }}
+      />
+      <motion.div
+        className="absolute left-1/2 top-[42%] size-28 -translate-x-1/2 -translate-y-1/2 rounded-full bg-teal-200/12 blur-2xl"
+        animate={{
+          scale: isWaiting ? [0.82, 1.05, 0.9] : 0.9,
+          opacity: isWaiting ? [0.16, 0.3, 0.18] : 0.22,
+        }}
+        transition={{
+          duration: 3.2,
+          repeat: isWaiting ? Infinity : 0,
+          ease: 'easeInOut',
+        }}
+      />
+      <motion.div
+        className="absolute inset-x-10 top-[38%] h-px bg-gradient-to-r from-transparent via-white/48 to-transparent shadow-[0_0_18px_rgba(153,246,228,.45)]"
+        animate={{ y: isWaiting ? ['-3rem', '5.5rem', '-3rem'] : 0 }}
+        transition={{
+          duration: 4,
+          repeat: isWaiting ? Infinity : 0,
+          ease: 'easeInOut',
+        }}
+      />
+
+      <div className="absolute left-3 right-3 top-3 flex items-center justify-between gap-3">
+        <span className="inline-flex min-w-0 items-center gap-2 rounded-full border border-white/22 bg-white/92 px-3 py-2 text-xs font-semibold text-emerald-950 shadow-lg shadow-slate-950/18 backdrop-blur">
+          {isWaiting ? (
+            <LoaderCircle className="size-4 animate-spin text-teal-700" aria-hidden="true" />
+          ) : (
+            <Check className="size-4 text-emerald-700" aria-hidden="true" />
+          )}
+          <span className="truncate">
+            {isWaiting ? 'Analizam fotografia' : 'Verificare finalizata'}
+          </span>
+        </span>
+        <span className="rounded-full bg-slate-950/55 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur">
+          {Math.min(currentStep.order, TOTAL_DISPLAY_STEPS)}/{TOTAL_DISPLAY_STEPS}
+        </span>
+      </div>
+
+      <div className="absolute inset-x-3 bottom-3 rounded-2xl border border-white/18 bg-white/92 p-3 shadow-2xl shadow-slate-950/20 backdrop-blur-xl">
+        <p className="text-xs font-semibold uppercase tracking-wide text-teal-700">
+          {roAgentName(currentStep.agentName)}
+        </p>
+        <p className="mt-1 line-clamp-3 text-[0.95rem] font-semibold leading-snug text-emerald-950">
+          {getAgentReturnText(currentStep, issue, streamState)}
+        </p>
+        <div className="mt-3 grid grid-cols-6 gap-1.5">
+          {Array.from({ length: TOTAL_DISPLAY_STEPS }).map((_, index) => (
+            <span
+              key={index}
+              className={cn(
+                'h-1.5 rounded-full',
+                index < currentStep.order ? 'bg-teal-500' : 'bg-emerald-100',
+              )}
+            />
+          ))}
+        </div>
+        {resultFacts.length > 0 && (
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            {resultFacts.map((fact) => (
+              <span
+                key={`${fact.label}-${fact.value}`}
+                className="min-w-0 rounded-lg border border-emerald-100 bg-emerald-50 px-2 py-1.5"
+              >
+                <span className="block text-[0.62rem] font-semibold uppercase text-emerald-700">
+                  {fact.label}
+                </span>
+                <span className="mt-0.5 block line-clamp-2 text-xs font-semibold leading-snug text-emerald-950">
+                  {fact.value}
+                </span>
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -464,61 +613,88 @@ function VisionPhotoScene({
   imagePreviewUrl: string
   isWaiting: boolean
 }) {
+  const checks = [
+    'Foto incarcata',
+    'Categorie in lucru',
+    'Prioritate in lucru',
+  ]
+
   return (
     <PhotoSceneFrame imagePreviewUrl={imagePreviewUrl}>
-      <div className="absolute inset-0 bg-slate-950/10" />
+      <div className="absolute inset-0 bg-gradient-to-b from-white/12 via-transparent to-slate-950/42" />
       <motion.div
-        className="absolute inset-y-0 left-1/2 w-px bg-teal-200/70 shadow-[0_0_28px_rgba(45,212,191,.8)]"
-        animate={{ x: ['-8rem', '8rem', '-8rem'], opacity: [0.2, 1, 0.2] }}
-        transition={{ duration: 2.9, repeat: Infinity, ease: 'easeInOut' }}
-      />
-      <motion.div
-        className="absolute inset-x-7 top-[16%] h-[50%] rounded-xl border border-teal-200/80 shadow-[0_0_36px_rgba(45,212,191,.42)]"
-        initial={{ opacity: 0, scale: 0.92 }}
-        animate={{ opacity: [0.35, 1, 0.72], scale: [0.96, 1, 0.98] }}
-        transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
-      />
-      <div className="absolute inset-x-7 top-[16%] h-[50%] rounded-xl">
-        {[
-          'left-0 top-0 border-l border-t',
-          'right-0 top-0 border-r border-t',
-          'bottom-0 left-0 border-b border-l',
-          'bottom-0 right-0 border-b border-r',
-        ].map((position) => (
-          <motion.span
-            key={position}
-            className={cn('absolute size-8 border-teal-100', position)}
-            animate={{ opacity: [0.35, 1, 0.45] }}
-            transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
-          />
-        ))}
-      </div>
-      <motion.div
-        className="absolute inset-x-5 top-[24%] h-px bg-gradient-to-r from-transparent via-teal-200 to-transparent"
-        animate={{ y: ['0rem', '7rem', '0rem'], opacity: [0.1, 1, 0.1] }}
-        transition={{ duration: 2.3, repeat: Infinity, ease: 'easeInOut' }}
+        className="absolute left-1/2 top-1/2 size-24 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/70 bg-teal-100/18 shadow-[0_0_38px_rgba(153,246,228,.34)]"
+        animate={{
+          scale: isWaiting ? [0.9, 1.08, 0.94] : 1,
+          opacity: isWaiting ? [0.55, 0.95, 0.68] : 0.82,
+        }}
+        transition={{ duration: 2.2, repeat: isWaiting ? Infinity : 0, ease: 'easeInOut' }}
       />
       <motion.span
-        className="absolute left-1/2 top-[38%] size-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-teal-200 shadow-[0_0_28px_rgba(45,212,191,.95)]"
-        animate={{ scale: [0.7, 1.45, 0.8], opacity: [0.55, 1, 0.6] }}
-        transition={{ duration: 1.35, repeat: Infinity, ease: 'easeInOut' }}
-      />
-      <div className="absolute bottom-3 left-3 right-3 grid grid-cols-3 gap-2">
-        {['detectie', 'categorie', 'risc'].map((label, index) => (
-          <motion.span
-            key={label}
-            className="h-1.5 rounded-full bg-teal-200/80 shadow-[0_0_12px_rgba(45,212,191,.5)]"
-            initial={{ scaleX: 0.2, opacity: 0.35 }}
-            animate={{ scaleX: [0.25, 1, 0.45], opacity: [0.35, 1, 0.45] }}
-            transition={{
-              delay: index * 0.22,
-              duration: 1.35,
-              repeat: Infinity,
-              ease: 'easeInOut',
-            }}
-          />
-        ))}
-      </div>
+        className="absolute left-1/2 top-1/2 flex size-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-xl bg-white/92 text-teal-700 shadow-xl shadow-slate-950/20"
+        animate={{ y: isWaiting ? [0, -4, 0] : 0 }}
+        transition={{ duration: 1.8, repeat: isWaiting ? Infinity : 0, ease: 'easeInOut' }}
+      >
+        <Camera className="size-6" aria-hidden="true" />
+      </motion.span>
+      <motion.div
+        className="absolute left-5 right-5 top-[58%] h-1 overflow-hidden rounded-full bg-white/40"
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.38, ease: 'easeOut' }}
+      >
+        <motion.div
+          className="h-full rounded-full bg-teal-200"
+          initial={{ x: '-55%' }}
+          animate={{ x: isWaiting ? ['-55%', '115%'] : '0%', width: isWaiting ? '45%' : '100%' }}
+          transition={{ duration: 1.7, repeat: isWaiting ? Infinity : 0, ease: 'easeInOut' }}
+        />
+      </motion.div>
+      <motion.div
+        className="absolute bottom-3 left-3 right-3 rounded-xl border border-white/28 bg-white/88 p-3 text-slate-700 shadow-xl shadow-slate-950/18 backdrop-blur"
+        initial={{ opacity: 0, y: 18 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.14, duration: 0.48, ease: [0.16, 1, 0.3, 1] }}
+      >
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[0.68rem] font-semibold uppercase text-teal-700">
+              Verificare foto
+            </p>
+            <p className="mt-0.5 text-sm font-semibold leading-5 text-emerald-950">
+              {isWaiting ? 'Cautam detalii utile in imagine' : 'Detaliile foto sunt pregatite'}
+            </p>
+          </div>
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-teal-100 text-teal-700">
+            {isWaiting ? (
+              <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <Check className="size-4" aria-hidden="true" />
+            )}
+          </span>
+        </div>
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          {checks.map((label, index) => (
+            <motion.span
+              key={label}
+              className="min-w-0 rounded-md border border-emerald-100 bg-emerald-50 px-2 py-1 text-[0.62rem] font-semibold text-emerald-900"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.28 + index * 0.14, duration: 0.34, ease: 'easeOut' }}
+            >
+              <span className="block truncate">{label}</span>
+            </motion.span>
+          ))}
+        </div>
+      </motion.div>
+      <motion.div
+        className="absolute right-4 top-4 hidden rounded-xl border border-white/28 bg-slate-950/44 px-3 py-2 text-xs font-semibold text-white shadow-lg backdrop-blur sm:block"
+        initial={{ opacity: 0, x: 10 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 0.24, duration: 0.4, ease: 'easeOut' }}
+      >
+        AI vizual activ
+      </motion.div>
       <SceneStatusPill isWaiting={isWaiting} />
     </PhotoSceneFrame>
   )
@@ -555,7 +731,7 @@ function TriagePhotoScene({
         animate={{ scaleX: 1, opacity: 1 }}
         transition={{ delay: 0.18, duration: 0.75, ease: 'easeOut' }}
       />
-      <div className="absolute bottom-4 left-3 right-3 grid grid-cols-3 gap-2">
+      <div className="absolute bottom-4 left-3 right-3 grid min-w-0 grid-cols-3 gap-2">
         {routeOptions.map((option, index) => {
           const Icon = option.icon
           const isActive =
@@ -576,7 +752,7 @@ function TriagePhotoScene({
               transition={{ delay: 0.16 * index, duration: 0.45, ease: 'easeOut' }}
             >
               <Icon className="mx-auto mb-1 size-4" aria-hidden="true" />
-              {option.label}
+              <span className="block truncate">{option.label}</span>
             </motion.div>
           )
         })}
@@ -917,9 +1093,11 @@ function FinalMapReveal({
   )
   const [showMapMarker, setShowMapMarker] = useState(false)
   useEffect(() => {
-    setSelectedMapItemId(null)
-    setHighlightedMapItemId(null)
-    setShowMapMarker(false)
+    const resetTimeout = window.setTimeout(() => {
+      setSelectedMapItemId(null)
+      setHighlightedMapItemId(null)
+      setShowMapMarker(false)
+    }, 0)
     const showTimeout = window.setTimeout(() => setShowMapMarker(true), MAP_MARKER_DELAY_MS)
     const pulseTimeout = window.setTimeout(
       () => setHighlightedMapItemId(issue.id),
@@ -927,6 +1105,7 @@ function FinalMapReveal({
     )
 
     return () => {
+      window.clearTimeout(resetTimeout)
       window.clearTimeout(showTimeout)
       window.clearTimeout(pulseTimeout)
     }
@@ -992,34 +1171,47 @@ function AnalysisStep({
 
   return (
     <motion.div
-      className="overflow-hidden rounded-lg border border-emerald-200 bg-white shadow-sm"
+      className="min-w-0 overflow-hidden rounded-lg border border-emerald-200 bg-white shadow-sm shadow-emerald-900/6 sm:rounded-xl"
       initial={{ opacity: 0, x: 26 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.58, ease: [0.16, 1, 0.3, 1] }}
     >
-      <AnimatePresence mode="wait" initial={false}>
-        <motion.div
-          key={currentStep.agentName}
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -8 }}
-          transition={{ duration: 0.38, ease: 'easeOut' }}
-        >
-          <AgentScene
-            currentStep={currentStep}
-            issue={issue}
-            imagePreviewUrl={imagePreviewUrl}
-            streamState={streamState}
-            isWaiting={isWaiting}
-          />
-        </motion.div>
-      </AnimatePresence>
+      <div className="grid min-w-0 lg:grid-cols-[minmax(0,1.08fr)_minmax(21rem,.92fr)]">
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={currentStep.agentName}
+            className="min-h-full min-w-0 overflow-hidden lg:border-r lg:border-emerald-100"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.38, ease: 'easeOut' }}
+          >
+            <div className="lg:hidden">
+              <MobileAnalysisLightScene
+                imagePreviewUrl={imagePreviewUrl}
+                currentStep={currentStep}
+                issue={issue}
+                streamState={streamState}
+                isWaiting={isWaiting}
+              />
+            </div>
+            <div className="hidden lg:block">
+              <AgentScene
+                currentStep={currentStep}
+                issue={issue}
+                imagePreviewUrl={imagePreviewUrl}
+                streamState={streamState}
+                isWaiting={isWaiting}
+              />
+            </div>
+          </motion.div>
+        </AnimatePresence>
 
-      <div className="p-4">
+      <div className="hidden p-3 sm:block sm:p-5">
         <div className="flex items-start gap-3">
           <span
             className={cn(
-              'flex size-10 shrink-0 items-center justify-center rounded-lg',
+              'flex size-10 shrink-0 items-center justify-center rounded-lg shadow-sm sm:size-11',
               isWaiting ? 'bg-cyan-100 text-cyan-700' : 'bg-emerald-600 text-white',
             )}
           >
@@ -1033,18 +1225,24 @@ function AnalysisStep({
             <p className="text-xs font-semibold uppercase text-emerald-700">
               Pasul {Math.min(currentStep.order, TOTAL_DISPLAY_STEPS)} din {TOTAL_DISPLAY_STEPS}
             </p>
-            <h3 className="mt-1 text-lg font-semibold text-emerald-950">
+            <h3 className="mt-1 text-lg font-semibold leading-tight text-emerald-950 sm:text-xl">
               {roAgentName(currentStep.agentName)}
             </h3>
+            <p className="mt-1 text-sm leading-5 text-slate-600 sm:hidden">
+              {getAgentReturnText(currentStep, issue, streamState)}
+            </p>
+            <p className="mt-1 hidden text-sm leading-5 text-slate-600 sm:block">
+              {isWaiting ? 'Verificarea ruleaza in timp real.' : 'Rezultatul a intrat in flow.'}
+            </p>
           </div>
         </div>
 
-        <div className="mt-4 grid gap-2">
+        <div className="mt-4 hidden gap-2 sm:grid">
           <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
             <p className="text-xs font-semibold uppercase text-slate-500">
               Lucreaza
             </p>
-            <p className="mt-1 text-sm leading-5 text-slate-700">
+            <p className="mt-1 break-words text-sm leading-5 text-slate-700">
               {getAgentWorkText(currentStep.agentName)}
             </p>
           </div>
@@ -1052,7 +1250,7 @@ function AnalysisStep({
             <p className="text-xs font-semibold uppercase text-emerald-700">
               A returnat
             </p>
-            <div className="mt-2 grid gap-2">
+            <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
               {resultFacts.map((fact, index) => (
                 <motion.div
                   key={`${fact.label}-${fact.value}`}
@@ -1075,7 +1273,7 @@ function AnalysisStep({
                   <p className="text-[0.68rem] font-semibold uppercase text-slate-500">
                     {fact.label}
                   </p>
-                  <p className="mt-0.5 text-sm font-semibold leading-5 text-emerald-950">
+                  <p className="mt-0.5 break-words text-sm font-semibold leading-5 text-emerald-950">
                     {fact.value}
                   </p>
                 </motion.div>
@@ -1084,7 +1282,100 @@ function AnalysisStep({
           </div>
         </div>
       </div>
+      </div>
     </motion.div>
+  )
+}
+
+function AgentTrackPanel({
+  steps,
+  displayStepIndex,
+  showMap,
+  className,
+}: {
+  steps: DisplayStep[]
+  displayStepIndex: number
+  showMap: boolean
+  className?: string
+}) {
+  return (
+    <div className={cn('rounded-xl border border-emerald-200 bg-white p-3 shadow-sm shadow-emerald-900/5', className)}>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+            Etape
+          </p>
+          <p className="mt-1 text-sm font-semibold text-emerald-950">
+            {showMap ? 'Toate etapele sunt gata' : 'Verificare in desfasurare'}
+          </p>
+        </div>
+        <span className="flex size-9 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
+          <Bot className="size-4.5" aria-hidden="true" />
+        </span>
+      </div>
+
+      <div className="mt-3 flex snap-x gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] lg:grid lg:grid-cols-1 lg:overflow-visible lg:pb-0 [&::-webkit-scrollbar]:hidden">
+        {steps.map((step, index) => {
+          const StepIcon =
+            step.kind === 'photo'
+              ? Radar
+              : step.kind === 'mission'
+                ? Flag
+                : step.kind === 'map'
+                  ? MapPin
+                  : Bot
+          const isDone = showMap || index < displayStepIndex
+          const isActive = !showMap && index === displayStepIndex
+
+          return (
+            <motion.div
+              key={step.id}
+              className={cn(
+                'flex min-w-[8.75rem] snap-start items-center gap-2 rounded-lg border px-2.5 py-2 transition lg:min-w-0 lg:px-3',
+                isActive
+                  ? 'border-teal-300 bg-teal-50 text-teal-950 shadow-sm'
+                  : isDone
+                    ? 'border-emerald-200 bg-emerald-50 text-emerald-950'
+                    : 'border-slate-200 bg-slate-50 text-slate-500',
+              )}
+              animate={isActive ? { y: [0, -2, 0] } : { y: 0 }}
+              transition={
+                isActive
+                  ? { duration: 1.35, repeat: Infinity, ease: 'easeInOut' }
+                  : { duration: 0.2 }
+              }
+            >
+              <span
+                className={cn(
+                  'flex size-8 shrink-0 items-center justify-center rounded-md',
+                  isActive
+                    ? 'bg-teal-500 text-white'
+                    : isDone
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-white text-slate-400',
+                )}
+              >
+                {isDone ? (
+                  <Check className="size-4" aria-hidden="true" />
+                ) : isActive ? (
+                  <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
+                ) : (
+                  <StepIcon className="size-4" aria-hidden="true" />
+                )}
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate text-xs font-semibold">
+                  {roAgentName(step.agentName)}
+                </span>
+                <span className="mt-0.5 block truncate text-[0.68rem] font-medium opacity-75">
+                  {isDone ? 'finalizat' : isActive ? 'ruleaza acum' : 'in asteptare'}
+                </span>
+              </span>
+            </motion.div>
+          )
+        })}
+      </div>
+    </div>
   )
 }
 
@@ -1098,7 +1389,7 @@ export function ReportAgentFlow({
 }: ReportAgentFlowProps) {
   const readyForMap = canRevealMap(issue, streamState)
   const [displayStepIndex, setDisplayStepIndex] = useState(0)
-  const completedSteps = getCompletedSteps(issue)
+  const completedSteps = useMemo(() => getCompletedSteps(issue), [issue])
   const targetDisplayIndex = getVisualTargetDisplayIndex(
     issue,
     streamState,
@@ -1107,6 +1398,9 @@ export function ReportAgentFlow({
   const showMap = readyForMap && displayStepIndex >= MAP_STEP_INDEX
   const currentStep = getStepForDisplayIndex(displayStepIndex, issue, streamState)
   const progress = getProgress(displayStepIndex, showMap)
+  const completedStepsKey = completedSteps
+    .map((step) => `${step.id}:${step.agentName}:${step.status}`)
+    .join('|')
   const completedTrack = [
     ...plannedSteps,
     mapStep,
@@ -1118,7 +1412,9 @@ export function ReportAgentFlow({
   })
 
   useEffect(() => {
-    setDisplayStepIndex(0)
+    const timeout = window.setTimeout(() => setDisplayStepIndex(0), 0)
+
+    return () => window.clearTimeout(timeout)
   }, [issue.id])
 
   useEffect(() => {
@@ -1126,110 +1422,147 @@ export function ReportAgentFlow({
       return
     }
 
+    const hasCachedResultForStep =
+      readyForMap ||
+      completedSteps.some((step) => getStepIndexByAgentName(step.agentName) >= displayStepIndex)
+    const stepDelayMs = hasCachedResultForStep
+      ? CACHED_STEP_DISPLAY_MS
+      : LIVE_STEP_DISPLAY_MS
+
     const timeout = window.setTimeout(() => {
       setDisplayStepIndex((currentIndex) =>
         Math.min(currentIndex + 1, targetDisplayIndex),
       )
-    }, STEP_DISPLAY_MS)
+    }, stepDelayMs)
 
     return () => window.clearTimeout(timeout)
-  }, [displayStepIndex, targetDisplayIndex])
+  }, [completedSteps, completedStepsKey, displayStepIndex, readyForMap, targetDisplayIndex])
 
   return (
-    <div className="mt-4">
-      <section className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-3">
-        <div className="flex items-start justify-between gap-3">
+    <div className="bg-gradient-to-b from-emerald-50/70 to-white p-2.5 sm:bg-none sm:p-5">
+      <section className="hidden overflow-hidden rounded-xl border border-emerald-200 bg-emerald-50/70 shadow-sm sm:block">
+        <div className="grid gap-3 p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:p-4">
           <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase text-emerald-700">
-              Analiza agentilor
+            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+              Analiza raportului
             </p>
-            <h2 className="mt-1 text-lg font-semibold text-emerald-950">
-              {showMap ? 'Semnal pregatit pentru harta' : 'Semnalul trece prin pipeline'}
+            <h2 className="mt-1 text-xl font-semibold leading-tight text-emerald-950 sm:text-2xl">
+              {showMap ? 'Semnal pregatit pentru harta' : 'Verificam semnalul'}
             </h2>
+            <p className="mt-1 text-sm leading-5 text-slate-600">
+              {showMap
+                ? 'Rezultatul este gata pentru inspectare si demo pe harta.'
+                : `${roAgentName(currentStep.agentName)} ruleaza acum si pregateste pasul urmator.`}
+            </p>
           </div>
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-white text-teal-700">
+          <span className="hidden size-12 shrink-0 items-center justify-center rounded-lg bg-white text-teal-700 shadow-sm sm:flex">
             {showMap ? (
-              <Trophy className="size-5" aria-hidden="true" />
+              <Trophy className="size-6" aria-hidden="true" />
             ) : (
-              <Bot className="size-5" aria-hidden="true" />
+              <Bot className="size-6" aria-hidden="true" />
             )}
           </span>
         </div>
 
-        <div className="mt-4 h-2 overflow-hidden rounded-full bg-white">
-          <motion.div
-            className="h-full rounded-full bg-emerald-500"
-            initial={false}
-            animate={{ width: `${progress}%` }}
-            transition={{ duration: 0.32, ease: 'easeOut' }}
-          />
-        </div>
+        <div className="px-3 pb-3 sm:px-4 sm:pb-4">
+          <div className="h-2 overflow-hidden rounded-full bg-white">
+            <motion.div
+              className="h-full rounded-full bg-emerald-500"
+              initial={false}
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 0.32, ease: 'easeOut' }}
+            />
+          </div>
 
-        <div className="mt-3 flex items-center justify-between gap-1">
-          {completedTrack.map((step) => {
-            const isDone =
-              showMap || completedTrack.findIndex((item) => item.id === step.id) < displayStepIndex
-            const isActive =
-              !showMap &&
-              completedTrack.findIndex((item) => item.id === step.id) === displayStepIndex
+          <div className="mt-3 flex items-center justify-between gap-1">
+            {completedTrack.map((step) => {
+              const isDone =
+                showMap || completedTrack.findIndex((item) => item.id === step.id) < displayStepIndex
+              const isActive =
+                !showMap &&
+                completedTrack.findIndex((item) => item.id === step.id) === displayStepIndex
 
-            return (
-              <span
-                key={step.id}
-                className={cn(
-                  'h-1.5 flex-1 rounded-full',
-                  isDone ? 'bg-emerald-500' : isActive ? 'bg-cyan-400' : 'bg-white',
-                )}
-              />
-            )
-          })}
+              return (
+                <span
+                  key={step.id}
+                  className={cn(
+                    'h-1.5 flex-1 rounded-full',
+                    isDone ? 'bg-emerald-500' : isActive ? 'bg-cyan-400' : 'bg-white',
+                  )}
+                />
+              )
+            })}
+          </div>
         </div>
       </section>
 
-      {!showMap && (
-        <div className="mt-3 grid gap-2 text-sm">
-        <div className="rounded-lg border border-slate-200 bg-white p-3">
-          <span className="flex items-center gap-2 font-semibold text-emerald-950">
-            <MapPin className="size-4 text-emerald-600" aria-hidden="true" />
-            {location.name}
-          </span>
-          <p className="mt-1 text-slate-600">{location.address}</p>
+      <div className="grid min-w-0 gap-2.5 sm:mt-3 sm:gap-3 lg:grid-cols-[18rem_minmax(0,1fr)] lg:items-start">
+        <div className="lg:hidden">
+          <AgentTrackPanel
+            steps={completedTrack}
+            displayStepIndex={displayStepIndex}
+            showMap={showMap}
+            className="rounded-xl border-emerald-100/90 bg-white/96 p-3"
+          />
         </div>
-        {description && (
-          <div className="rounded-lg border border-purple-100 bg-purple-50 p-3 text-slate-700">
-            {description}
-          </div>
-        )}
-        </div>
-      )}
 
-      <div className="mt-3">
-        <AnimatePresence mode="wait">
-          {showMap ? (
-            <FinalMapReveal
-              key="map"
-              issue={issue}
-              location={location}
-              description={description}
-            />
-          ) : (
-            <AnalysisStep
-              key="analysis"
-              issue={issue}
-              imagePreviewUrl={imagePreviewUrl}
-              currentStep={currentStep}
-              streamState={streamState}
-            />
+        <div className="hidden lg:block">
+          <AgentTrackPanel
+            steps={completedTrack}
+            displayStepIndex={displayStepIndex}
+            showMap={showMap}
+          />
+        </div>
+
+        <div className="grid min-w-0 gap-3">
+          {!showMap && (
+            <div className="hidden gap-2 text-sm sm:grid sm:grid-cols-2">
+              <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                <span className="flex items-center gap-2 font-semibold text-emerald-950">
+                  <MapPin className="size-4 text-emerald-600" aria-hidden="true" />
+                  {location.name}
+                </span>
+                <p className="mt-1 line-clamp-2 text-slate-600">{location.address}</p>
+              </div>
+              <div className="rounded-xl border border-teal-100 bg-teal-50 p-3 text-slate-700 shadow-sm">
+                <span className="flex items-center gap-2 text-xs font-semibold uppercase text-teal-700">
+                  <GitBranch className="size-3.5" aria-hidden="true" />
+                  Date pentru analiza
+                </span>
+                <p className="mt-1 line-clamp-2 text-sm">
+                  {description || 'Fotografia si locatia sunt suficiente pentru analiza.'}
+                </p>
+              </div>
+            </div>
           )}
-        </AnimatePresence>
+
+          <AnimatePresence mode="wait">
+            {showMap ? (
+              <FinalMapReveal
+                key="map"
+                issue={issue}
+                location={location}
+                description={description}
+              />
+            ) : (
+              <AnalysisStep
+                key={currentStep.agentName}
+                issue={issue}
+                imagePreviewUrl={imagePreviewUrl}
+                currentStep={currentStep}
+                streamState={streamState}
+              />
+            )}
+          </AnimatePresence>
+        </div>
       </div>
 
       {!showMap && visibleCompletedSteps.length > 0 && (
-        <div className="mt-3 grid gap-2">
+        <div className="mt-3 hidden gap-2 lg:ml-[19rem] lg:grid">
           {visibleCompletedSteps.slice(-2).map((step) => (
             <div
               key={step.id}
-              className="flex items-start gap-2 rounded-lg border border-emerald-100 bg-white p-2 text-xs text-slate-600"
+              className="flex items-start gap-2 rounded-lg border border-emerald-100 bg-white p-2 text-xs text-slate-600 shadow-sm"
             >
               <Check className="mt-0.5 size-3.5 shrink-0 text-emerald-600" aria-hidden="true" />
               <span>
@@ -1244,9 +1577,9 @@ export function ReportAgentFlow({
       )}
 
       {!showMap && visibleCompletedSteps.length === 0 && (
-        <p className="mt-3 flex items-center justify-center rounded-lg border border-dashed border-emerald-200 bg-emerald-50/50 p-3 text-sm font-medium text-emerald-800">
+        <p className="mt-3 hidden items-center justify-center rounded-lg border border-dashed border-emerald-200 bg-emerald-50/50 p-3 text-sm font-medium text-emerald-800 sm:flex lg:ml-[19rem]">
           <CircleDashed className="mr-2 size-4 animate-spin" aria-hidden="true" />
-          Astept primul raspuns al agentilor.
+          Astept primul rezultat al verificarii.
         </p>
       )}
     </div>

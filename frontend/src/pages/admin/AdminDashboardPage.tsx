@@ -1,7 +1,8 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
+  Activity,
   ArrowLeft,
   BarChart3,
   Brain,
@@ -13,12 +14,22 @@ import {
   MapPinned,
   SearchX,
   Sparkles,
+  Target,
   TriangleAlert,
   Trophy,
-} from 'lucide-react'
+  Users,
+} from '@/components/icons/hugeicons'
 import { motion } from 'motion/react'
 import { Button } from '@/components/ui/button'
+import { TopNavigation } from '@/components/layout/TopNavigation'
 import { DemoSkeletonGrid, DemoState } from '@/components/ui/demo-state'
+import { CivicMap } from '@/components/map/CivicMap'
+import { type MapFilterKind, type MapMarkerKind } from '@/components/map/MapMarker'
+import {
+  filterCivicMapItemsForTimisoara,
+  getCivicMapItems,
+  type CivicMapItem,
+} from '@/data/civicMapData'
 import {
   fetchIssues,
   fetchMissions,
@@ -34,6 +45,7 @@ import {
   rewardsQueryKey,
 } from '@/lib/queryClient'
 import { roActor, roCategory } from '@/lib/locale'
+import { cn } from '@/lib/utils'
 
 type DashboardMetric = {
   id: string
@@ -48,6 +60,12 @@ type DashboardChartItem = {
   label: string
   value: number
   tone: DashboardMetric['tone']
+}
+
+type FilterOption = {
+  value: MapFilterKind
+  label: string
+  icon: typeof LayoutDashboard
 }
 
 type AiCitySummary = {
@@ -138,6 +156,7 @@ const demoMunicipalQueue: IssueResponse[] = [
     status: 'ai_analyzed',
     responsibleActor: 'city_hall',
     imageUrl: '',
+    imageUrls: [],
     afterImageUrl: null,
     latitude: 45.7603,
     longitude: 21.2422,
@@ -158,6 +177,15 @@ const demoMunicipalQueue: IssueResponse[] = [
   },
 ]
 
+const adminMapFilters: FilterOption[] = [
+  { value: 'all', label: 'Toate', icon: MapPinned },
+  { value: 'new', label: 'Noi', icon: TriangleAlert },
+  { value: 'in_progress', label: 'In lucru', icon: Flag },
+  { value: 'resolved', label: 'Rezolvate', icon: CheckCircle2 },
+  { value: 'mission', label: 'Misiuni', icon: Trophy },
+  { value: 'reward', label: 'Rewards', icon: Gift },
+]
+
 const demoAiCitySummary: AiCitySummary = {
   headline: 'Citire agent oras: Complex si Fabric au nevoie de urmatorul impuls civic.',
   summary:
@@ -172,12 +200,21 @@ const demoAiCitySummary: AiCitySummary = {
 }
 
 const toneClasses: Record<DashboardMetric['tone'], string> = {
-  emerald: 'bg-orange-50 text-emerald-700',
+  emerald: 'bg-emerald-50 text-emerald-700',
   lime: 'bg-lime-50 text-lime-700',
   teal: 'bg-teal-50 text-teal-700',
   sky: 'bg-sky-50 text-sky-700',
   amber: 'bg-amber-50 text-amber-700',
   rose: 'bg-rose-50 text-rose-700',
+}
+
+const softToneClasses: Record<DashboardMetric['tone'], string> = {
+  emerald: 'border-emerald-200 bg-emerald-50 text-emerald-800',
+  lime: 'border-lime-200 bg-lime-50 text-lime-800',
+  teal: 'border-teal-200 bg-teal-50 text-teal-800',
+  sky: 'border-sky-200 bg-sky-50 text-sky-800',
+  amber: 'border-amber-200 bg-amber-50 text-amber-800',
+  rose: 'border-rose-200 bg-rose-50 text-rose-800',
 }
 
 const chartBarClasses: Record<DashboardMetric['tone'], string> = {
@@ -187,6 +224,14 @@ const chartBarClasses: Record<DashboardMetric['tone'], string> = {
   sky: 'bg-sky-500',
   amber: 'bg-amber-500',
   rose: 'bg-rose-500',
+}
+
+const markerToneClasses: Record<MapMarkerKind, string> = {
+  new: 'bg-rose-500',
+  in_progress: 'bg-amber-400',
+  resolved: 'bg-emerald-600',
+  mission: 'bg-slate-700',
+  reward: 'bg-yellow-300',
 }
 
 function isResolvedIssue(issue: IssueResponse) {
@@ -228,6 +273,79 @@ function getTopValue(values: string[], fallback: string) {
   )[0]
 
   return topEntry?.[0] ?? fallback
+}
+
+function formatPercent(value: number) {
+  return `${Math.round(value)}%`
+}
+
+function createMapSummary(items: CivicMapItem[]) {
+  const openItems = items.filter((item) =>
+    ['new', 'in_progress'].includes(item.kind),
+  )
+  const urgentItems = items.filter((item) => item.kind === 'new')
+  const missionItems = items.filter((item) => item.kind === 'mission')
+  const resolvedItems = items.filter((item) => item.kind === 'resolved')
+
+  return {
+    open: openItems.length,
+    urgent: urgentItems.length,
+    missions: missionItems.length,
+    resolved: resolvedItems.length,
+  }
+}
+
+function getDashboardHealth(metrics: DashboardMetric[]) {
+  const totalIssues = metrics.find((metric) => metric.id === 'total-issues')?.value ?? 0
+  const resolved = metrics.find((metric) => metric.id === 'resolved')?.value ?? 0
+  const activeMissions =
+    metrics.find((metric) => metric.id === 'active-missions')?.value ?? 0
+  const newIssues = metrics.find((metric) => metric.id === 'new-issues')?.value ?? 0
+  const resolutionRate = totalIssues > 0 ? (resolved / totalIssues) * 100 : 0
+
+  return [
+    {
+      label: 'Rata rezolvare',
+      value: formatPercent(resolutionRate),
+      detail: `${resolved}/${totalIssues} probleme inchise`,
+      tone: 'lime' as const,
+      icon: CheckCircle2,
+    },
+    {
+      label: 'Misiuni active',
+      value: String(activeMissions),
+      detail: 'Actiuni comunitare in teren',
+      tone: 'teal' as const,
+      icon: Users,
+    },
+    {
+      label: 'Backlog nou',
+      value: String(newIssues),
+      detail: 'Rapoarte care cer triere',
+      tone: newIssues > 0 ? ('amber' as const) : ('emerald' as const),
+      icon: Activity,
+    },
+  ]
+}
+
+function mergeChartItems(items: DashboardChartItem[]) {
+  const mergedItems = new Map<string, DashboardChartItem>()
+
+  items.forEach((item) => {
+    const existingItem = mergedItems.get(item.label)
+
+    if (!existingItem) {
+      mergedItems.set(item.label, item)
+      return
+    }
+
+    mergedItems.set(item.label, {
+      ...existingItem,
+      value: existingItem.value + item.value,
+    })
+  })
+
+  return Array.from(mergedItems.values())
 }
 
 function createStatusChart(issues: IssueResponse[]): DashboardChartItem[] {
@@ -275,7 +393,7 @@ function createStatusChart(issues: IssueResponse[]): DashboardChartItem[] {
       tone: 'emerald' as const,
     }))
 
-  return [...knownItems, ...otherItems]
+  return mergeChartItems([...knownItems, ...otherItems])
 }
 
 function createCategoryChart(issues: IssueResponse[]): DashboardChartItem[] {
@@ -434,8 +552,8 @@ function createAiCitySummary(
     focusLabel: 'Pattern detected',
     focusValue: `${topCategory} reports around ${topZone}`,
     actionLabel: 'Suggested action',
-      actionValue:
-        activeMissions.length > 0
+    actionValue:
+      activeMissions.length > 0
         ? 'Boost the active missions already attached to reported issues.'
         : 'Create a mission from the most visible open issue and attach a reward.',
     confidenceLabel: 'Live data summary',
@@ -445,14 +563,14 @@ function createAiCitySummary(
 
 function DashboardStats({ metrics }: { metrics: DashboardMetric[] }) {
   return (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
       {metrics.map((metric, index) => {
         const MetricIcon = metric.icon
 
         return (
           <motion.article
             key={metric.id}
-            className="min-h-36 rounded-lg border border-emerald-200 bg-white p-4 shadow-sm"
+            className="min-h-32 rounded-lg border border-emerald-200 bg-white p-4 shadow-sm transition hover:border-emerald-300 hover:shadow-md"
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.03, duration: 0.22, ease: 'easeOut' }}
@@ -479,6 +597,90 @@ function DashboardStats({ metrics }: { metrics: DashboardMetric[] }) {
         )
       })}
     </div>
+  )
+}
+
+function DashboardHero({ metrics }: { metrics: DashboardMetric[] }) {
+  const healthItems = getDashboardHealth(metrics)
+
+  return (
+    <section className="rounded-lg border border-emerald-200 bg-white p-4 shadow-sm sm:p-5 lg:p-6">
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex min-w-0 items-start gap-3">
+          <span className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-sm">
+            <LayoutDashboard className="size-6" aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+              CiviTm admin
+            </p>
+            <h1 className="!m-0 !text-2xl font-semibold leading-tight text-emerald-950 sm:!text-3xl">
+              Dashboard operational
+            </h1>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+              Metrici, grafice si harta cu issues pentru triere rapida,
+              misiuni active si impact civic vizibil.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2 lg:justify-end">
+          <Button asChild variant="outline" size="sm" className="min-h-11">
+            <Link to="/">
+              <ArrowLeft data-icon="inline-start" aria-hidden="true" />
+              Live map
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="sm" className="min-h-11">
+            <Link to="/admin/issues">
+              <Target data-icon="inline-start" aria-hidden="true" />
+              Issues
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="sm" className="min-h-11">
+            <Link to="/admin/agents">
+              <Brain data-icon="inline-start" aria-hidden="true" />
+              Agents
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="sm" className="min-h-11">
+            <Link to="/zones">
+              <Trophy data-icon="inline-start" aria-hidden="true" />
+              Zones
+            </Link>
+          </Button>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-3 md:grid-cols-3">
+        {healthItems.map((item) => {
+          const ItemIcon = item.icon
+
+          return (
+            <div
+              key={item.label}
+              className={cn(
+                'rounded-lg border p-3',
+                softToneClasses[item.tone],
+              )}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs font-semibold uppercase tracking-wide">
+                  {item.label}
+                </p>
+                <ItemIcon className="size-4" aria-hidden="true" />
+              </div>
+              <p className="mt-2 text-2xl font-semibold text-emerald-950">
+                {item.value}
+              </p>
+              <p className="mt-1 text-sm leading-5 text-slate-600">
+                {item.detail}
+              </p>
+            </div>
+          )
+        })}
+      </div>
+    </section>
   )
 }
 
@@ -547,10 +749,200 @@ function DashboardCharts({
   categoryItems: DashboardChartItem[]
 }) {
   return (
-    <div className="grid gap-3 lg:grid-cols-2">
-      <DashboardBarChart title="Issues by status" items={statusItems} />
-      <DashboardBarChart title="Issues by category" items={categoryItems} />
-    </div>
+    <section className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-3 shadow-sm sm:p-4">
+      <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+            Grafice rapide
+          </p>
+          <h2 className="!m-0 !text-xl font-semibold text-emerald-950">
+            Distributie issues
+          </h2>
+        </div>
+        <p className="text-sm leading-6 text-slate-600">
+          Statusuri si categorii din datele live sau fallback demo.
+        </p>
+      </div>
+
+      <div className="grid gap-3 lg:grid-cols-2">
+        <DashboardBarChart title="Issues by status" items={statusItems} />
+        <DashboardBarChart title="Issues by category" items={categoryItems} />
+      </div>
+    </section>
+  )
+}
+
+function AdminIssuesMap({
+  items,
+  activeFilter,
+  selectedItemId,
+  onFilterChange,
+  onSelectedItemChange,
+}: {
+  items: CivicMapItem[]
+  activeFilter: MapFilterKind
+  selectedItemId: string | null
+  onFilterChange: (filter: MapFilterKind) => void
+  onSelectedItemChange: (itemId: string | null) => void
+}) {
+  const mapSummary = createMapSummary(items)
+  const selectedItem = selectedItemId
+    ? items.find((item) => item.id === selectedItemId)
+    : null
+  const featuredItems = items
+    .filter((item) => ['new', 'in_progress', 'mission'].includes(item.kind))
+    .slice(0, 4)
+
+  return (
+    <section className="grid gap-3 lg:grid-cols-[minmax(0,1.65fr)_minmax(18rem,0.85fr)]">
+      <div className="overflow-hidden rounded-lg border border-emerald-200 bg-white shadow-sm">
+        <div className="flex flex-col gap-3 border-b border-emerald-100 p-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+              Harta operationala
+            </p>
+            <h2 className="!m-0 !text-lg font-semibold text-emerald-950">
+              Issues pe harta Timisoarei
+            </h2>
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-1 lg:flex-wrap lg:justify-end lg:overflow-visible lg:pb-0">
+            {adminMapFilters.map((filter) => {
+              const FilterIcon = filter.icon
+              const isActive = activeFilter === filter.value
+
+              return (
+                <button
+                  key={filter.value}
+                  type="button"
+                  className={cn(
+                    'flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg border px-3 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-emerald-500/30',
+                    isActive
+                      ? 'border-emerald-500 bg-emerald-600 text-white shadow-sm'
+                      : 'border-emerald-200 bg-white text-emerald-800 hover:border-emerald-300 hover:bg-emerald-50',
+                  )}
+                  aria-pressed={isActive}
+                  onClick={() => onFilterChange(filter.value)}
+                >
+                  <FilterIcon className="size-4" aria-hidden="true" />
+                  {filter.label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        <div className="h-[32rem] min-h-[28rem] p-3 sm:h-[34rem]">
+          <CivicMap
+            items={items}
+            activeFilter={activeFilter}
+            selectedItemId={selectedItemId}
+            onSelectedItemChange={onSelectedItemChange}
+          />
+        </div>
+      </div>
+
+      <aside className="grid gap-3">
+        <div className="rounded-lg border border-emerald-200 bg-white p-4 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+            Semnale live
+          </p>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            {[
+              { label: 'Deschise', value: mapSummary.open, kind: 'in_progress' as const },
+              { label: 'Noi', value: mapSummary.urgent, kind: 'new' as const },
+              { label: 'Misiuni', value: mapSummary.missions, kind: 'mission' as const },
+              { label: 'Rezolvate', value: mapSummary.resolved, kind: 'resolved' as const },
+            ].map((item) => (
+              <button
+                key={item.label}
+                type="button"
+                className="min-h-20 rounded-lg border border-slate-200 bg-slate-50/70 p-3 text-left transition hover:border-emerald-200 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-emerald-500/30"
+                onClick={() => onFilterChange(item.kind)}
+              >
+                <span
+                  className={cn(
+                    'mb-2 block size-2.5 rounded-full',
+                    markerToneClasses[item.kind],
+                  )}
+                />
+                <span className="block text-2xl font-semibold text-emerald-950">
+                  {item.value}
+                </span>
+                <span className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  {item.label}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-emerald-200 bg-white p-4 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+            Prioritati pe teren
+          </p>
+          <div className="mt-3 grid gap-2">
+            {featuredItems.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className={cn(
+                  'rounded-lg border p-3 text-left transition focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-emerald-500/30',
+                  selectedItemId === item.id
+                    ? 'border-emerald-400 bg-emerald-50'
+                    : 'border-slate-200 bg-slate-50/70 hover:border-emerald-200 hover:bg-emerald-50/70',
+                )}
+                onClick={() => onSelectedItemChange(item.id)}
+              >
+                <div className="flex items-start gap-2">
+                  <span
+                    className={cn(
+                      'mt-1 size-2.5 shrink-0 rounded-full',
+                      markerToneClasses[item.kind],
+                    )}
+                  />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-emerald-950">
+                      {item.title}
+                    </p>
+                    <p className="mt-1 text-xs font-medium text-slate-500">
+                      {item.statusLabel} · {item.zone}
+                    </p>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-emerald-200 bg-white p-4 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+            Selectie curenta
+          </p>
+          {selectedItem ? (
+            <div className="mt-3">
+              <p className="text-base font-semibold leading-tight text-emerald-950">
+                {selectedItem.title}
+              </p>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                {selectedItem.description}
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <span className="rounded-md bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                  {selectedItem.statusLabel}
+                </span>
+                <span className="rounded-md bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">
+                  {selectedItem.zone}
+                </span>
+              </div>
+            </div>
+          ) : (
+            <p className="mt-3 text-sm leading-6 text-slate-600">
+              Alege un marker sau o prioritate pentru detalii rapide.
+            </p>
+          )}
+        </div>
+      </aside>
+    </section>
   )
 }
 
@@ -571,7 +963,7 @@ function MunicipalQueue({ issues }: { issues: IssueResponse[] }) {
             </h2>
           </div>
         </div>
-        <Button asChild variant="outline" size="sm">
+        <Button asChild variant="outline" size="sm" className="min-h-11 w-full sm:w-auto">
           <Link to="/admin/issues">Deschide lista</Link>
         </Button>
       </div>
@@ -607,7 +999,7 @@ function MunicipalQueue({ issues }: { issues: IssueResponse[] }) {
                   {issue.aiSummary ?? issue.description ?? 'Caz pregatit pentru inspectie.'}
                 </p>
               </div>
-              <Button asChild variant="outline" size="sm" className="self-start">
+              <Button asChild variant="outline" size="sm" className="min-h-11 self-start">
                 <Link to={`/issues/${issue.id}`}>Detalii</Link>
               </Button>
             </article>
@@ -674,6 +1066,8 @@ function AiCitySummaryCard({ summary }: { summary: AiCitySummary }) {
 }
 
 export function AdminDashboardPage() {
+  const [activeMapFilter, setActiveMapFilter] = useState<MapFilterKind>('all')
+  const [selectedMapItemId, setSelectedMapItemId] = useState<string | null>(null)
   const issuesQuery = useQuery({
     queryKey: issuesQueryKey,
     queryFn: fetchIssues,
@@ -745,6 +1139,17 @@ export function AdminDashboardPage() {
 
     return (issuesQuery.data ?? []).filter(isMunicipalIssue)
   }, [hasDataError, issuesQuery.data])
+  const mapItems = useMemo(
+    () =>
+      filterCivicMapItemsForTimisoara(
+        getCivicMapItems(
+          !isApiConfigured || hasDataError ? [] : (issuesQuery.data ?? []),
+          !isApiConfigured || hasDataError ? [] : (missionsQuery.data ?? []),
+        ),
+        'all',
+      ),
+    [hasDataError, issuesQuery.data, missionsQuery.data],
+  )
   const hasEmptyLiveDashboard =
     isApiConfigured &&
     !isLoading &&
@@ -759,36 +1164,8 @@ export function AdminDashboardPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.25, ease: 'easeOut' }}
       >
-        <div className="flex flex-col gap-4 rounded-lg border border-emerald-200 bg-white p-4 shadow-sm lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center gap-3">
-            <span className="flex size-10 items-center justify-center rounded-lg bg-emerald-500 text-white">
-              <LayoutDashboard className="size-5" aria-hidden="true" />
-            </span>
-            <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
-                CiviTm admin
-              </p>
-              <h1 className="!m-0 !text-2xl font-semibold leading-tight text-emerald-950">
-                Dashboard overview
-              </h1>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Button asChild variant="outline" size="sm">
-              <Link to="/">
-                <ArrowLeft data-icon="inline-start" aria-hidden="true" />
-                Live map
-              </Link>
-            </Button>
-            <Button asChild variant="outline" size="sm">
-              <Link to="/zones">
-                <Trophy data-icon="inline-start" aria-hidden="true" />
-                Zones
-              </Link>
-            </Button>
-          </div>
-        </div>
+        <TopNavigation />
+        <DashboardHero metrics={metrics} />
 
         {hasDataError && isApiConfigured && (
           <DemoState
@@ -810,18 +1187,26 @@ export function AdminDashboardPage() {
           />
         )}
 
+        <DashboardCharts
+          statusItems={charts.statusItems}
+          categoryItems={charts.categoryItems}
+        />
+
         {isLoading ? (
           <DemoSkeletonGrid items={6} className="sm:grid-cols-2 xl:grid-cols-3" />
         ) : (
           <DashboardStats metrics={metrics} />
         )}
 
-        <MunicipalQueue issues={municipalQueue} />
-
-        <DashboardCharts
-          statusItems={charts.statusItems}
-          categoryItems={charts.categoryItems}
+        <AdminIssuesMap
+          items={mapItems}
+          activeFilter={activeMapFilter}
+          selectedItemId={selectedMapItemId}
+          onFilterChange={setActiveMapFilter}
+          onSelectedItemChange={setSelectedMapItemId}
         />
+
+        <MunicipalQueue issues={municipalQueue} />
 
         <AiCitySummaryCard summary={aiSummary} />
       </motion.section>

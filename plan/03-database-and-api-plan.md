@@ -11,6 +11,7 @@
 ### Issues
 
 - [x] `Issues`: Id, Title, Description, Category, Severity, Status, ResponsibleActor, ImageUrl, AfterImageUrl, Latitude, Longitude, LocationPoint, ZoneId, CreatedByUserId, ConfirmedCount, DuplicateCount, CreatedAt, UpdatedAt, ResolvedAt.
+- [x] `IssueImages`: Id, IssueId, Url, ContentHash, FileName, ContentType, SortOrder, CreatedAt.
 - [x] `IssueAiAnalyses`: Id, IssueId, Category, Severity, Summary, ResponsibleActor, SuggestedAction, Confidence, IsUrgent, RewardEligible, RawResponseJson, CreatedAt.
 - [x] `AgentRuns`: Id, IssueId, Status, StartedAt, CompletedAt, CreatedAt.
 - [x] `AgentSteps`: Id, AgentRunId, AgentName, Status, InputJson, OutputJson, Message, StartedAt, CompletedAt, Order.
@@ -59,6 +60,7 @@
 - [x] În MVP, poți salva lat/lng numeric și folosi calcul simplificat dacă PostGIS întârzie.
 - [x] Păstrează `LocationPoint` pentru migrarea ușoară la PostGIS.
 - [x] Imaginile raportate se salvează în Supabase Storage, iar URL-ul se persistă pe issue.
+- [x] Issue-urile pot păstra mai multe imagini, cu `ImageUrl` ca imagine principală pentru compatibilitate.
 - [x] Demo seed data trebuie să existe chiar dacă integrarea externă e incompletă.
 
 ## API endpoints MVP
@@ -126,16 +128,16 @@
 
 - [ ] `GET /api/partners`.
 - [ ] `GET /api/partners/{id}`.
-- [ ] `GET /api/partners/dashboard`.
+- [x] `GET /api/partners/dashboard`.
 - [ ] `POST /api/partners/rewards`.
 - [ ] `PATCH /api/partners/rewards/{id}`.
 
 ### Zones
 
-- [ ] `GET /api/zones`.
-- [ ] `GET /api/zones/{id}`.
-- [ ] `GET /api/zones/{id}/issues`.
-- [ ] `GET /api/zones/{id}/missions`.
+- [x] `GET /api/zones`.
+- [x] `GET /api/zones/{id}`.
+- [x] `GET /api/zones/{id}/issues`.
+- [x] `GET /api/zones/{id}/missions`.
 - [x] `GET /api/zones/leaderboard`.
 
 ### Dashboard
@@ -194,6 +196,7 @@
 - [ ] Creează `DuplicateDetectionService`.
 - [ ] Adaugă query pentru issues nerezolvate la 100-300 metri pe lat/lng numeric.
 - [ ] Compară categorie, status și distanță.
+- [x] Compară și hash-ul imaginilor când există fotografii identice.
 - [ ] Actualizează `Issues.DuplicateCount`.
 - [ ] Setează status `duplicate_detected` doar pentru match-uri suficient de clare.
 - [ ] Scrie pas `Duplicate Agent` în `AgentSteps`.
@@ -201,10 +204,10 @@
 
 ### Role-protected backend
 
-- [ ] Configurează authorization policies pentru `admin` și `partner`.
-- [ ] Aplică policy `admin` pe dashboard/admin endpoints.
-- [ ] Aplică policy `partner` pe partner endpoints.
-- [ ] Returnează 403 clar pentru roluri insuficiente.
+- [x] Configurează authorization policies pentru `admin` și `partner`.
+- [x] Aplică policy `admin` pe dashboard/admin endpoints.
+- [x] Aplică policy `partner` pe partner endpoints.
+- [x] Returnează 403 clar pentru roluri insuficiente.
 
 ### Endpointuri lipsă pentru rute
 
@@ -212,10 +215,10 @@
 - [ ] `GET /api/issues/{id}/activity`.
 - [ ] `GET /api/missions/active`.
 - [ ] `POST /api/missions/{id}/leave`.
-- [ ] `GET /api/zones`.
-- [ ] `GET /api/zones/{id}`.
-- [ ] `GET /api/zones/{id}/issues`.
-- [ ] `GET /api/zones/{id}/missions`.
+- [x] `GET /api/zones`.
+- [x] `GET /api/zones/{id}`.
+- [x] `GET /api/zones/{id}/issues`.
+- [x] `GET /api/zones/{id}/missions`.
 - [ ] `GET /api/admin/issues`.
 - [ ] `PATCH /api/admin/issues/{id}/status`.
-- [ ] `GET /api/partners/dashboard`.
+- [x] `GET /api/partners/dashboard`.

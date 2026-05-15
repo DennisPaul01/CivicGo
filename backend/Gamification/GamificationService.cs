@@ -8,6 +8,8 @@ public sealed class GamificationService(CivicGoDbContext dbContext)
 {
     private const int ValidReportPoints = 20;
     private const int AiAcceptedReportPoints = 10;
+    private const int DuplicateReportPoints = 8;
+    private const int DuplicateAiCheckedPoints = 2;
 
     public async Task<GamificationAwardResponse> ApplyReportRewardsAsync(
         Guid issueId,
@@ -32,39 +34,48 @@ public sealed class GamificationService(CivicGoDbContext dbContext)
         var pointAwards = new List<PointAwardResponse>();
         var unlockedBadges = new List<BadgeResponse>();
         var now = DateTimeOffset.UtcNow;
+        var isDuplicate = string.Equals(issue.Status, "duplicate_detected", StringComparison.OrdinalIgnoreCase) ||
+            issue.DuplicateCount > 0;
+        var reportPoints = isDuplicate ? DuplicateReportPoints : ValidReportPoints;
+        var reportReason = isDuplicate ? "Duplicate report" : "Valid report";
+        var reportSourceType = isDuplicate ? "duplicate_report" : "valid_report";
 
         if (await TryAddPointsAsync(
             user,
-            ValidReportPoints,
-            "Valid report",
-            "valid_report",
+            reportPoints,
+            reportReason,
+            reportSourceType,
             issue.Id,
             now,
             cancellationToken
         ))
         {
             pointAwards.Add(new PointAwardResponse(
-                ValidReportPoints,
-                "Valid report",
-                "valid_report"
+                reportPoints,
+                reportReason,
+                reportSourceType
             ));
         }
+
+        var aiPoints = isDuplicate ? DuplicateAiCheckedPoints : AiAcceptedReportPoints;
+        var aiReason = isDuplicate ? "Duplicate checked by AI" : "AI accepted report";
+        var aiSourceType = isDuplicate ? "duplicate_ai_checked" : "ai_accepted_report";
 
         if (issue.AiAnalyses.Count > 0 &&
             await TryAddPointsAsync(
                 user,
-                AiAcceptedReportPoints,
-                "AI accepted report",
-                "ai_accepted_report",
+                aiPoints,
+                aiReason,
+                aiSourceType,
                 issue.Id,
                 now,
                 cancellationToken
             ))
         {
             pointAwards.Add(new PointAwardResponse(
-                AiAcceptedReportPoints,
-                "AI accepted report",
-                "ai_accepted_report"
+                aiPoints,
+                aiReason,
+                aiSourceType
             ));
         }
 
@@ -174,11 +185,15 @@ public sealed class GamificationService(CivicGoDbContext dbContext)
         }
 
         var validReportCount = await dbContext.UserPointsHistory.CountAsync(
-            item => item.UserId == userId && item.SourceType == "valid_report",
+            item =>
+                item.UserId == userId &&
+                (item.SourceType == "valid_report" || item.SourceType == "duplicate_report"),
             cancellationToken
         );
         var pendingValidReportCount = dbContext.UserPointsHistory.Local.Count(
-            item => item.UserId == userId && item.SourceType == "valid_report"
+            item =>
+                item.UserId == userId &&
+                (item.SourceType == "valid_report" || item.SourceType == "duplicate_report")
         );
 
         if (validReportCount + pendingValidReportCount == 0)

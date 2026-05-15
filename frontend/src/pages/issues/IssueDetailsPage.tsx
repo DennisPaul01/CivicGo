@@ -1,6 +1,6 @@
 import { Link, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import type { LucideIcon } from 'lucide-react'
+import type { LucideIcon } from '@/components/icons/hugeicons'
 import {
   ArrowLeft,
   Bot,
@@ -12,9 +12,10 @@ import {
   MapPin,
   Sparkles,
   TriangleAlert,
-} from 'lucide-react'
+} from '@/components/icons/hugeicons'
 import { motion } from 'motion/react'
 import { AgentTimeline } from '@/components/agents/AgentTimeline'
+import { TopNavigation } from '@/components/layout/TopNavigation'
 import { Button } from '@/components/ui/button'
 import { DemoSkeletonGrid, DemoState } from '@/components/ui/demo-state'
 import {
@@ -75,14 +76,17 @@ export function IssueDetailsPage() {
 }
 
 function IssueDetails({ issue }: { issue: IssueResponse }) {
+  const imageUrls = issue.imageUrls.length > 0 ? issue.imageUrls : [issue.imageUrl].filter(Boolean)
+
   return (
     <main className="min-h-svh overflow-x-hidden bg-orange-50 px-4 py-5 text-slate-950 sm:px-6 lg:px-8">
       <motion.section
-        className="mx-auto grid w-full max-w-6xl gap-5"
+        className="mx-auto grid w-full max-w-6xl gap-5 pb-24 sm:pb-0"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.25, ease: 'easeOut' }}
       >
+        <TopNavigation />
         <div className="flex flex-col gap-4 rounded-lg border border-emerald-200 bg-white p-4 shadow-sm lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-3">
             <span className="flex size-10 items-center justify-center rounded-lg bg-emerald-500 text-white">
@@ -120,11 +124,25 @@ function IssueDetails({ issue }: { issue: IssueResponse }) {
           <section className="min-w-0 space-y-4">
             <div className="overflow-hidden rounded-lg border border-emerald-200 bg-white shadow-sm">
               {issue.imageUrl ? (
-                <img
-                  src={issue.imageUrl}
-                  alt=""
-                  className="h-72 w-full object-cover sm:h-96"
-                />
+                <div>
+                  <img
+                    src={imageUrls[0]}
+                    alt=""
+                    className="h-72 w-full object-cover sm:h-96"
+                  />
+                  {imageUrls.length > 1 && (
+                    <div className="grid grid-cols-3 gap-2 border-t border-emerald-100 bg-emerald-50/40 p-2 sm:grid-cols-6">
+                      {imageUrls.map((imageUrl, index) => (
+                        <img
+                          key={imageUrl}
+                          src={imageUrl}
+                          alt={`Fotografie raport ${index + 1}`}
+                          className="aspect-square rounded-md object-cover"
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
               ) : (
                 <div className="flex h-72 items-center justify-center bg-orange-50 text-emerald-700">
                   <ImageOff className="size-8" aria-hidden="true" />
@@ -186,6 +204,10 @@ function IssueDetails({ issue }: { issue: IssueResponse }) {
               </p>
               <dl className="mt-4 grid gap-3 text-sm">
                 <DetailRow label="Zona" value={issue.zoneName ?? 'Timisoara'} />
+                <DetailRow
+                  label="Locatie"
+                  value={`${issue.latitude.toFixed(5)}, ${issue.longitude.toFixed(5)}`}
+                />
                 <DetailRow label="Responsabil" value={roActor(issue.responsibleActor)} />
                 <DetailRow label="Creat" value={formatDate(issue.createdAt)} />
                 <DetailRow

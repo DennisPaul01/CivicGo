@@ -1,4 +1,4 @@
-import type { LucideIcon } from 'lucide-react'
+import type { LucideIcon } from '@/components/icons/hugeicons'
 import {
   ArrowLeft,
   CheckCircle2,
@@ -7,7 +7,7 @@ import {
   Sparkles,
   TriangleAlert,
   Wrench,
-} from 'lucide-react'
+} from '@/components/icons/hugeicons'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { TopNavigation } from '@/components/layout/TopNavigation'

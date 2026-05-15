@@ -1,4 +1,4 @@
-import type { LucideIcon } from 'lucide-react'
+import type { LucideIcon } from '@/components/icons/hugeicons'
 import { Link } from 'react-router-dom'
 import {
   CheckCircle2,
@@ -11,7 +11,7 @@ import {
   TriangleAlert,
   Users,
   X,
-} from 'lucide-react'
+} from '@/components/icons/hugeicons'
 import { AnimatePresence, motion } from 'motion/react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'

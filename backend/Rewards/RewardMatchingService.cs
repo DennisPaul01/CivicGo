@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CivicGo.Api.Agents;
 using CivicGo.Api.Data;
 using CivicGo.Api.Data.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -17,6 +18,7 @@ public sealed class RewardMatchingService(
 
     public async Task<RewardSummaryResponse?> MatchRewardForMissionAsync(
         Guid missionId,
+        RuntimeAgentConfig? agentConfig,
         CancellationToken cancellationToken
     )
     {
@@ -51,7 +53,7 @@ public sealed class RewardMatchingService(
                 (reward.Quantity <= 0 || reward.ClaimedCount < reward.Quantity)
             )
             .ToListAsync(cancellationToken);
-        var selectedReward = SelectReward(candidates, mission);
+        var selectedReward = SelectReward(candidates, mission, agentConfig);
 
         if (selectedReward is null)
         {
@@ -75,7 +77,7 @@ public sealed class RewardMatchingService(
             CreatedAt = now
         });
 
-        AddRewardAgentStep(mission, selectedReward, now);
+        AddRewardAgentStep(mission, selectedReward, agentConfig, now);
 
         if (!await TrySaveRewardMatchAsync(mission.Id, cancellationToken))
         {
@@ -83,6 +85,14 @@ public sealed class RewardMatchingService(
         }
 
         return RewardMapper.ToSummary(selectedReward);
+    }
+
+    public Task<RewardSummaryResponse?> MatchRewardForMissionAsync(
+        Guid missionId,
+        CancellationToken cancellationToken
+    )
+    {
+        return MatchRewardForMissionAsync(missionId, null, cancellationToken);
     }
 
     private async Task<bool> TrySaveRewardMatchAsync(
@@ -111,9 +121,29 @@ public sealed class RewardMatchingService(
 
     private static RewardEntity? SelectReward(
         IReadOnlyCollection<RewardEntity> candidates,
-        MissionEntity mission
+        MissionEntity mission,
+        RuntimeAgentConfig? agentConfig
     )
     {
+        var instructionText = agentConfig?.Instructions ?? string.Empty;
+        var preferSystem = instructionText.Contains("system", StringComparison.OrdinalIgnoreCase) ||
+            instructionText.Contains("sistem", StringComparison.OrdinalIgnoreCase);
+        var preferPartner = instructionText.Contains("partner", StringComparison.OrdinalIgnoreCase) ||
+            instructionText.Contains("partener", StringComparison.OrdinalIgnoreCase);
+
+        if (preferSystem && !preferPartner)
+        {
+            var systemReward = candidates
+                .Where(reward => reward.Type == "system")
+                .OrderBy(reward => reward.RequiredPoints)
+                .FirstOrDefault();
+
+            if (systemReward is not null)
+            {
+                return systemReward;
+            }
+        }
+
         var partnerRewards = candidates
             .Where(reward => reward.Type == "partner")
             .OrderByDescending(reward => GetPartnerScore(reward, mission))
@@ -184,6 +214,7 @@ public sealed class RewardMatchingService(
     private static void AddRewardAgentStep(
         MissionEntity mission,
         RewardEntity reward,
+        RuntimeAgentConfig? agentConfig,
         DateTimeOffset now
     )
     {
@@ -213,10 +244,15 @@ public sealed class RewardMatchingService(
                 mission.Title,
                 mission.Zone?.Name,
                 issue?.Category,
-                mission.ImpactPoints
+                mission.ImpactPoints,
+                adminInstructions = agentConfig?.Instructions,
+                configuredModel = agentConfig?.Model,
+                fallbackMode = agentConfig?.FallbackMode,
+                isEnabled = agentConfig?.IsEnabled ?? true
             }, JsonOptions),
             OutputJson = JsonSerializer.Serialize(new
             {
+                mode = agentConfig?.FallbackMode ?? "Seeded system or partner reward matching.",
                 reward.Id,
                 reward.Type,
                 reward.Title,

@@ -8,7 +8,7 @@ Flow complet după `POST /api/issues`:
 - [x] Creează `AgentRun`.
 - [x] Rulează Vision Agent.
 - [x] Rulează Triage Agent.
-- [ ] Rulează Duplicate Agent.
+- [x] Rulează Duplicate Agent.
 - [x] Rulează Mission Agent.
 - [x] Rulează Reward Agent.
 - [ ] Rulează City Insights Agent.
@@ -18,7 +18,7 @@ Flow complet după `POST /api/issues`:
 - [x] Potrivește reward.
 - [x] Acordă puncte, badges și rank progress.
 - [x] Publică item în activity feed.
-- [ ] Trimite evenimente SignalR.
+- [x] Trimite evenimente SignalR.
 
 ## Agents
 
@@ -37,10 +37,10 @@ Flow complet după `POST /api/issues`:
 
 ### Duplicate Agent
 
-- [ ] Caută issue-uri la 100-300 metri.
-- [ ] Compară categorie și status nerezolvat.
-- [ ] Returnează duplicate count și nearest distance.
-- [ ] Fallback: folosește query simplu pe lat/lng dacă PostGIS nu este gata.
+- [x] Caută issue-uri la 100-300 metri.
+- [x] Compară categorie și status nerezolvat.
+- [x] Returnează duplicate count și nearest distance.
+- [x] Fallback: folosește query simplu pe lat/lng dacă PostGIS nu este gata.
 
 ### Mission Agent
 
@@ -72,7 +72,7 @@ Timeline UI messages:
 
 - [x] Vision Agent: `Spotted the issue from your photo`.
 - [x] Triage Agent: `Found who can help`.
-- [ ] Duplicate Agent: `Checked nearby reports`.
+- [x] Duplicate Agent: `Checked nearby reports`.
 - [x] Mission Agent: `Created a community action`.
 - [x] Reward Agent: `Matched a local reward`.
 - [ ] City Agent: `Updated the zone score`.
@@ -81,32 +81,32 @@ Timeline UI messages:
 
 Hub:
 
-- [ ] `/civic-hub`.
+- [x] `/civic-hub`.
 
 Events:
 
-- [ ] `IssueCreated`.
-- [ ] `IssueAnalyzed`.
-- [ ] `AgentStepStarted`.
-- [ ] `AgentStepCompleted`.
-- [ ] `DuplicateDetected`.
-- [ ] `MissionCreated`.
-- [ ] `RewardMatched`.
-- [ ] `ZoneScoreUpdated`.
-- [ ] `IssueStatusChanged`.
-- [ ] `IssueResolved`.
+- [x] `IssueCreated`.
+- [x] `IssueAnalyzed`.
+- [x] `AgentStepStarted`.
+- [x] `AgentStepCompleted`.
+- [x] `DuplicateDetected`.
+- [x] `MissionCreated`.
+- [x] `RewardMatched`.
+- [x] `ZoneScoreUpdated`.
+- [x] `IssueStatusChanged`.
+- [x] `IssueResolved`.
 - [ ] `DashboardUpdated`.
-- [ ] `BadgeUnlocked`.
-- [ ] `RankChanged`.
-- [ ] `PointsAwarded`.
+- [x] `BadgeUnlocked`.
+- [x] `RankChanged`.
+- [x] `PointsAwarded`.
 
 Frontend behavior:
 
-- [ ] Ascultă evenimentele SignalR.
-- [ ] Actualizează public activity feed.
-- [ ] Actualizează marker-ele de hartă.
-- [ ] Actualizează selected issue panel.
-- [ ] Invalidează cache-uri React Query relevante.
+- [x] Ascultă evenimentele SignalR.
+- [x] Actualizează public activity feed.
+- [x] Actualizează marker-ele de hartă.
+- [x] Actualizează selected issue panel.
+- [x] Invalidează cache-uri React Query relevante.
 - [ ] Animează schimbările cu Framer Motion.
 
 Nu se emite:
@@ -119,6 +119,7 @@ Scoruri MVP:
 
 - [x] Valid report: `+20`.
 - [x] AI accepted report: `+10`.
+- [x] Duplicate report: puncte reduse `+8` raportare și `+2` verificare AI.
 - [ ] Confirm issue: `+5`.
 - [ ] Join mission: `+30`.
 - [ ] Complete mission: `+100`.
@@ -239,25 +240,25 @@ SignalR unstable:
 
 ### SignalR complet
 
-- [ ] Creează hub backend `/civic-hub`.
-- [ ] Emite `IssueCreated` imediat după salvarea issue-ului.
-- [ ] Emite `IssueAnalyzed` după Vision/Triage.
-- [ ] Emite `AgentStepStarted` și `AgentStepCompleted` pentru pașii agenților.
-- [ ] Emite `MissionCreated` după Mission Agent.
-- [ ] Emite `RewardMatched` după Reward Agent.
-- [ ] Emite `ZoneScoreUpdated` după modificarea scorului zonei.
-- [ ] Emite `BadgeUnlocked`, `RankChanged` și `PointsAwarded` după gamification.
-- [ ] Frontendul ascultă evenimentele și sincronizează map, feed, selected issue, dashboard și cache.
+- [x] Creează hub backend `/civic-hub`.
+- [x] Emite `IssueCreated` imediat după salvarea issue-ului.
+- [x] Emite `IssueAnalyzed` după Vision/Triage.
+- [x] Emite `AgentStepStarted` și `AgentStepCompleted` pentru pașii agenților.
+- [x] Emite `MissionCreated` după Mission Agent.
+- [x] Emite `RewardMatched` după Reward Agent.
+- [x] Emite `ZoneScoreUpdated` după modificarea scorului zonei.
+- [x] Emite `BadgeUnlocked`, `RankChanged` și `PointsAwarded` după gamification.
+- [x] Frontendul ascultă evenimentele și sincronizează map, feed, selected issue, dashboard și cache.
 
 ### Duplicate Agent real
 
-- [ ] Rulează Duplicate Agent între Triage Agent și Mission Agent.
-- [ ] Folosește radius 100-300 metri și comparație categorie/status.
-- [ ] Returnează duplicate count, nearest distance și nearest issue id.
-- [ ] Marchează status `duplicate_detected` când este cazul.
-- [ ] Scrie `Duplicate Agent` în timeline.
-- [ ] Emite `DuplicateDetected` prin SignalR.
-- [ ] Păstrează fallback lat/lng până la PostGIS.
+- [x] Rulează Duplicate Agent între Triage Agent și Mission Agent.
+- [x] Folosește radius 100-300 metri și comparație categorie/status.
+- [x] Returnează duplicate count, nearest distance și nearest issue id.
+- [x] Marchează status `duplicate_detected` când este cazul.
+- [x] Scrie `Duplicate Agent` în timeline.
+- [x] Emite `DuplicateDetected` prin SignalR.
+- [x] Păstrează fallback lat/lng până la PostGIS.
 
 ### City Agent live
 

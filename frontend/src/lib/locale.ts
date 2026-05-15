@@ -111,18 +111,33 @@ const rewardLabels: Record<string, string> = {
   'Civic notebook pack': 'Pachet de carnetele civice',
 }
 
+const missionTextLabels: Record<string, string> = {
+  'Clean-up Mehala park edge': 'Curatenie la marginea parcului Mehala',
+  'Community clean-up for the Mehala park edge reported in the live map.':
+    'Curatenie comunitara pentru marginea parcului din Mehala, raportata pe harta live.',
+  'Safe route Soarelui sidewalk sprint':
+    'Sprint pentru trotuarul sigur din Soarelui',
+  'Volunteers and the city team clear the blocked sidewalk on a school route.':
+    'Voluntarii si echipa orasului elibereaza trotuarul blocat de pe traseul spre scoala.',
+  'Fabric lighting safety walk': 'Tur de siguranta pentru iluminatul din Fabric',
+  'Evening safety walk to document broken lighting and confirm repair spots.':
+    'Tur de siguranta seara pentru documentarea iluminatului defect si confirmarea punctelor care trebuie reparate.',
+  'Temporary reward matching verification mission.':
+    'Misiune temporara pentru verificarea potrivirii recompensei.',
+}
+
 const pointReasonLabels: Record<string, string> = {
   'Valid report': 'Raport valid',
   'AI accepted report': 'Raport acceptat de AI',
 }
 
 const agentNameLabels: Record<string, string> = {
-  'Vision Agent': 'Agent vizual',
-  'Triage Agent': 'Agent de triere',
-  'Duplicate Agent': 'Agent de duplicate',
-  'Mission Agent': 'Agent misiuni',
-  'Reward Agent': 'Agent recompense',
-  'City Agent': 'Agent oras',
+  'Vision Agent': 'Verificare foto',
+  'Triage Agent': 'Triere',
+  'Duplicate Agent': 'Verificare duplicate',
+  'Mission Agent': 'Misiune',
+  'Reward Agent': 'Puncte si recompense',
+  'City Agent': 'Harta live',
 }
 
 const humanizedLabels: Record<string, string> = {
@@ -262,6 +277,22 @@ export function roBadge(value: string | null | undefined) {
 
 export function roReward(value: string | null | undefined) {
   return value ? rewardLabels[value] ?? value : ''
+}
+
+export function roMissionText(value: string | null | undefined) {
+  if (!value) {
+    return ''
+  }
+
+  const translated = (missionTextLabels[value] ?? value)
+    .replace(/^Clean-up (.+)$/, 'Curatenie in $1')
+
+  return Object.entries(humanizedLabels)
+    .sort(([first], [second]) => second.length - first.length)
+    .reduce(
+      (message, [english, romanian]) => message.replaceAll(english, romanian),
+      translated,
+    )
 }
 
 export function roPointReason(value: string | null | undefined) {

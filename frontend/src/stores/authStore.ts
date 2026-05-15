@@ -25,15 +25,25 @@ type AuthStore = {
   clearAuth: () => void
 }
 
+function createDisplayNameFromEmail(email: string) {
+  const namePart = email.split('@', 1)[0]?.replace(/[._-]+/g, ' ').trim()
+
+  return namePart || 'Cetatean civic'
+}
+
 function createProfileFromUser(user: User): LocalUserProfile {
+  const fullName =
+    typeof user.user_metadata.full_name === 'string' && user.user_metadata.full_name.trim()
+      ? user.user_metadata.full_name.trim()
+      : typeof user.user_metadata.name === 'string' && user.user_metadata.name.trim()
+        ? user.user_metadata.name.trim()
+        : createDisplayNameFromEmail(user.email ?? '')
+
   return {
     id: user.id,
     supabaseUserId: user.id,
     email: user.email ?? '',
-    fullName:
-      typeof user.user_metadata.full_name === 'string'
-        ? user.user_metadata.full_name
-        : 'Civic citizen',
+    fullName,
     role: 'citizen',
     points: 0,
     rankName: 'New Citizen',

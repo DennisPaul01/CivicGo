@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import type { Map as MapboxMap, Marker as MapboxMarker } from 'mapbox-gl'
-import { MapPin } from 'lucide-react'
+import { MapPin } from '@/components/icons/hugeicons'
 import { isMapboxConfigured, mapboxgl } from '@/lib/mapbox'
 import {
   MapMarker,
@@ -18,6 +18,13 @@ const TIMISOARA_MAX_BOUNDS: [[number, number], [number, number]] = [
 ]
 const MARKER_SPREAD_DISTANCE = 42
 const MAPBOX_CANVAS_SELECTOR = '.mapboxgl-canvas'
+const FALLBACK_MIN_MARKER_DISTANCE = 5.6
+const FALLBACK_BOUNDS = {
+  minLng: TIMISOARA_MAX_BOUNDS[0][0],
+  minLat: TIMISOARA_MAX_BOUNDS[0][1],
+  maxLng: TIMISOARA_MAX_BOUNDS[1][0],
+  maxLat: TIMISOARA_MAX_BOUNDS[1][1],
+}
 
 type MarkerRecord = {
   marker: MapboxMarker
@@ -33,10 +40,76 @@ type CivicMapProps = {
   highlightedItemId?: string | null
   focusItemId?: string | null
   markerRevealDelayMs?: number
+  isInteractive?: boolean
 }
 
 function shouldShowMarker(kind: MapMarkerKind, activeFilter: MapFilterKind) {
   return activeFilter === 'all' || activeFilter === kind
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max)
+}
+
+function projectToFallbackMap([lng, lat]: [number, number]) {
+  const x =
+    ((lng - FALLBACK_BOUNDS.minLng) /
+      (FALLBACK_BOUNDS.maxLng - FALLBACK_BOUNDS.minLng)) *
+    100
+  const y =
+    ((FALLBACK_BOUNDS.maxLat - lat) /
+      (FALLBACK_BOUNDS.maxLat - FALLBACK_BOUNDS.minLat)) *
+    100
+
+  return {
+    x: clamp(x, 5, 95),
+    y: clamp(y, 7, 93),
+  }
+}
+
+function getFallbackMarkerLayout(items: CivicMapItem[]) {
+  const positions = items.map((item) => ({
+    item,
+    ...projectToFallbackMap(item.coordinates),
+    offsetX: 0,
+    offsetY: 0,
+  }))
+  const visitedIds = new Set<string>()
+
+  positions.forEach((position) => {
+    if (visitedIds.has(position.item.id)) {
+      return
+    }
+
+    const nearbyPositions = positions.filter((candidate) => {
+      if (visitedIds.has(candidate.item.id)) {
+        return false
+      }
+
+      return (
+        Math.hypot(candidate.x - position.x, candidate.y - position.y) <=
+        FALLBACK_MIN_MARKER_DISTANCE
+      )
+    })
+
+    nearbyPositions.forEach((candidate) => visitedIds.add(candidate.item.id))
+
+    if (nearbyPositions.length <= 1) {
+      return
+    }
+
+    const radius = Math.min(34, 16 + nearbyPositions.length * 3)
+    const angleStep = (Math.PI * 2) / nearbyPositions.length
+
+    nearbyPositions.forEach((candidate, index) => {
+      const angle = -Math.PI / 2 + angleStep * index
+
+      candidate.offsetX = Math.cos(angle) * radius
+      candidate.offsetY = Math.sin(angle) * radius
+    })
+  })
+
+  return positions
 }
 
 function renderMarker(
@@ -51,6 +124,7 @@ function renderMarker(
     <MapMarker
       kind={item.kind}
       label={item.label}
+      duplicateCount={item.duplicateCount}
       isSelected={item.id === selectedItemId}
       isHighlighted={item.id === highlightedItemId}
       revealDelayMs={item.id === highlightedItemId ? markerRevealDelayMs : 0}
@@ -133,6 +207,135 @@ function preventMapCanvasFocus(container: HTMLDivElement) {
   }
 }
 
+function FallbackCivicMap({
+  items,
+  activeFilter,
+  selectedItemId,
+  onSelectedItemChange,
+  highlightedItemId = null,
+  focusItemId = null,
+  markerRevealDelayMs = 0,
+  hasMapError = false,
+}: CivicMapProps & { hasMapError?: boolean }) {
+  const visibleItems = useMemo(
+    () => items.filter((item) => shouldShowMarker(item.kind, activeFilter)),
+    [activeFilter, items],
+  )
+  const markerLayout = useMemo(
+    () => getFallbackMarkerLayout(visibleItems),
+    [visibleItems],
+  )
+  const selectedItem = selectedItemId
+    ? visibleItems.find((item) => item.id === selectedItemId)
+    : undefined
+  const focusedItem =
+    selectedItem ??
+    (focusItemId ? visibleItems.find((item) => item.id === focusItemId) : undefined)
+  const focusedPosition = focusedItem
+    ? markerLayout.find(({ item }) => item.id === focusedItem.id)
+    : undefined
+  const selectedPosition = selectedItem
+    ? markerLayout.find(({ item }) => item.id === selectedItem.id)
+    : undefined
+
+  useEffect(() => {
+    if (selectedItemId && !selectedItem) {
+      onSelectedItemChange(null)
+    }
+  }, [onSelectedItemChange, selectedItem, selectedItemId])
+
+  return (
+    <div
+      className="relative h-full min-h-80 w-full overflow-hidden rounded-lg bg-[#e9f6ee]"
+      aria-label="Fallback CiviTm map of Timisoara"
+      onClick={() => onSelectedItemChange(null)}
+    >
+      <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.52)_1px,transparent_1px),linear-gradient(0deg,rgba(255,255,255,0.52)_1px,transparent_1px)] bg-[size:76px_76px]" />
+      <div className="absolute inset-x-0 top-[18%] h-9 rotate-[-8deg] bg-white/70 shadow-sm" />
+      <div className="absolute left-[-6%] top-[55%] h-8 w-[112%] rotate-[11deg] bg-white/75 shadow-sm" />
+      <div className="absolute left-[48%] top-[-8%] h-[116%] w-8 rotate-[5deg] bg-white/65 shadow-sm" />
+      <div className="absolute left-[10%] top-[10%] h-28 w-36 rounded-[42%] border border-emerald-200/70 bg-emerald-100/75" />
+      <div className="absolute bottom-[12%] right-[9%] h-32 w-44 rounded-[44%] border border-emerald-200/70 bg-lime-100/75" />
+      <div className="absolute left-[54%] top-[35%] h-20 w-28 rounded-[45%] border border-cyan-100 bg-cyan-50/85" />
+
+      <div className="pointer-events-none absolute left-3 top-3 z-10 rounded-md border border-emerald-200 bg-white/92 px-3 py-2 text-xs font-semibold text-emerald-900 shadow-sm">
+        {hasMapError ? 'Mapbox unavailable. Demo map active.' : 'Mapbox token missing. Demo map active.'}
+      </div>
+
+      <div className="pointer-events-none absolute right-3 top-3 z-10 flex items-center gap-2 rounded-md border border-emerald-200 bg-white/92 px-3 py-2 text-xs font-bold text-slate-700 shadow-sm">
+        <MapPin className="size-4 text-emerald-600" aria-hidden="true" />
+        Timisoara
+      </div>
+
+      {markerLayout.map(({ item, x, y, offsetX, offsetY }) => (
+        <div
+          key={item.id}
+          className="absolute z-20"
+          style={{
+            left: `${x}%`,
+            top: `${y}%`,
+            transform: `translate(calc(-50% + ${offsetX}px), calc(-50% + ${offsetY}px))`,
+            zIndex:
+              item.id === selectedItemId || item.id === highlightedItemId ? 35 : 20,
+          }}
+        >
+          <MapMarker
+            kind={item.kind}
+            label={item.label}
+            duplicateCount={item.duplicateCount}
+            isSelected={item.id === selectedItemId}
+            isHighlighted={item.id === highlightedItemId}
+            revealDelayMs={item.id === highlightedItemId ? markerRevealDelayMs : 0}
+            onSelect={() => onSelectedItemChange(item.id)}
+          />
+        </div>
+      ))}
+
+      {focusedPosition && !selectedPosition && (
+        <div
+          className="pointer-events-none absolute z-10 size-24 rounded-full border border-emerald-400/40 bg-emerald-300/10"
+          style={{
+            left: `${focusedPosition.x}%`,
+            top: `${focusedPosition.y}%`,
+            transform: `translate(calc(-50% + ${focusedPosition.offsetX}px), calc(-50% + ${focusedPosition.offsetY}px))`,
+          }}
+        />
+      )}
+
+      {selectedItem && (
+        <div
+          className="pointer-events-auto absolute inset-x-2 bottom-20 z-50 sm:hidden"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <SelectedIssuePanel
+            item={selectedItem}
+            onClose={() => onSelectedItemChange(null)}
+            className="max-h-[min(24rem,calc(100svh-10rem))] overflow-y-auto rounded-xl shadow-xl shadow-slate-900/18"
+          />
+        </div>
+      )}
+
+      {selectedItem && selectedPosition && (
+        <div
+          className="pointer-events-auto absolute z-50 hidden sm:block"
+          style={{
+            left: `${selectedPosition.x}%`,
+            top: `${selectedPosition.y}%`,
+            transform: `translate(calc(-50% + ${selectedPosition.offsetX}px), calc(1.35rem + ${selectedPosition.offsetY}px))`,
+          }}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <SelectedIssuePanel
+            item={selectedItem}
+            onClose={() => onSelectedItemChange(null)}
+            className="max-h-[min(23rem,calc(100svh-7rem))] w-[min(20.5rem,calc(100vw-2rem))] overflow-y-auto shadow-lg shadow-slate-900/12"
+          />
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function CivicMap({
   items,
   activeFilter,
@@ -141,6 +344,7 @@ export function CivicMap({
   highlightedItemId = null,
   focusItemId = null,
   markerRevealDelayMs = 0,
+  isInteractive = true,
 }: CivicMapProps) {
   const mapShellRef = useRef<HTMLDivElement | null>(null)
   const mapContainerRef = useRef<HTMLDivElement | null>(null)
@@ -175,14 +379,12 @@ export function CivicMap({
       applyMarkerSpread(activeMap, markerRefs.current, activeFilter)
     }
 
-    const selectedItem = markerRefs.current.find(
-      ({ item }) => item.id === selectedItemIdRef.current,
-    )?.item
+    const selectedItem = items.find((item) => item.id === selectedItemIdRef.current)
 
     if (selectedItem && !shouldShowMarker(selectedItem.kind, activeFilter)) {
       onSelectedItemChange(null)
     }
-  }, [activeFilter, isMapReady, onSelectedItemChange])
+  }, [activeFilter, isMapReady, items, onSelectedItemChange])
 
   useEffect(() => {
     selectedItemIdRef.current = selectedItemId
@@ -245,18 +447,20 @@ export function CivicMap({
     activeMap.on('move', updateSelectedMarkerPosition)
     activeMap.on('resize', updateSelectedMarkerPosition)
 
-    activeMap.easeTo({
-      center: focusedItem.coordinates,
-      duration: 900,
-      essential: true,
-      padding: { top: 90, bottom: 190, left: 40, right: 40 },
-    })
+    if (isInteractive) {
+      activeMap.easeTo({
+        center: focusedItem.coordinates,
+        duration: 900,
+        essential: true,
+        padding: { top: 90, bottom: 190, left: 40, right: 40 },
+      })
+    }
 
     return () => {
       activeMap.off('move', updateSelectedMarkerPosition)
       activeMap.off('resize', updateSelectedMarkerPosition)
     }
-  }, [activeFilter, focusedItem, isMapReady, selectedItem])
+  }, [activeFilter, focusedItem, isInteractive, isMapReady, selectedItem])
 
   useEffect(() => {
     const activeMap = mapRef.current
@@ -383,6 +587,7 @@ export function CivicMap({
         minZoom: 11.6,
         maxZoom: 17,
         maxBounds: TIMISOARA_MAX_BOUNDS,
+        interactive: isInteractive,
       })
 
       const spreadVisibleMarkers = () => {
@@ -430,21 +635,20 @@ export function CivicMap({
       mapRef.current?.remove()
       mapRef.current = null
     }
-  }, [])
+  }, [isInteractive])
 
   if (!isMapboxConfigured() || mapError) {
     return (
-      <div className="flex h-full min-h-80 w-full items-center justify-center bg-orange-50 text-emerald-950">
-        <div className="mx-4 flex max-w-sm flex-col items-center gap-3 rounded-lg border border-emerald-200 bg-white/90 p-6 text-center shadow-sm">
-          <MapPin className="size-7 text-emerald-600" aria-hidden="true" />
-          <div>
-            <h1 className="text-lg font-semibold">Harta CiviTm este pregatita</h1>
-            <p className="mt-1 text-sm text-slate-600">
-              Adauga un token Mapbox pentru a afisa harta live a orasului.
-            </p>
-          </div>
-        </div>
-      </div>
+      <FallbackCivicMap
+        items={items}
+        activeFilter={activeFilter}
+        selectedItemId={selectedItemId}
+        onSelectedItemChange={onSelectedItemChange}
+        highlightedItemId={highlightedItemId}
+        focusItemId={focusItemId}
+        markerRevealDelayMs={markerRevealDelayMs}
+        hasMapError={mapError}
+      />
     )
   }
 
@@ -454,7 +658,20 @@ export function CivicMap({
 
       {selectedItem && selectedMarkerPosition && (
         <div
-          className="pointer-events-auto absolute z-50"
+          className="pointer-events-auto absolute inset-x-2 bottom-20 z-50 sm:hidden"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <SelectedIssuePanel
+            item={selectedItem}
+            onClose={() => onSelectedItemChange(null)}
+            className="max-h-[min(24rem,calc(100svh-10rem))] overflow-y-auto rounded-xl shadow-xl shadow-slate-900/18"
+          />
+        </div>
+      )}
+
+      {selectedItem && selectedMarkerPosition && (
+        <div
+          className="pointer-events-auto absolute z-50 hidden sm:block"
           style={{
             left: selectedMarkerPosition.x,
             top: selectedMarkerPosition.y,

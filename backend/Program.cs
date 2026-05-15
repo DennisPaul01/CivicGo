@@ -1,6 +1,8 @@
 using System.Security.Claims;
 using CivicGo.Api.Activity;
 using CivicGo.Api.Agents;
+using CivicGo.Api.Agents.Runtime;
+using CivicGo.Api.Agents.Tools;
 using CivicGo.Api.Ai;
 using CivicGo.Api.Auth;
 using CivicGo.Api.Dashboard;
@@ -14,6 +16,7 @@ using CivicGo.Api.Rewards;
 using CivicGo.Api.Storage;
 using CivicGo.Api.Zones;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
@@ -55,6 +58,7 @@ builder.Services.AddDbContext<CivicGoDbContext>(options =>
     options.UseNpgsql(civicGoDbConnectionString)
 );
 builder.Services.AddScoped<UserProfileService>();
+builder.Services.AddScoped<IAuthorizationHandler, LocalRoleAuthorizationHandler>();
 builder.Services.Configure<SupabaseStorageOptions>(options =>
 {
     options.Url = supabaseUrl;
@@ -81,7 +85,13 @@ builder.Services.AddScoped<MissionGenerationService>();
 builder.Services.AddScoped<RewardMatchingService>();
 builder.Services.AddScoped<GamificationService>();
 builder.Services.AddScoped<DuplicateDetectionService>();
-builder.Services.AddSingleton<IssueAgentPipelineService>();
+builder.Services.AddScoped<IssueAgentStepWriter>();
+builder.Services.AddScoped<AnalyzeIssueTool>();
+builder.Services.AddScoped<SearchNearbyIssuesTool>();
+builder.Services.AddScoped<CreateMissionTool>();
+builder.Services.AddScoped<MatchRewardTool>();
+builder.Services.AddScoped<UpdateZoneScoreTool>();
+builder.Services.AddSingleton<IssueAgentOrchestratorService>();
 builder.Services.AddSingleton<IssueEventStreamService>();
 
 builder.Services
@@ -104,7 +114,19 @@ builder.Services
         };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("AdminOnly", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.AddRequirements(new LocalRoleRequirement("admin"));
+    });
+    options.AddPolicy("PartnerOnly", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.AddRequirements(new LocalRoleRequirement("partner"));
+    });
+});
 
 var app = builder.Build();
 
@@ -144,6 +166,7 @@ app.MapGet("/api/me", async (ClaimsPrincipal user, UserProfileService profiles) 
 
 app.MapIssueEndpoints();
 app.MapAgentRunEndpoints();
+app.MapAdminAgentEndpoints();
 app.MapActivityEndpoints();
 app.MapMissionEndpoints();
 app.MapRewardEndpoints();

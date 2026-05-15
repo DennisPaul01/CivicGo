@@ -1,4 +1,4 @@
-import { Award, Sparkles, TrendingUp, Trophy } from 'lucide-react'
+import { Award, Sparkles, TrendingUp, Trophy } from '@/components/icons/hugeicons'
 import { motion } from 'motion/react'
 import type { GamificationAwardResponse } from '@/lib/api'
 import { roBadge, roPointReason, roRank } from '@/lib/locale'

@@ -106,8 +106,8 @@ Obiectivul pentru MVP este un demo stabil și convingător până vineri, **15 m
 
 ## Backlog critic post-audit
 
-- [ ] SignalR live events: hub backend `/civic-hub`, client SignalR în frontend și evenimente pentru map/feed/dashboard.
-- [ ] Duplicate Agent real: verificare issues apropiate, incrementare duplicate count, agent step și UI pentru duplicate.
-- [ ] Mapbox fallback complet: hartă stilizată fără token cu marker-e absolute, filtre, selected issue panel și bottom rail funcționale.
-- [ ] Role protected routes: `RoleProtectedRoute`, politici backend și restricții reale pentru admin/partner.
-- [ ] Rute și feature-uri lipsă: `/issues/:id`, `/command-center`, `/zones/:id`, `/missions`, `/missions/:id`, `/admin/issues`, partner dashboard real.
+- [x] SignalR live events: hub backend `/civic-hub`, client SignalR în frontend și evenimente pentru map/feed/dashboard.
+- [x] Duplicate Agent real: verificare issues apropiate, incrementare duplicate count, agent step și UI pentru duplicate.
+- [x] Mapbox fallback complet: hartă stilizată fără token cu marker-e absolute, filtre, selected issue panel și bottom rail funcționale.
+- [x] Role protected routes: `RoleProtectedRoute`, politici backend și restricții reale pentru admin/partner.
+- [x] Rute și feature-uri lipsă: `/issues/:id`, `/command-center`, `/zones/:id`, `/missions`, `/missions/:id`, `/admin/issues`, partner dashboard real.

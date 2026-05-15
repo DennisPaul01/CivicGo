@@ -6,20 +6,24 @@ import {
   ArrowLeft,
   Award,
   BadgeCheck,
+  CalendarDays,
   CheckCircle2,
   Gift,
   Leaf,
   LoaderCircle,
   LockKeyhole,
+  MapPin,
   Medal,
+  PackageCheck,
   PackageOpen,
   Sparkles,
   Star,
   Store,
   TriangleAlert,
   Trophy,
-} from 'lucide-react'
+} from '@/components/icons/hugeicons'
 import { Button } from '@/components/ui/button'
+import { TopNavigation } from '@/components/layout/TopNavigation'
 import { DemoSkeletonGrid, DemoState } from '@/components/ui/demo-state'
 import {
   claimReward,
@@ -35,6 +39,25 @@ import {
 import { roBadge, roRank, roReward } from '@/lib/locale'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/authStore'
+import cafeaImage from '@/assets/recomense/cafea.png'
+import cafeaGroupImage from '@/assets/recomense/cafea-2.png'
+import cofetarieNaomiImage from '@/assets/recomense/cofetarie-naomi.png'
+import desertImage from '@/assets/recomense/desert.png'
+import salaImage from '@/assets/recomense/sala.png'
+import firstReporterBadgeImage from '@/assets/badges/optimized/first-reporter.png'
+import aiScoutBadgeImage from '@/assets/badges/optimized/ai-scout.png'
+import cleanupHeroBadgeImage from '@/assets/badges/optimized/cleanup-hero.png'
+import beforeAfterBadgeImage from '@/assets/badges/optimized/before-after-hero.png'
+import problemSolverBadgeImage from '@/assets/badges/optimized/problem-solver.png'
+import trustedReporterBadgeImage from '@/assets/badges/optimized/trusted-reporter.png'
+import zoneChampionBadgeImage from '@/assets/badges/optimized/zone-champion.png'
+import newCitizenRankImage from '@/assets/ranks/optimized/new-citizen.png'
+import civicRookieRankImage from '@/assets/ranks/optimized/civic-rookie.png'
+import neighborhoodHelperRankImage from '@/assets/ranks/optimized/neighborhood-helper.png'
+import communityBuilderRankImage from '@/assets/ranks/optimized/community-builder.png'
+import cityGuardianRankImage from '@/assets/ranks/optimized/city-guardian.png'
+import civicHeroRankImage from '@/assets/ranks/optimized/civic-hero.png'
+import urbanLegendRankImage from '@/assets/ranks/optimized/urban-legend.png'
 
 type RewardsTab = 'system' | 'partner' | 'badges' | 'ranks' | 'claimed'
 type RewardCardState = 'available' | 'claimed' | 'locked' | 'sold_out'
@@ -56,55 +79,158 @@ const badgeItems = [
     name: 'First Reporter',
     description: 'Se deblocheaza dupa primul raport valid.',
     icon: BadgeCheck,
+    image: firstReporterBadgeImage,
     unlockedAtPoints: 1,
   },
   {
     name: 'AI Scout',
     description: 'Se deblocheaza dupa primul raport analizat de AI.',
     icon: Sparkles,
+    image: aiScoutBadgeImage,
     unlockedAtPoints: 100,
   },
   {
     name: 'Clean-up Hero',
     description: 'Se deblocheaza dupa prima misiune de curatenie.',
     icon: Leaf,
+    image: cleanupHeroBadgeImage,
     unlockedAtPoints: 300,
   },
   {
     name: 'Before/After Hero',
     description: 'Se deblocheaza dupa prima fotografie de dupa.',
     icon: Award,
+    image: beforeAfterBadgeImage,
     unlockedAtPoints: 700,
   },
   {
     name: 'Problem Solver',
     description: 'Se deblocheaza dupa prima problema rezolvata cu ajutorul tau.',
     icon: CheckCircle2,
+    image: problemSolverBadgeImage,
     unlockedAtPoints: 120,
   },
   {
     name: 'Trusted Reporter',
     description: 'Se deblocheaza dupa trei rapoarte valide in aceeasi zona.',
     icon: BadgeCheck,
+    image: trustedReporterBadgeImage,
     unlockedAtPoints: 300,
   },
   {
     name: 'Zone Champion',
     description: 'Se deblocheaza cand conduci punctajul saptamanal intr-o zona.',
     icon: Trophy,
+    image: zoneChampionBadgeImage,
     unlockedAtPoints: 700,
   },
 ]
 
 const rankThresholds = [
-  { name: 'New Citizen', minPoints: 0, icon: Leaf },
-  { name: 'Civic Rookie', minPoints: 100, icon: Star },
-  { name: 'Neighborhood Helper', minPoints: 300, icon: Medal },
-  { name: 'Community Builder', minPoints: 700, icon: Award },
-  { name: 'City Guardian', minPoints: 1500, icon: BadgeCheck },
-  { name: 'Civic Hero', minPoints: 3000, icon: Trophy },
-  { name: 'Urban Legend', minPoints: 6000, icon: Sparkles },
+  {
+    name: 'New Citizen',
+    minPoints: 0,
+    icon: Leaf,
+    image: newCitizenRankImage,
+    description: 'Primul pas in comunitate, pentru cetateni care incep sa raporteze.',
+  },
+  {
+    name: 'Civic Rookie',
+    minPoints: 100,
+    icon: Star,
+    image: civicRookieRankImage,
+    description: 'Ai deja ritm: rapoartele tale incep sa miste harta orasului.',
+  },
+  {
+    name: 'Neighborhood Helper',
+    minPoints: 300,
+    icon: Medal,
+    image: neighborhoodHelperRankImage,
+    description: 'Ajuti cartierul sa transforme problemele mici in actiuni clare.',
+  },
+  {
+    name: 'Community Builder',
+    minPoints: 700,
+    icon: Award,
+    image: communityBuilderRankImage,
+    description: 'Conectezi oameni, misiuni si solutii locale cu impact vizibil.',
+  },
+  {
+    name: 'City Guardian',
+    minPoints: 1500,
+    icon: BadgeCheck,
+    image: cityGuardianRankImage,
+    description: 'Protejezi zonele active si tii comunitatea aproape de probleme.',
+  },
+  {
+    name: 'Civic Hero',
+    minPoints: 3000,
+    icon: Trophy,
+    image: civicHeroRankImage,
+    description: 'Esti printre oamenii care duc misiunile civice pana la rezultat.',
+  },
+  {
+    name: 'Urban Legend',
+    minPoints: 6000,
+    icon: Sparkles,
+    image: urbanLegendRankImage,
+    description: 'Rank maxim pentru impact civic constant, vizibil in tot orasul.',
+  },
 ]
+
+const partnerRewardImages = [
+  {
+    matches: ['coffeelab tray', 'tray', 'tava', 'volunteer groups'],
+    src: cafeaGroupImage,
+    alt: 'Tava cu pahare de cafea CoffeeLab pregatita pentru voluntari',
+  },
+  {
+    matches: ['coffeelab', 'cappuccino', 'coffee', 'cafea'],
+    src: cafeaImage,
+    alt: 'Cafea CoffeeLab oferita ca recompensa locala',
+  },
+  {
+    matches: ['local gym', 'gym', 'day pass', 'sala'],
+    src: salaImage,
+    alt: 'Sala de fitness partenera pentru abonament de o zi',
+  },
+  {
+    matches: ['restaurant', 'dessert', 'desert'],
+    src: desertImage,
+    alt: 'Desert oferit de restaurantul partener',
+  },
+  {
+    matches: ['bookstore', 'cofetarie', 'naomi'],
+    src: cofetarieNaomiImage,
+    alt: 'Recompensa locala de la partenerul Naomi',
+  },
+  {
+    matches: ['coworking'],
+    src: cafeaGroupImage,
+    alt: 'Spatiu de lucru partener pentru cetateni activi',
+  },
+]
+
+function getPartnerRewardImage(reward: RewardResponse) {
+  if (reward.type !== 'partner') {
+    return null
+  }
+
+  const rewardText = [
+    reward.title,
+    reward.description,
+    reward.partner?.name,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+
+  return (
+    partnerRewardImages.find((image) =>
+      image.matches.some((match) => rewardText.includes(match)),
+    ) ?? partnerRewardImages[0]
+  )
+}
 
 function getRewardState(
   reward: RewardResponse,
@@ -149,6 +275,64 @@ function formatDate(value: string | null) {
   }).format(new Date(value))
 }
 
+function getClaimLabel(state: RewardCardState, missingPoints: number) {
+  if (state === 'available') {
+    return 'Disponibil'
+  }
+
+  if (state === 'claimed') {
+    return 'Revendicat'
+  }
+
+  if (state === 'sold_out') {
+    return 'Epuizat'
+  }
+
+  return missingPoints > 0 ? `${missingPoints} pct lipsa` : 'Blocat'
+}
+
+function MetricCard({
+  label,
+  value,
+  detail,
+  icon: Icon,
+  tone = 'emerald',
+}: {
+  label: string
+  value: string | number
+  detail: string
+  icon: typeof Gift
+  tone?: 'emerald' | 'sunshine' | 'coral'
+}) {
+  return (
+    <section className="rounded-xl border border-emerald-100/80 bg-white/90 p-3 shadow-sm shadow-slate-900/5 ring-1 ring-white/70 backdrop-blur">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[0.68rem] font-semibold uppercase tracking-wide text-emerald-700">
+            {label}
+          </p>
+          <p className="mt-1 text-xl font-semibold leading-none text-emerald-950 sm:text-2xl">
+            {value}
+          </p>
+        </div>
+        <span
+          className={cn(
+            'flex size-8 shrink-0 items-center justify-center rounded-lg sm:size-9',
+            tone === 'emerald' && 'bg-emerald-50 text-emerald-700',
+            tone === 'sunshine' && 'bg-yellow-50 text-yellow-700',
+            tone === 'coral' && 'bg-rose-50 text-rose-700',
+          )}
+        >
+          <Icon className="size-4 sm:size-4.5" aria-hidden="true" />
+        </span>
+      </div>
+      <p className="mt-2 text-xs font-medium leading-5 text-slate-600 sm:text-[0.8rem]">
+        {detail}
+      </p>
+    </section>
+  )
+}
+
 function RewardsGrid({
   rewards,
   points,
@@ -174,7 +358,7 @@ function RewardsGrid({
   }
 
   return (
-    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+    <div className="grid auto-rows-fr gap-5 md:grid-cols-2 xl:grid-cols-3">
       {rewards.map((reward) => (
         <RewardCard
           key={reward.id}
@@ -207,18 +391,69 @@ function RewardCard({
     ? 'Nelimitat'
     : `${Math.max(0, reward.quantity - reward.claimedCount)} ramase`
   const canClaim = state === 'available' && !isClaiming
+  const rewardImage = getPartnerRewardImage(reward)
+  const claimLabel = getClaimLabel(state, missingPoints)
 
   return (
     <motion.article
-      className="flex min-h-64 flex-col rounded-lg border border-emerald-200 bg-white p-4 shadow-sm"
+      className={cn(
+        'group flex min-h-80 flex-col overflow-hidden rounded-xl border bg-white shadow-sm shadow-slate-900/5 transition duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-900/8',
+        state === 'available'
+          ? 'border-emerald-200 ring-1 ring-emerald-100'
+          : 'border-slate-200',
+      )}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.24, ease: 'easeOut' }}
     >
-      <div className="flex items-start justify-between gap-3">
+      <div
+        className={cn(
+          'relative overflow-hidden',
+          rewardImage ? 'aspect-[16/9]' : 'min-h-28 bg-emerald-50',
+        )}
+      >
+        {rewardImage ? (
+          <img
+            src={rewardImage.src}
+            alt={rewardImage.alt}
+            className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
+            loading="lazy"
+          />
+        ) : (
+          <div className="flex h-full min-h-28 items-center justify-center">
+            <Sparkles className="size-12 text-emerald-600" aria-hidden="true" />
+          </div>
+        )}
+        <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-emerald-950/55 to-transparent" />
+        <div className="absolute left-3 top-3 flex items-center gap-2">
+          <span
+            className={cn(
+              'rounded-full px-2.5 py-1 text-xs font-bold ring-1 backdrop-blur',
+              reward.type === 'partner'
+                ? 'bg-yellow-50/95 text-yellow-800 ring-yellow-200'
+                : 'bg-emerald-50/95 text-emerald-800 ring-emerald-200',
+            )}
+          >
+            {reward.partner?.name ?? 'Sistem CiviTm'}
+          </span>
+        </div>
         <span
           className={cn(
-            'flex size-10 shrink-0 items-center justify-center rounded-lg',
+            'absolute bottom-3 right-3 rounded-full px-2.5 py-1 text-xs font-bold ring-1 backdrop-blur',
+            state === 'available' && 'bg-emerald-50/95 text-emerald-800 ring-emerald-200',
+            state === 'claimed' && 'bg-lime-50/95 text-lime-800 ring-lime-200',
+            state === 'locked' && 'bg-white/95 text-slate-700 ring-slate-200',
+            state === 'sold_out' && 'bg-rose-50/95 text-rose-800 ring-rose-200',
+          )}
+        >
+          {claimLabel}
+        </span>
+      </div>
+
+      <div className="flex items-start gap-3 p-4 pb-0">
+        <span
+          className={cn(
+            'flex size-10 shrink-0 items-center justify-center rounded-xl',
             reward.type === 'partner'
               ? 'bg-yellow-50 text-yellow-700'
               : 'bg-orange-50 text-emerald-700',
@@ -230,54 +465,47 @@ function RewardCard({
             <Sparkles className="size-5" aria-hidden="true" />
           )}
         </span>
-
-        <span
-          className={cn(
-            'rounded-md px-2 py-1 text-xs font-semibold ring-1',
-            state === 'available' && 'bg-orange-50 text-emerald-700 ring-emerald-200',
-            state === 'claimed' && 'bg-lime-50 text-lime-700 ring-lime-200',
-            state === 'locked' && 'bg-slate-50 text-slate-600 ring-slate-200',
-            state === 'sold_out' && 'bg-rose-50 text-rose-700 ring-rose-200',
-          )}
-        >
-          {state === 'available' && 'Disponibil'}
-          {state === 'claimed' && 'Revendicat'}
-          {state === 'locked' && 'Blocat'}
-          {state === 'sold_out' && 'Epuizat'}
-        </span>
+        <div className="min-w-0">
+          <h2 className="text-lg font-bold leading-tight text-slate-950">
+            {roReward(reward.title)}
+          </h2>
+          <p className="mt-1 line-clamp-3 text-sm leading-6 text-slate-600">
+            {reward.description}
+          </p>
+        </div>
       </div>
 
-      <div className="mt-4 min-w-0 flex-1">
-        <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
-          {reward.partner?.name ?? 'Sistem CiviTm'}
-        </p>
-        <h2 className="mt-1 text-lg font-semibold leading-tight text-emerald-950">
-          {roReward(reward.title)}
-        </h2>
-        <p className="mt-2 text-sm leading-6 text-slate-600">
-          {reward.description}
-        </p>
-      </div>
-
-      <div className="mt-4 grid gap-2 text-sm text-slate-600">
-        <div className="flex items-center justify-between rounded-md bg-orange-50 px-3 py-2">
-          <span>Necesare</span>
-          <span className="font-semibold text-emerald-800">
+      <div className="mt-4 grid flex-1 gap-2 px-4 text-sm text-slate-600">
+        <div className="flex items-center justify-between gap-3 rounded-md bg-emerald-50 px-3 py-2">
+          <span className="inline-flex items-center gap-2">
+            <Star className="size-4 text-emerald-600" aria-hidden="true" />
+            Necesare
+          </span>
+          <span className="shrink-0 font-semibold text-emerald-800">
             {reward.requiredPoints} pct
           </span>
         </div>
-        <div className="flex items-center justify-between rounded-md bg-slate-50 px-3 py-2">
-          <span>{reward.zoneName ?? 'Toate zonele'}</span>
-          <span>{formatDate(reward.expiresAt)}</span>
+        <div className="flex items-center justify-between gap-3 rounded-md bg-slate-50 px-3 py-2">
+          <span className="inline-flex min-w-0 items-center gap-2">
+            <MapPin className="size-4 shrink-0 text-emerald-600" aria-hidden="true" />
+            <span className="truncate">{reward.zoneName ?? 'Toate zonele'}</span>
+          </span>
+          <span className="inline-flex shrink-0 items-center gap-2">
+            <CalendarDays className="size-4 text-emerald-600" aria-hidden="true" />
+            {formatDate(reward.expiresAt)}
+          </span>
         </div>
-        <div className="flex items-center justify-between rounded-md bg-slate-50 px-3 py-2">
-          <span>Disponibilitate</span>
-          <span>{remaining}</span>
+        <div className="flex items-center justify-between gap-3 rounded-md bg-slate-50 px-3 py-2">
+          <span className="inline-flex items-center gap-2">
+            <PackageCheck className="size-4 text-emerald-600" aria-hidden="true" />
+            Disponibilitate
+          </span>
+          <span className="shrink-0">{remaining}</span>
         </div>
       </div>
 
       <Button
-        className="mt-4 bg-emerald-600 text-white hover:bg-emerald-700"
+        className="m-4 bg-emerald-600 text-white hover:bg-emerald-700"
         disabled={!canClaim}
         onClick={onClaim}
       >
@@ -331,24 +559,24 @@ function ClaimedRewardsList({ claims }: { claims: RewardClaimResponse[] }) {
   }
 
   return (
-    <div className="grid gap-3 md:grid-cols-2">
+    <div className="grid gap-5 md:grid-cols-2">
       {claims.map((claim) => (
         <article
           key={claim.id}
-          className="rounded-lg border border-lime-200 bg-white p-4 shadow-sm"
+          className="rounded-xl border border-emerald-200 bg-white p-4 shadow-sm shadow-slate-900/5 ring-1 ring-emerald-100"
         >
-          <div className="flex items-start gap-3">
-            <span className="flex size-10 items-center justify-center rounded-lg bg-lime-50 text-lime-700">
+          <div className="flex items-start gap-3 min-w-0">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
               <CheckCircle2 className="size-5" aria-hidden="true" />
             </span>
-            <div>
+            <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-wide text-lime-700">
                 Recompensa revendicata
               </p>
-              <h2 className="mt-1 text-lg font-semibold text-emerald-950">
+              <h2 className="mt-1 text-lg font-bold text-slate-950">
                 {roReward(claim.rewardTitle)}
               </h2>
-              <p className="mt-1 text-sm text-slate-600">
+              <p className="mt-1 break-words text-sm text-slate-600">
                 {claim.partnerName ?? 'Sistem CiviTm'} · cod {claim.code}
               </p>
             </div>
@@ -415,88 +643,147 @@ export function RewardsPage() {
     : 100
 
   return (
-    <main className="min-h-svh bg-orange-50 px-4 py-5 text-slate-950 sm:px-6 lg:px-8">
-      <section className="mx-auto grid w-full max-w-7xl gap-5">
-        <div className="flex flex-col gap-4 rounded-lg border border-emerald-200 bg-white p-4 shadow-sm lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center gap-3">
-            <span className="flex size-10 items-center justify-center rounded-lg bg-emerald-500 text-white">
-              <Gift className="size-5" aria-hidden="true" />
-            </span>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
-                Recompense CiviTm
-              </p>
-              <h1 className="text-2xl font-semibold text-emerald-950">
-                Marketplace de recompense
-              </h1>
+    <motion.main
+      className="min-h-svh w-full overflow-x-hidden bg-[linear-gradient(180deg,#fff9ef_0%,#f5fbf6_42%,#fffaf1_100%)] px-4 py-5 text-slate-950 sm:px-6 lg:px-8"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.35, ease: 'easeOut' }}
+    >
+      <section className="mx-auto grid w-full max-w-[calc(100vw-2rem)] gap-4 pb-24 sm:max-w-[calc(100vw-3rem)] sm:gap-5 sm:pb-0 lg:max-w-7xl">
+        <TopNavigation />
+
+        <div className="relative grid w-full gap-4 overflow-hidden rounded-2xl border border-emerald-100/80 bg-white/82 p-4 shadow-[0_14px_38px_rgba(15,23,42,0.06)] ring-1 ring-white/80 backdrop-blur lg:grid-cols-[minmax(0,1.45fr)_minmax(22rem,0.75fr)] lg:p-5">
+          <div
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-emerald-300/70 to-transparent"
+            aria-hidden="true"
+          />
+          <div className="flex min-w-0 flex-col justify-between gap-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <p className="inline-flex max-w-full items-center gap-2 rounded-full border border-emerald-200/80 bg-white/82 px-3 py-1 text-xs font-bold text-emerald-800 shadow-sm shadow-emerald-900/8">
+                  <span className="relative flex size-2.5" aria-hidden="true">
+                    <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+                    <span className="relative inline-flex size-2.5 rounded-full bg-emerald-500" />
+                  </span>
+                  <Gift className="size-4" aria-hidden="true" />
+                  Recompense CiviTm
+                </p>
+                <h1 className="mt-3 max-w-2xl text-[1.85rem] font-bold leading-[1.08] tracking-normal text-slate-950 min-[430px]:text-[2.15rem] sm:text-[2.55rem] lg:text-[2.85rem]">
+                  Puncte civice si recompense locale
+                </h1>
+                <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-slate-600 sm:text-[0.95rem]">
+                  Foloseste punctele castigate din rapoarte, misiuni si impact pe zone
+                  pentru badge-uri, rankuri si recompense locale.
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {['Badge-uri vizuale', 'Rank progress', 'Oferte locale'].map((label) => (
+                    <span
+                      key={label}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-emerald-100 bg-white/76 px-2.5 py-1 text-xs font-bold text-slate-700 shadow-sm shadow-slate-900/5"
+                    >
+                      <CheckCircle2 className="size-3.5 text-emerald-600" aria-hidden="true" />
+                      {label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex shrink-0 flex-col gap-2 min-[440px]:flex-row sm:pt-1 lg:flex-col">
+                <Button
+                  asChild
+                  variant="outline"
+                  className="h-10 border-slate-200 bg-white px-4 text-slate-900 shadow-sm shadow-slate-900/5 hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800"
+                >
+                  <Link to="/">
+                    <ArrowLeft data-icon="inline-start" aria-hidden="true" />
+                    Harta live
+                  </Link>
+                </Button>
+                <Button
+                  asChild
+                  className="h-10 border border-emerald-600 bg-emerald-600 px-4 text-white shadow-md shadow-emerald-900/16 hover:bg-emerald-700"
+                >
+                  <Link to="/report">
+                    <Leaf data-icon="inline-start" aria-hidden="true" />
+                    Raporteaza
+                  </Link>
+                </Button>
+              </div>
             </div>
-          </div>
 
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Button asChild variant="outline" size="sm">
-              <Link to="/">
-                <ArrowLeft data-icon="inline-start" aria-hidden="true" />
-                Harta live
-              </Link>
-            </Button>
-            <Button asChild className="bg-emerald-600 text-white hover:bg-emerald-700" size="sm">
-              <Link to="/report">
-                <Leaf data-icon="inline-start" aria-hidden="true" />
-                Raporteaza
-              </Link>
-            </Button>
-          </div>
-        </div>
-
-        <div className="grid gap-3 md:grid-cols-3">
-          <section className="rounded-lg border border-emerald-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
-              Puncte curente
-            </p>
-            <p className="mt-2 text-3xl font-semibold text-emerald-950">
-              {points}
-            </p>
-            <p className="mt-1 text-sm text-slate-600">Puncte civice gata de folosit.</p>
-          </section>
-
-          <section className="rounded-lg border border-emerald-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
-              Rank curent
-            </p>
-            <p className="mt-2 text-xl font-semibold text-emerald-950">
-              {roRank(profile?.rankName ?? currentRank.name)}
-            </p>
-            <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
-              <motion.div
-                className="h-full rounded-full bg-emerald-500"
-                initial={{ width: 0 }}
-                animate={{ width: `${progressPercent}%` }}
-                transition={{ duration: 0.45, ease: 'easeOut' }}
+            <div className="grid gap-2.5 sm:grid-cols-3">
+              <MetricCard
+                label="Puncte"
+                value={points}
+                detail="Gata de folosit pentru revendicari."
+                icon={Star}
+              />
+              <MetricCard
+                label="Revendicate"
+                value={claims.length}
+                detail="Coduri salvate in contul tau."
+                icon={CheckCircle2}
+                tone="sunshine"
+              />
+              <MetricCard
+                label="Badge-uri"
+                value={badgeItems.filter((badge) => points >= badge.unlockedAtPoints).length}
+                detail={`din ${badgeItems.length} disponibile.`}
+                icon={BadgeCheck}
+                tone="coral"
               />
             </div>
-          </section>
+          </div>
 
-          <section className="rounded-lg border border-emerald-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
-              Revendicate
-            </p>
-            <p className="mt-2 text-3xl font-semibold text-emerald-950">
-              {claims.length}
-            </p>
-            <p className="mt-1 text-sm text-slate-600">Recompense de sistem si parteneri.</p>
-          </section>
+          <aside className="rounded-2xl border border-emerald-100 bg-slate-950 p-4 text-white shadow-sm shadow-slate-900/10 lg:self-stretch">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-emerald-100">
+                  Rank curent
+                </p>
+                <p className="mt-1.5 text-lg font-semibold leading-tight sm:text-xl">
+                  {roRank(profile?.rankName ?? currentRank.name)}
+                </p>
+              </div>
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/12 text-yellow-200 ring-1 ring-white/15">
+                <Trophy className="size-5" aria-hidden="true" />
+              </span>
+            </div>
+
+            <div className="mt-3">
+              <div className="flex items-center justify-between gap-3 text-xs font-medium text-emerald-50">
+                <span>{currentRank.minPoints} pct</span>
+                <span>
+                  {nextRank ? `${nextRank.minPoints} pct` : 'Max rank'}
+                </span>
+              </div>
+              <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-white/12">
+                <motion.div
+                  className="h-full rounded-full bg-yellow-300"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progressPercent}%` }}
+                  transition={{ duration: 0.45, ease: 'easeOut' }}
+                />
+              </div>
+              <p className="mt-2.5 text-sm leading-6 text-emerald-50">
+                {nextRank
+                  ? `${nextRank.minPoints - points} puncte pana la ${roRank(nextRank.name)}.`
+                  : 'Ai deblocat toate rankurile din demo.'}
+              </p>
+            </div>
+          </aside>
         </div>
 
-        <div className="overflow-x-auto rounded-lg border border-emerald-200 bg-white p-2 shadow-sm">
-          <div className="flex min-w-max gap-1">
+        <div className="rounded-2xl border border-slate-200 bg-white/92 p-1.5 shadow-sm shadow-slate-900/8 backdrop-blur">
+          <div className="grid grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-5">
             {rewardTabs.map((tab) => (
               <button
                 key={tab.id}
                 type="button"
                 className={cn(
-                  'inline-flex h-10 items-center gap-2 rounded-md px-3 text-sm font-medium transition-colors',
+                  'inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-2.5 text-center text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-emerald-300/60 sm:text-sm',
                   activeTab === tab.id
-                    ? 'bg-emerald-600 text-white'
+                    ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-900/16'
                     : 'text-slate-600 hover:bg-emerald-50 hover:text-emerald-800',
                 )}
                 onClick={() => setActiveTab(tab.id)}
@@ -547,72 +834,203 @@ export function RewardsPage() {
         )}
 
         {activeTab === 'badges' && (
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="grid auto-rows-fr gap-4 sm:gap-5 md:grid-cols-2 xl:grid-cols-4">
             {badgeItems.map((badge) => {
               const unlocked = points >= badge.unlockedAtPoints
-              const BadgeIcon = badge.icon
 
               return (
-                <article
+                <motion.article
                   key={badge.name}
-                  className="rounded-lg border border-emerald-200 bg-white p-4 shadow-sm"
+                  className={cn(
+                    'group relative flex min-h-full flex-col overflow-hidden rounded-xl border bg-white/94 p-4 shadow-sm shadow-slate-900/5 transition duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-900/8 sm:p-5',
+                    unlocked
+                      ? 'border-emerald-200 ring-1 ring-emerald-100/90'
+                      : 'border-slate-200',
+                  )}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.24, ease: 'easeOut' }}
                 >
                   <span
-                    className={cn(
-                      'flex size-10 items-center justify-center rounded-lg',
-                      unlocked
-                        ? 'bg-lime-50 text-lime-700'
-                        : 'bg-slate-50 text-slate-500',
-                    )}
-                  >
-                    <BadgeIcon className="size-5" aria-hidden="true" />
-                  </span>
-                  <h2 className="mt-4 text-lg font-semibold text-emerald-950">
-                    {roBadge(badge.name)}
-                  </h2>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">
-                    {badge.description}
-                  </p>
-                  <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-emerald-700">
-                    {unlocked ? 'Deblocat' : `${badge.unlockedAtPoints} pct`}
-                  </p>
-                </article>
+                    className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(245,251,246,0.9)_0%,rgba(255,255,255,0)_56%)]"
+                    aria-hidden="true"
+                  />
+                  <span
+                    className="pointer-events-none absolute inset-x-5 top-0 h-px bg-gradient-to-r from-transparent via-emerald-300/70 to-transparent"
+                    aria-hidden="true"
+                  />
+                  <div className="relative z-10 flex flex-1 flex-col">
+                    <div className="flex items-start justify-between gap-3">
+                      <div
+                        className={cn(
+                          'flex size-28 shrink-0 items-center justify-center overflow-hidden rounded-full border bg-white p-2 shadow-lg shadow-slate-900/10 ring-4 transition duration-300 group-hover:scale-105 sm:size-32',
+                          unlocked
+                            ? 'border-emerald-100 ring-emerald-100/80'
+                            : 'border-slate-100 ring-slate-100/80',
+                        )}
+                      >
+                        <img
+                          src={badge.image}
+                          alt={`Badge ${roBadge(badge.name)}`}
+                          className={cn(
+                            'h-full w-full object-contain',
+                            !unlocked && 'grayscale opacity-60',
+                          )}
+                          loading="lazy"
+                        />
+                      </div>
+                      <badge.icon
+                        className={cn(
+                          'mt-1 size-5 shrink-0',
+                          unlocked ? 'text-emerald-600' : 'text-slate-400',
+                        )}
+                        aria-hidden="true"
+                      />
+                    </div>
+
+                    <div className="mt-5 flex min-w-0 flex-1 flex-col justify-between gap-5">
+                      <span
+                        className={cn(
+                          'inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ring-1 backdrop-blur',
+                          unlocked
+                            ? 'bg-emerald-50/90 text-emerald-800 ring-emerald-200'
+                            : 'bg-white/90 text-slate-700 ring-slate-200',
+                        )}
+                      >
+                        {unlocked ? (
+                          <CheckCircle2 className="size-4" aria-hidden="true" />
+                        ) : (
+                          <LockKeyhole className="size-4" aria-hidden="true" />
+                        )}
+                        {unlocked ? 'Deblocat' : `${badge.unlockedAtPoints} pct`}
+                      </span>
+
+                      <div>
+                        <h2 className="text-xl font-bold leading-tight text-slate-950">
+                          {roBadge(badge.name)}
+                        </h2>
+                        <p className="mt-2 text-sm font-medium leading-6 text-slate-600">
+                          {badge.description}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </motion.article>
               )
             })}
           </div>
         )}
 
         {activeTab === 'ranks' && (
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="grid auto-rows-fr gap-4 sm:gap-5 md:grid-cols-2 xl:grid-cols-4">
             {rankThresholds.map((rank) => {
               const unlocked = points >= rank.minPoints
+              const isCurrent = currentRank.name === rank.name
               const RankIcon = rank.icon
 
               return (
-                <article
+                <motion.article
                   key={rank.name}
                   className={cn(
-                    'rounded-lg border bg-white p-4 shadow-sm',
-                    unlocked ? 'border-emerald-200' : 'border-slate-200',
+                    'group relative flex min-h-full flex-col overflow-hidden rounded-xl border bg-white/94 p-4 shadow-sm shadow-slate-900/5 transition duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-900/8 sm:p-5',
+                    isCurrent
+                      ? 'border-yellow-300 ring-2 ring-yellow-100'
+                      : unlocked
+                        ? 'border-emerald-200 ring-1 ring-emerald-100'
+                        : 'border-slate-200',
                   )}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.24, ease: 'easeOut' }}
                 >
                   <span
-                    className={cn(
-                      'flex size-10 items-center justify-center rounded-lg',
-                      unlocked
-                        ? 'bg-orange-50 text-emerald-700'
-                        : 'bg-slate-50 text-slate-500',
-                    )}
-                  >
-                    <RankIcon className="size-5" aria-hidden="true" />
-                  </span>
-                  <h2 className="mt-4 text-lg font-semibold text-emerald-950">
-                    {roRank(rank.name)}
-                  </h2>
-                  <p className="mt-2 text-sm text-slate-600">
-                    Incepe de la {rank.minPoints} puncte civice.
-                  </p>
-                </article>
+                    className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(236,253,245,0.86)_0%,rgba(255,255,255,0)_60%)]"
+                    aria-hidden="true"
+                  />
+                  <span
+                    className="pointer-events-none absolute inset-x-5 top-0 h-px bg-gradient-to-r from-transparent via-yellow-300/80 to-transparent"
+                    aria-hidden="true"
+                  />
+                  <div className="relative z-10 flex flex-1 flex-col">
+                    <div className="flex items-start justify-between gap-3">
+                      <div
+                        className={cn(
+                          'flex size-32 shrink-0 items-center justify-center overflow-hidden rounded-full border bg-white p-2 shadow-lg shadow-slate-900/10 ring-4 transition duration-300 group-hover:scale-105 sm:size-36',
+                          isCurrent
+                            ? 'border-yellow-100 ring-yellow-100'
+                            : unlocked
+                              ? 'border-emerald-100 ring-emerald-100/80'
+                              : 'border-slate-100 ring-slate-100/80',
+                        )}
+                      >
+                        <img
+                          src={rank.image}
+                          alt={`Rank ${roRank(rank.name)}`}
+                          className={cn(
+                            'h-full w-full object-contain',
+                            !unlocked && 'grayscale opacity-55',
+                          )}
+                          loading="lazy"
+                        />
+                      </div>
+                      <span
+                        className={cn(
+                          'flex size-9 shrink-0 items-center justify-center rounded-lg',
+                          unlocked
+                            ? 'bg-yellow-50 text-yellow-700'
+                            : 'bg-slate-50 text-slate-500',
+                        )}
+                      >
+                        <RankIcon className="size-4" aria-hidden="true" />
+                      </span>
+                    </div>
+
+                    <div className="mt-5 flex min-w-0 flex-1 flex-col justify-between gap-5">
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <span
+                          className={cn(
+                            'inline-flex min-h-8 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ring-1 backdrop-blur',
+                            isCurrent
+                              ? 'bg-yellow-50/95 text-yellow-800 ring-yellow-200'
+                              : unlocked
+                                ? 'bg-emerald-50/95 text-emerald-800 ring-emerald-200'
+                                : 'bg-white/95 text-slate-700 ring-slate-200',
+                          )}
+                        >
+                          {isCurrent ? (
+                            <Trophy className="size-4" aria-hidden="true" />
+                          ) : unlocked ? (
+                            <CheckCircle2 className="size-4" aria-hidden="true" />
+                          ) : (
+                            <LockKeyhole className="size-4" aria-hidden="true" />
+                          )}
+                          {isCurrent ? 'Rank curent' : unlocked ? 'Deblocat' : `${rank.minPoints} pct`}
+                        </span>
+                      </div>
+
+                      <div>
+                        <h2 className="text-xl font-bold leading-tight text-slate-950">
+                          {roRank(rank.name)}
+                        </h2>
+                        <p className="mt-2 text-sm font-medium leading-6 text-slate-600">
+                          {rank.description}
+                        </p>
+                      </div>
+
+                      <div className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600 ring-1 ring-slate-100">
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="inline-flex items-center gap-2 font-semibold text-emerald-800">
+                            <Star className="size-4" aria-hidden="true" />
+                            Prag
+                          </span>
+                          <span className="shrink-0 font-bold text-slate-950">
+                            {rank.minPoints} pct
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </motion.article>
               )
             })}
           </div>
@@ -626,6 +1044,6 @@ export function RewardsPage() {
           <ClaimedRewardsList claims={claims} />
         )}
       </section>
-    </main>
+    </motion.main>
   )
 }

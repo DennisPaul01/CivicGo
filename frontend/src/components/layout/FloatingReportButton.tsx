@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button'
-import { Plus } from 'lucide-react'
+import { Plus } from '@/components/icons/hugeicons'
 import { Link } from 'react-router-dom'
 
 export function FloatingReportButton() {

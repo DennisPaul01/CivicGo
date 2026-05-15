@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using CivicGo.Api.Agents;
 using CivicGo.Api.Ai.Prompts;
 using CivicGo.Api.Data;
 using CivicGo.Api.Data.Entities;
@@ -49,6 +50,7 @@ public sealed class IssueAiAnalysisService(
 
     public async Task<IssueAiAnalysisResponse> AnalyzeIssueAsync(
         Guid issueId,
+        IReadOnlyDictionary<string, RuntimeAgentConfig>? agentConfigs,
         CancellationToken cancellationToken
     )
     {
@@ -68,7 +70,7 @@ public sealed class IssueAiAnalysisService(
             .OrderByDescending(analysis => analysis.CreatedAt)
             .FirstOrDefault();
 
-        if (existingAnalysis is not null && issue.Status == "ai_analyzed")
+        if (existingAnalysis is not null && issue.Status is "ai_analyzed" or "rejected")
         {
             if (issue.AgentRuns.Count == 0)
             {
@@ -78,9 +80,12 @@ public sealed class IssueAiAnalysisService(
             return ToResponse(existingAnalysis);
         }
 
-        var result = await GetAnalysisResultAsync(issue, cancellationToken);
+        agentConfigs ??= await LoadAgentConfigsAsync(cancellationToken);
+        var visionAgent = GetAgentConfig(agentConfigs, "vision", "Vision Agent");
+        var triageAgent = GetAgentConfig(agentConfigs, "triage", "Triage Agent");
+        var result = await GetAnalysisResultAsync(issue, visionAgent, triageAgent, cancellationToken);
         var startedAt = DateTimeOffset.UtcNow;
-        var run = CreateAgentRun(issue, result, startedAt);
+        var run = CreateAgentRun(issue, result, visionAgent, triageAgent, startedAt);
         var now = DateTimeOffset.UtcNow;
         var analysis = new IssueAiAnalysisEntity
         {
@@ -102,7 +107,7 @@ public sealed class IssueAiAnalysisService(
         issue.Severity = analysis.Severity;
         issue.ResponsibleActor = analysis.ResponsibleActor;
         issue.Title = CreateIssueTitle(analysis.Category, issue.Zone?.Name);
-        issue.Status = "ai_analyzed";
+        issue.Status = result.IsValidIssue ? "ai_analyzed" : "rejected";
         issue.UpdatedAt = now;
 
         dbContext.AgentRuns.Add(run);
@@ -110,9 +115,11 @@ public sealed class IssueAiAnalysisService(
         dbContext.PublicActivityFeedItems.Add(new PublicActivityFeedItemEntity
         {
             Id = Guid.NewGuid(),
-            Type = "issue_analyzed",
-            Title = "AI checked",
-            Message = $"AI checked a {analysis.Category.Replace('_', ' ')} issue in {issue.Zone?.Name ?? "Timisoara"}.",
+            Type = result.IsValidIssue ? "issue_analyzed" : "issue_rejected",
+            Title = result.IsValidIssue ? "AI checked" : "AI rejected",
+            Message = result.IsValidIssue
+                ? $"AI checked a {analysis.Category.Replace('_', ' ')} issue in {issue.Zone?.Name ?? "Timisoara"}."
+                : $"AI could not confirm a civic issue in {issue.Zone?.Name ?? "Timisoara"}.",
             RelatedIssueId = issue.Id,
             RelatedZoneId = issue.ZoneId,
             CreatedAt = now
@@ -123,37 +130,64 @@ public sealed class IssueAiAnalysisService(
         return ToResponse(analysis);
     }
 
-    private async Task<IssueAiAnalysisResult> GetAnalysisResultAsync(
-        IssueEntity issue,
+    public Task<IssueAiAnalysisResponse> AnalyzeIssueAsync(
+        Guid issueId,
         CancellationToken cancellationToken
     )
     {
+        return AnalyzeIssueAsync(issueId, null, cancellationToken);
+    }
+
+    private async Task<IssueAiAnalysisResult> GetAnalysisResultAsync(
+        IssueEntity issue,
+        RuntimeAgentConfig visionAgent,
+        RuntimeAgentConfig triageAgent,
+        CancellationToken cancellationToken
+    )
+    {
+        if (!visionAgent.IsEnabled || !triageAgent.IsEnabled)
+        {
+            var disabledAgents = new[] { visionAgent, triageAgent }
+                .Where(agent => !agent.IsEnabled)
+                .Select(agent => agent.Name)
+                .ToArray();
+
+            return CreateFallbackResult(
+                issue,
+                $"disabled_by_admin:{string.Join(",", disabledAgents)}",
+                visionAgent,
+                triageAgent
+            );
+        }
+
         if (string.IsNullOrWhiteSpace(openAiOptions.ApiKey))
         {
-            return CreateFallbackResult(issue, "missing_openai_key");
+            return CreateFallbackResult(issue, "missing_openai_key", visionAgent, triageAgent);
         }
 
         try
         {
-            return await AnalyzeWithOpenAiAsync(issue, cancellationToken);
+            return await AnalyzeWithOpenAiAsync(issue, visionAgent, triageAgent, cancellationToken);
         }
         catch (Exception exception)
         {
             logger.LogWarning(exception, "OpenAI analysis failed. Falling back for issue {IssueId}.", issue.Id);
 
-            return CreateFallbackResult(issue, "openai_failed");
+            return CreateFallbackResult(issue, "openai_failed", visionAgent, triageAgent);
         }
     }
 
     private async Task<IssueAiAnalysisResult> AnalyzeWithOpenAiAsync(
         IssueEntity issue,
+        RuntimeAgentConfig visionAgent,
+        RuntimeAgentConfig triageAgent,
         CancellationToken cancellationToken
     )
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, "responses");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", openAiOptions.ApiKey);
         request.Content = JsonContent.Create(
-            CreateOpenAiRequest(issue, openAiOptions.Model),
+            CreateOpenAiRequest(issue, GetOpenAiModel(visionAgent, triageAgent), visionAgent, triageAgent),
             options: JsonOptions
         );
 
@@ -179,7 +213,12 @@ public sealed class IssueAiAnalysisService(
         return NormalizeResult(parsed, responseJson);
     }
 
-    private static object CreateOpenAiRequest(IssueEntity issue, string model)
+    private static object CreateOpenAiRequest(
+        IssueEntity issue,
+        string model,
+        RuntimeAgentConfig visionAgent,
+        RuntimeAgentConfig triageAgent
+    )
     {
         return new Dictionary<string, object?>
         {
@@ -194,7 +233,11 @@ public sealed class IssueAiAnalysisService(
                         new Dictionary<string, object?>
                         {
                             ["type"] = "input_text",
-                            ["text"] = IssueAnalysisPromptBuilder.Build(issue)
+                            ["text"] = IssueAnalysisPromptBuilder.Build(
+                                issue,
+                                visionAgent.Instructions,
+                                triageAgent.Instructions
+                            )
                         },
                         new Dictionary<string, object?>
                         {
@@ -206,6 +249,23 @@ public sealed class IssueAiAnalysisService(
                 }
             }
         };
+    }
+
+    private string GetOpenAiModel(RuntimeAgentConfig visionAgent, RuntimeAgentConfig triageAgent)
+    {
+        if (!string.IsNullOrWhiteSpace(visionAgent.Model) &&
+            !visionAgent.Model.Equals("deterministic", StringComparison.OrdinalIgnoreCase))
+        {
+            return visionAgent.Model;
+        }
+
+        if (!string.IsNullOrWhiteSpace(triageAgent.Model) &&
+            !triageAgent.Model.Equals("deterministic", StringComparison.OrdinalIgnoreCase))
+        {
+            return triageAgent.Model;
+        }
+
+        return string.IsNullOrWhiteSpace(openAiOptions.Model) ? "gpt-4o-mini" : openAiOptions.Model;
     }
 
     private static string ExtractOutputText(string responseJson)
@@ -277,34 +337,90 @@ public sealed class IssueAiAnalysisService(
         );
         var confidence = NormalizeConfidence(dto.Confidence);
         var isUrgent = dto.IsUrgent ?? severity is "high" or "critical";
+        var isValidIssue = dto.IsValidIssue ?? true;
+        var invalidReason = isValidIssue
+            ? null
+            : Truncate(
+                dto.InvalidReason,
+                240,
+                "Imaginea nu confirma o problema civica raportabila."
+            );
+
+        var rawJson = JsonSerializer.Serialize(
+            new
+            {
+                source = "openai",
+                category = isValidIssue ? category : IssueCategories.Other,
+                severity = isValidIssue ? severity : "low",
+                summary = Truncate(
+                    dto.Summary,
+                    700,
+                    "AI checked this city issue and prepared it for civic follow-up."
+                ),
+                confidence,
+                isUrgent = isValidIssue && isUrgent,
+                responsibleActor = isValidIssue ? responsibleActor : "unknown",
+                suggestedAction = Truncate(
+                    dto.SuggestedAction,
+                    700,
+                    "Verifica raportul si trimite-l catre actiunea civica potrivita."
+                ),
+                rewardEligible = isValidIssue &&
+                    (dto.RewardEligible ?? IssueCategories.IsRewardEligible(category)),
+                isValidIssue,
+                invalidReason
+            },
+            JsonOptions
+        );
 
         return new IssueAiAnalysisResult(
-            category,
-            severity,
+            isValidIssue ? category : IssueCategories.Other,
+            isValidIssue ? severity : "low",
             Truncate(dto.Summary, 700, "AI checked this city issue and prepared it for civic follow-up."),
             confidence,
-            isUrgent,
-            responsibleActor,
+            isValidIssue && isUrgent,
+            isValidIssue ? responsibleActor : "unknown",
             Truncate(dto.SuggestedAction, 700, "Verifica raportul si trimite-l catre actiunea civica potrivita."),
-            dto.RewardEligible ?? IssueCategories.IsRewardEligible(category),
-            rawResponseJson,
+            isValidIssue && (dto.RewardEligible ?? IssueCategories.IsRewardEligible(category)),
+            isValidIssue,
+            invalidReason,
+            rawJson,
             false,
             "openai"
         );
     }
 
-    private static IssueAiAnalysisResult CreateFallbackResult(IssueEntity issue, string reason)
+    private static IssueAiAnalysisResult CreateFallbackResult(
+        IssueEntity issue,
+        string reason,
+        RuntimeAgentConfig? visionAgent = null,
+        RuntimeAgentConfig? triageAgent = null
+    )
     {
         var text = $"{issue.Description} {issue.Title}".ToLowerInvariant();
         var category = DetectCategory(text);
         var severity = DetectSeverity(text, category);
-        var responsibleActor = DetectResponsibleActor(category, severity);
+        var responsibleActor = DetectResponsibleActor(category, severity, text);
         var isUrgent = severity is "high" or "critical";
+        var rewardEligible = DetectRewardEligible(category, severity, responsibleActor);
+        var isValidIssue = DetectFallbackValidity(text, category);
+        if (!isValidIssue)
+        {
+            category = IssueCategories.Other;
+            severity = "low";
+            responsibleActor = "unknown";
+            isUrgent = false;
+            rewardEligible = false;
+        }
         var zoneName = issue.Zone?.Name ?? "Timisoara";
-        var summary = category == "other"
+        var summary = !isValidIssue
+            ? $"Imaginea sau descrierea nu confirma o problema civica in {zoneName}."
+            : category == "other"
             ? $"Problema raportata in {zoneName}, trimisa pentru verificare civica."
             : $"Problema de tip {HumanizeRo(category)} raportata in {zoneName}.";
-        var suggestedAction = responsibleActor switch
+        var suggestedAction = !isValidIssue
+            ? "Raportul este respins automat si poate fi retrimis cu o poza relevanta."
+            : responsibleActor switch
         {
             "emergency" => "Escaladeaza rapid si verifica riscul de siguranta la fata locului.",
             "city_hall" => "Trimite catre serviciile orasului pentru inspectie si rezolvare.",
@@ -318,6 +434,18 @@ public sealed class IssueAiAnalysisService(
             {
                 source = "fallback",
                 reason,
+                visionAgent = visionAgent is null ? null : new
+                {
+                    visionAgent.Name,
+                    visionAgent.IsEnabled,
+                    visionAgent.FallbackMode
+                },
+                triageAgent = triageAgent is null ? null : new
+                {
+                    triageAgent.Name,
+                    triageAgent.IsEnabled,
+                    triageAgent.FallbackMode
+                },
                 category,
                 severity,
                 summary,
@@ -325,7 +453,11 @@ public sealed class IssueAiAnalysisService(
                 isUrgent,
                 responsibleActor,
                 suggestedAction,
-                rewardEligible = IssueCategories.IsRewardEligible(category)
+                rewardEligible,
+                isValidIssue,
+                invalidReason = isValidIssue
+                    ? null
+                    : "Fallback-ul nu a gasit indicii textuale pentru o problema civica."
             },
             JsonOptions
         );
@@ -338,7 +470,11 @@ public sealed class IssueAiAnalysisService(
             isUrgent,
             responsibleActor,
             suggestedAction,
-            IssueCategories.IsRewardEligible(category),
+            rewardEligible,
+            isValidIssue,
+            isValidIssue
+                ? null
+                : "Fallback-ul nu a gasit indicii textuale pentru o problema civica.",
             rawJson,
             true,
             reason
@@ -348,6 +484,8 @@ public sealed class IssueAiAnalysisService(
     private static AgentRunEntity CreateAgentRun(
         IssueEntity issue,
         IssueAiAnalysisResult result,
+        RuntimeAgentConfig? visionAgent,
+        RuntimeAgentConfig? triageAgent,
         DateTimeOffset startedAt
     )
     {
@@ -366,7 +504,10 @@ public sealed class IssueAiAnalysisService(
         run.AgentSteps.Add(CreateStep(
             run.Id,
             "Vision Agent",
-            status,
+            GetStepStatus(visionAgent, status),
+            visionAgent?.IsEnabled == false
+                ? "Vision Agent este oprit din configuratia admin; analiza foloseste fallback determinist."
+                :
             result.UsedFallback
                 ? $"Fallback-ul a identificat o problema de tip {HumanizeRo(result.Category)}."
                 : $"A identificat din poza o problema de tip {HumanizeRo(result.Category)}.",
@@ -376,7 +517,11 @@ public sealed class IssueAiAnalysisService(
                 issue.Description,
                 zone = issue.Zone?.Name,
                 issue.Latitude,
-                issue.Longitude
+                issue.Longitude,
+                adminInstructions = visionAgent?.Instructions,
+                configuredModel = visionAgent?.Model,
+                fallbackMode = visionAgent?.FallbackMode,
+                isEnabled = visionAgent?.IsEnabled ?? true
             },
             new
             {
@@ -384,7 +529,9 @@ public sealed class IssueAiAnalysisService(
                 result.Severity,
                 result.Summary,
                 result.Confidence,
-                result.IsUrgent
+                result.IsUrgent,
+                result.IsValidIssue,
+                result.InvalidReason
             },
             startedAt,
             startedAt.AddMilliseconds(420),
@@ -394,7 +541,13 @@ public sealed class IssueAiAnalysisService(
         run.AgentSteps.Add(CreateStep(
             run.Id,
             "Triage Agent",
-            status,
+            result.IsValidIssue ? GetStepStatus(triageAgent, status) : "skipped",
+            triageAgent?.IsEnabled == false
+                ? "Triage Agent este oprit din configuratia admin; rutarea foloseste fallback determinist."
+                :
+            !result.IsValidIssue
+                ? "Raportul nu este o problema civica valida, asa ca trierea este sarita."
+                :
             result.UsedFallback
                 ? $"Fallback-ul a directionat cazul catre {HumanizeRo(result.ResponsibleActor)}."
                 : $"A gasit cine poate ajuta: {HumanizeRo(result.ResponsibleActor)}.",
@@ -402,7 +555,11 @@ public sealed class IssueAiAnalysisService(
             {
                 result.Category,
                 result.Severity,
-                issue.Zone?.Name
+                issue.Zone?.Name,
+                adminInstructions = triageAgent?.Instructions,
+                configuredModel = triageAgent?.Model,
+                fallbackMode = triageAgent?.FallbackMode,
+                isEnabled = triageAgent?.IsEnabled ?? true
             },
             new
             {
@@ -416,6 +573,11 @@ public sealed class IssueAiAnalysisService(
         ));
 
         return run;
+    }
+
+    private static string GetStepStatus(RuntimeAgentConfig? agentConfig, string fallbackStatus)
+    {
+        return agentConfig?.IsEnabled == false ? "skipped" : fallbackStatus;
     }
 
     private async Task CreateAgentRunFromAnalysisAsync(
@@ -433,12 +595,14 @@ public sealed class IssueAiAnalysisService(
             analysis.ResponsibleActor,
             analysis.SuggestedAction,
             analysis.RewardEligible,
+            ExtractIsValidIssue(analysis.RawResponseJson),
+            ExtractInvalidReason(analysis.RawResponseJson),
             analysis.RawResponseJson,
             analysis.RawResponseJson.Contains("\"source\":\"fallback\"", StringComparison.OrdinalIgnoreCase),
             "reconstructed"
         );
         var startedAt = analysis.CreatedAt.AddMilliseconds(-900);
-        var run = CreateAgentRun(issue, result, startedAt);
+        var run = CreateAgentRun(issue, result, null, null, startedAt);
         run.CompletedAt = analysis.CreatedAt;
 
         foreach (var step in run.AgentSteps)
@@ -451,6 +615,38 @@ public sealed class IssueAiAnalysisService(
 
         dbContext.AgentRuns.Add(run);
         await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task<IReadOnlyDictionary<string, RuntimeAgentConfig>> LoadAgentConfigsAsync(
+        CancellationToken cancellationToken
+    )
+    {
+        return await dbContext.AgentConfigs
+            .AsNoTracking()
+            .ToDictionaryAsync(
+                agent => agent.Key,
+                agent => new RuntimeAgentConfig(
+                    agent.Key,
+                    agent.Name,
+                    agent.Instructions,
+                    agent.Model,
+                    agent.FallbackMode,
+                    agent.IsEnabled
+                ),
+                StringComparer.OrdinalIgnoreCase,
+                cancellationToken
+            );
+    }
+
+    private static RuntimeAgentConfig GetAgentConfig(
+        IReadOnlyDictionary<string, RuntimeAgentConfig> agentConfigs,
+        string key,
+        string fallbackName
+    )
+    {
+        return agentConfigs.TryGetValue(key, out var config)
+            ? config
+            : RuntimeAgentConfig.Default(key, fallbackName);
     }
 
     private static AgentStepEntity CreateStep(
@@ -613,11 +809,18 @@ public sealed class IssueAiAnalysisService(
         return "medium";
     }
 
-    private static string DetectResponsibleActor(string category, string severity)
+    private static string DetectResponsibleActor(string category, string severity, string text)
     {
         if (severity == "critical")
         {
             return "emergency";
+        }
+
+        if (category is IssueCategories.SanitationPestSnow or "waste" &&
+            ContainsAny(text, "o sticla", "un ambalaj", "un gunoi", "gunoi mic", "hartie", "doza") &&
+            !ContainsAny(text, "moloz", "sac", "saci", "gramada", "containere", "cosuri pline"))
+        {
+            return "citizen";
         }
 
         return category switch
@@ -640,6 +843,52 @@ public sealed class IssueAiAnalysisService(
             "blocked_sidewalk" => "community",
             _ => "unknown"
         };
+    }
+
+    private static bool DetectRewardEligible(string category, string severity, string responsibleActor)
+    {
+        if (severity == "critical" || responsibleActor is "emergency" or "private_company" or "unknown")
+        {
+            return false;
+        }
+
+        if (responsibleActor is "community" or "community_and_city_hall")
+        {
+            return category is IssueCategories.SanitationPestSnow or
+                IssueCategories.EnvironmentPlaygroundsGreenSpaces or
+                IssueCategories.GaragesCemeteriesPublicToilets or
+                IssueCategories.PublicOrder or
+                "waste" or "graffiti" or "green_space_issue" or "green_space" or
+                "blocked_sidewalk" or "accessibility_issue" or "damaged_public_furniture";
+        }
+
+        return false;
+    }
+
+    private static bool DetectFallbackValidity(string text, string category)
+    {
+        if (category != IssueCategories.Other)
+        {
+            return true;
+        }
+
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        return ContainsAny(
+            text,
+            "problema",
+            "defect",
+            "stricat",
+            "rupt",
+            "pericol",
+            "bloc",
+            "murdar",
+            "sesizare",
+            "raport"
+        );
     }
 
     private static bool ContainsAny(string text, params string[] values)
@@ -723,8 +972,50 @@ public sealed class IssueAiAnalysisService(
         return text.Length <= maxLength ? text : text[..maxLength];
     }
 
+    private static bool ExtractIsValidIssue(string rawResponseJson)
+    {
+        if (string.IsNullOrWhiteSpace(rawResponseJson))
+        {
+            return true;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(rawResponseJson);
+            return !document.RootElement.TryGetProperty("isValidIssue", out var value) ||
+                value.ValueKind != JsonValueKind.False;
+        }
+        catch
+        {
+            return true;
+        }
+    }
+
+    private static string? ExtractInvalidReason(string rawResponseJson)
+    {
+        if (string.IsNullOrWhiteSpace(rawResponseJson))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(rawResponseJson);
+            return document.RootElement.TryGetProperty("invalidReason", out var value) &&
+                value.ValueKind == JsonValueKind.String
+                    ? value.GetString()
+                    : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     public static IssueAiAnalysisResponse ToResponse(IssueAiAnalysisEntity analysis)
     {
+        var isValidIssue = ExtractIsValidIssue(analysis.RawResponseJson);
+
         return new IssueAiAnalysisResponse(
             analysis.Id,
             analysis.IssueId,
@@ -736,6 +1027,8 @@ public sealed class IssueAiAnalysisService(
             NormalizeConfidence(analysis.Confidence),
             analysis.IsUrgent,
             analysis.RewardEligible,
+            isValidIssue,
+            isValidIssue ? null : ExtractInvalidReason(analysis.RawResponseJson),
             analysis.CreatedAt
         );
     }
@@ -749,6 +1042,8 @@ public sealed class IssueAiAnalysisService(
         string ResponsibleActor,
         string SuggestedAction,
         bool RewardEligible,
+        bool IsValidIssue,
+        string? InvalidReason,
         string RawResponseJson,
         bool UsedFallback,
         string Source
@@ -779,5 +1074,11 @@ public sealed class IssueAiAnalysisService(
 
         [JsonPropertyName("rewardEligible")]
         public bool? RewardEligible { get; init; }
+
+        [JsonPropertyName("isValidIssue")]
+        public bool? IsValidIssue { get; init; }
+
+        [JsonPropertyName("invalidReason")]
+        public string? InvalidReason { get; init; }
     }
 }

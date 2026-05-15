@@ -1,4 +1,4 @@
-import { Activity, CheckCircle2, Clock3, MapPinned, TrendingUp } from 'lucide-react'
+import { Activity, CheckCircle2, Clock3, MapPinned, TrendingUp } from '@/components/icons/hugeicons'
 import { motion } from 'motion/react'
 import { civicMapItems, type CivicMapItem } from '@/data/civicMapData'
 

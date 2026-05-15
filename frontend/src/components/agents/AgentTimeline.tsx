@@ -1,4 +1,4 @@
-import { Bot, Sparkles } from 'lucide-react'
+import { Bot, Sparkles } from '@/components/icons/hugeicons'
 import { motion } from 'motion/react'
 import { AgentStepCard } from '@/components/agents/AgentStepCard'
 import type { AgentRunResponse } from '@/lib/api'

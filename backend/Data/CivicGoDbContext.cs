@@ -8,7 +8,9 @@ public sealed class CivicGoDbContext(DbContextOptions<CivicGoDbContext> options)
 {
     public DbSet<UserEntity> Users => Set<UserEntity>();
     public DbSet<IssueEntity> Issues => Set<IssueEntity>();
+    public DbSet<IssueImageEntity> IssueImages => Set<IssueImageEntity>();
     public DbSet<IssueAiAnalysisEntity> IssueAiAnalyses => Set<IssueAiAnalysisEntity>();
+    public DbSet<AgentConfigEntity> AgentConfigs => Set<AgentConfigEntity>();
     public DbSet<AgentRunEntity> AgentRuns => Set<AgentRunEntity>();
     public DbSet<AgentStepEntity> AgentSteps => Set<AgentStepEntity>();
     public DbSet<MissionEntity> Missions => Set<MissionEntity>();
@@ -139,6 +141,22 @@ public sealed class CivicGoDbContext(DbContextOptions<CivicGoDbContext> options)
             entity.HasOne(issue => issue.CreatedByUser).WithMany().HasForeignKey(issue => issue.CreatedByUserId);
         });
 
+        modelBuilder.Entity<IssueImageEntity>(entity =>
+        {
+            entity.ToTable("IssueImages");
+            entity.HasKey(image => image.Id);
+            entity.Property(image => image.Url).HasMaxLength(2048).IsRequired();
+            entity.Property(image => image.ContentHash).HasMaxLength(128).IsRequired();
+            entity.Property(image => image.FileName).HasMaxLength(260);
+            entity.Property(image => image.ContentType).HasMaxLength(120);
+            entity.HasIndex(image => image.ContentHash);
+            entity.HasIndex(image => new { image.IssueId, image.SortOrder });
+            entity.HasOne(image => image.Issue)
+                .WithMany(issue => issue.Images)
+                .HasForeignKey(image => image.IssueId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
         modelBuilder.Entity<IssueAiAnalysisEntity>(entity =>
         {
             entity.ToTable("IssueAiAnalyses");
@@ -152,6 +170,21 @@ public sealed class CivicGoDbContext(DbContextOptions<CivicGoDbContext> options)
             entity.HasOne(analysis => analysis.Issue)
                 .WithMany(issue => issue.AiAnalyses)
                 .HasForeignKey(analysis => analysis.IssueId);
+        });
+
+        modelBuilder.Entity<AgentConfigEntity>(entity =>
+        {
+            entity.ToTable("AgentConfigs");
+            entity.HasKey(agent => agent.Id);
+            entity.HasIndex(agent => agent.Key).IsUnique();
+            entity.Property(agent => agent.Key).HasMaxLength(80).IsRequired();
+            entity.Property(agent => agent.Name).HasMaxLength(120).IsRequired();
+            entity.Property(agent => agent.Role).HasMaxLength(120).IsRequired();
+            entity.Property(agent => agent.Description).HasMaxLength(700).IsRequired();
+            entity.Property(agent => agent.Instructions).HasMaxLength(2000).IsRequired();
+            entity.Property(agent => agent.Model).HasMaxLength(120).IsRequired();
+            entity.Property(agent => agent.FallbackMode).HasMaxLength(240).IsRequired();
+            entity.HasIndex(agent => agent.SortOrder);
         });
 
         modelBuilder.Entity<AgentRunEntity>(entity =>

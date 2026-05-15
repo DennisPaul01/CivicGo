@@ -37,7 +37,9 @@ public static class DashboardEndpoints
 
     public static RouteGroupBuilder MapDashboardEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/dashboard").WithTags("Dashboard");
+        var group = app.MapGroup("/api/dashboard")
+            .RequireAuthorization("AdminOnly")
+            .WithTags("Dashboard");
 
         group.MapGet("/overview", async (
             CivicGoDbContext dbContext,

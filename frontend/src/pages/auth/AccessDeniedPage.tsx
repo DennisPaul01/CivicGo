@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { ArrowLeft, ShieldX } from 'lucide-react'
+import { ArrowLeft, ShieldX } from '@/components/icons/hugeicons'
 import { Button } from '@/components/ui/button'
 
 export function AccessDeniedPage() {

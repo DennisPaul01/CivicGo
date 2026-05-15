@@ -1,4 +1,4 @@
-import { Loader2, Send } from 'lucide-react'
+import { Loader2, Send } from '@/components/icons/hugeicons'
 import { Button } from '@/components/ui/button'
 
 type SubmitIssueButtonProps = {
@@ -14,7 +14,7 @@ export function SubmitIssueButton({
     <Button
       type="submit"
       size="lg"
-      className="h-12 w-full bg-emerald-600 text-white hover:bg-emerald-700"
+      className="min-h-12 w-full bg-emerald-600 text-base font-semibold text-white shadow-sm shadow-emerald-900/10 hover:bg-emerald-700"
       disabled={disabled}
     >
       {isSubmitting ? (

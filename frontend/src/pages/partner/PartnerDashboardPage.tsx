@@ -1,30 +1,24 @@
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import type { LucideIcon } from 'lucide-react'
-import { ArrowLeft, Gift, Handshake, PackageCheck, Sparkles, Store } from 'lucide-react'
+import type { LucideIcon } from '@/components/icons/hugeicons'
+import { ArrowLeft, Gift, Handshake, PackageCheck, Sparkles, Store } from '@/components/icons/hugeicons'
 import { motion } from 'motion/react'
 import { Button } from '@/components/ui/button'
 import { DemoSkeletonGrid, DemoState } from '@/components/ui/demo-state'
-import { fetchRewards, isApiConfigured, type RewardResponse } from '@/lib/api'
-import { rewardsQueryKey } from '@/lib/queryClient'
-
-function getPartnerRewards(rewards: RewardResponse[]) {
-  return rewards.filter((reward) => reward.type === 'partner')
-}
+import { fetchPartnerDashboard, isApiConfigured } from '@/lib/api'
+import { useAuthStore } from '@/stores/authStore'
 
 export function PartnerDashboardPage() {
-  const rewardsQuery = useQuery({
-    queryKey: rewardsQueryKey,
-    queryFn: fetchRewards,
+  const accessToken = useAuthStore((state) => state.session?.access_token ?? null)
+  const partnerDashboardQuery = useQuery({
+    queryKey: ['partner', 'dashboard'],
+    queryFn: () => fetchPartnerDashboard(accessToken),
+    enabled: Boolean(accessToken),
   })
-  const partnerRewards = getPartnerRewards(rewardsQuery.data ?? [])
-  const claimedCount = partnerRewards.reduce(
-    (total, reward) => total + reward.claimedCount,
-    0,
-  )
-  const activeRewards = partnerRewards.filter(
-    (reward) => reward.status === 'available',
-  ).length
+  const partnerDashboard = partnerDashboardQuery.data
+  const partnerRewards = partnerDashboard?.rewards ?? []
+  const claimedCount = partnerDashboard?.claimedCount ?? 0
+  const activeRewards = partnerDashboard?.activeRewardCount ?? 0
 
   return (
     <main className="min-h-svh overflow-x-hidden bg-orange-50 px-4 py-5 text-slate-950 sm:px-6 lg:px-8">
@@ -69,7 +63,7 @@ export function PartnerDashboardPage() {
           <MetricCard
             icon={Store}
             label="Partner rewards"
-            value={partnerRewards.length}
+            value={partnerDashboard?.rewardCount ?? partnerRewards.length}
             detail="Local offers ready for citizens."
           />
           <MetricCard
@@ -86,9 +80,9 @@ export function PartnerDashboardPage() {
           />
         </div>
 
-        {rewardsQuery.isLoading && isApiConfigured ? (
+        {partnerDashboardQuery.isLoading && isApiConfigured ? (
           <DemoSkeletonGrid items={3} className="md:grid-cols-3" />
-        ) : rewardsQuery.isError && isApiConfigured ? (
+        ) : partnerDashboardQuery.isError && isApiConfigured ? (
           <DemoState
             icon={Gift}
             tone="amber"

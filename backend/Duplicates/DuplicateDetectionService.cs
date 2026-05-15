@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CivicGo.Api.Agents;
 using CivicGo.Api.Data;
 using CivicGo.Api.Data.Entities;
 using CivicGo.Api.Issues;
@@ -12,7 +13,12 @@ public sealed class DuplicateDetectionService(
 )
 {
     private const double RadiusMeters = 300;
+    private const double SameSpotRadiusMeters = 95;
+    private const double SameZoneLocationRadiusMeters = 225;
+    private const double UnknownCategoryRadiusMeters = 250;
     private const double EarthRadiusMeters = 6_371_000;
+    private const string MatchPolicy =
+        "MVP: any active report inside 300m is treated as a similar civic signal; image hash/category/zone increase confidence.";
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
@@ -28,11 +34,13 @@ public sealed class DuplicateDetectionService(
 
     public async Task<DuplicateDetectionResult> CheckIssueAsync(
         Guid issueId,
+        RuntimeAgentConfig? agentConfig,
         CancellationToken cancellationToken
     )
     {
         var issue = await dbContext.Issues
             .Include(item => item.Zone)
+            .Include(item => item.Images)
             .Include(item => item.AgentRuns)
                 .ThenInclude(run => run.AgentSteps)
             .FirstOrDefaultAsync(item => item.Id == issueId, cancellationToken);
@@ -44,16 +52,27 @@ public sealed class DuplicateDetectionService(
 
         var latestRun = EnsureAgentRun(issue);
 
-        if (latestRun.AgentSteps.Any(step => step.AgentName == "Duplicate Agent"))
+        var existingNearestDuplicate = IssueDuplicateMapper.GetNearestDuplicate(issue);
+        if (existingNearestDuplicate is not null)
         {
             return new DuplicateDetectionResult(
                 issue.DuplicateCount,
-                IssueDuplicateMapper.GetNearestDuplicate(issue)
+                existingNearestDuplicate,
+                new DuplicateDetectionDiagnostics(
+                    issue.DuplicateCount,
+                    issue.DuplicateCount,
+                    existingNearestDuplicate,
+                    (int)RadiusMeters,
+                    MatchPolicy
+                )
             );
         }
 
-        var candidates = await GetCandidateIssuesAsync(issue, cancellationToken);
-        var matches = candidates
+        var issueImageHashes = issue.Images
+            .Select(image => image.ContentHash)
+            .Where(hash => !string.IsNullOrWhiteSpace(hash))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var candidates = (await GetCandidateIssuesAsync(issue, cancellationToken))
             .Select(candidate => new DuplicateCandidate(
                 candidate,
                 CalculateDistanceMeters(
@@ -61,22 +80,42 @@ public sealed class DuplicateDetectionService(
                     issue.Longitude,
                     candidate.Latitude,
                     candidate.Longitude
-                )
+                ),
+                HasMatchingImageHash(candidate, issueImageHashes)
             ))
-            .Where(candidate => candidate.DistanceMeters <= RadiusMeters)
+            .OrderBy(candidate => candidate.DistanceMeters)
+            .ToArray();
+        var matches = candidates
+            .Where(candidate => IsDuplicateMatch(issue, candidate))
             .OrderBy(candidate => candidate.DistanceMeters)
             .ToArray();
         var nearest = matches.FirstOrDefault();
+        var nearestCandidate = candidates.FirstOrDefault();
+        var nearestCandidateResponse = nearestCandidate is null
+            ? null
+            : new NearestDuplicateIssueResponse(
+                nearestCandidate.Issue.Id,
+                nearestCandidate.Issue.Title,
+                (int)Math.Round(nearestCandidate.DistanceMeters),
+                nearestCandidate.Issue.Status
+            );
+        var diagnostics = new DuplicateDetectionDiagnostics(
+            candidates.Length,
+            matches.Length,
+            nearestCandidateResponse,
+            (int)RadiusMeters,
+            MatchPolicy
+        );
         var now = DateTimeOffset.UtcNow;
 
-        AddAgentStep(issue, latestRun, matches, nearest, now);
+        AddAgentStep(issue, latestRun, candidates, matches, nearest, diagnostics, agentConfig, now);
 
         if (nearest is null)
         {
             issue.UpdatedAt = now;
             await TrySaveDuplicateDetectionAsync(issue.Id, cancellationToken);
 
-            return new DuplicateDetectionResult(issue.DuplicateCount, null);
+            return new DuplicateDetectionResult(issue.DuplicateCount, null, diagnostics);
         }
 
         issue.Status = "duplicate_detected";
@@ -117,8 +156,17 @@ public sealed class DuplicateDetectionService(
                 nearest.Issue.Title,
                 (int)Math.Round(nearest.DistanceMeters),
                 nearest.Issue.Status
-            )
+            ),
+            diagnostics
         );
+    }
+
+    public Task<DuplicateDetectionResult> CheckIssueAsync(
+        Guid issueId,
+        CancellationToken cancellationToken
+    )
+    {
+        return CheckIssueAsync(issueId, null, cancellationToken);
     }
 
     private async Task<bool> TrySaveDuplicateDetectionAsync(
@@ -157,9 +205,9 @@ public sealed class DuplicateDetectionService(
             : RadiusMeters / (111_320 * Math.Abs(longitudeScale));
 
         return await dbContext.Issues
+            .Include(candidate => candidate.Images)
             .Where(candidate =>
                 candidate.Id != issue.Id &&
-                candidate.Category == issue.Category &&
                 !ClosedStatuses.Contains(candidate.Status) &&
                 candidate.Latitude >= issue.Latitude - latitudeDelta &&
                 candidate.Latitude <= issue.Latitude + latitudeDelta &&
@@ -167,6 +215,65 @@ public sealed class DuplicateDetectionService(
                 candidate.Longitude <= issue.Longitude + longitudeDelta
             )
             .ToListAsync(cancellationToken);
+    }
+
+    private static bool IsDuplicateMatch(IssueEntity issue, DuplicateCandidate candidate)
+    {
+        if (candidate.HasMatchingImageHash)
+        {
+            return true;
+        }
+
+        if (candidate.DistanceMeters <= RadiusMeters)
+        {
+            return true;
+        }
+
+        if (candidate.DistanceMeters > RadiusMeters)
+        {
+            return false;
+        }
+
+        if (candidate.DistanceMeters <= SameSpotRadiusMeters)
+        {
+            return true;
+        }
+
+        if (string.Equals(candidate.Issue.Category, issue.Category, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (candidate.Issue.ZoneId == issue.ZoneId &&
+            candidate.DistanceMeters <= SameZoneLocationRadiusMeters)
+        {
+            return true;
+        }
+
+        return (IsUnknownCategory(issue.Category) || IsUnknownCategory(candidate.Issue.Category)) &&
+            candidate.DistanceMeters <= UnknownCategoryRadiusMeters;
+    }
+
+    private static bool IsUnknownCategory(string value)
+    {
+        return string.IsNullOrWhiteSpace(value) ||
+            value.Equals("other", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool HasMatchingImageHash(
+        IssueEntity candidate,
+        IReadOnlySet<string> issueImageHashes
+    )
+    {
+        if (issueImageHashes.Count == 0)
+        {
+            return false;
+        }
+
+        return candidate.Images.Any(image =>
+            !image.ContentHash.StartsWith("legacy:", StringComparison.OrdinalIgnoreCase) &&
+            issueImageHashes.Contains(image.ContentHash)
+        );
     }
 
     private static AgentRunEntity EnsureAgentRun(IssueEntity issue)
@@ -198,8 +305,11 @@ public sealed class DuplicateDetectionService(
     private static void AddAgentStep(
         IssueEntity issue,
         AgentRunEntity run,
+        IReadOnlyCollection<DuplicateCandidate> candidates,
         IReadOnlyCollection<DuplicateCandidate> matches,
         DuplicateCandidate? nearest,
+        DuplicateDetectionDiagnostics diagnostics,
+        RuntimeAgentConfig? agentConfig,
         DateTimeOffset now
     )
     {
@@ -220,10 +330,18 @@ public sealed class DuplicateDetectionService(
                 issue.Status,
                 radiusMeters = RadiusMeters,
                 issue.Latitude,
-                issue.Longitude
+                issue.Longitude,
+                matchPolicy = MatchPolicy,
+                adminInstructions = agentConfig?.Instructions,
+                configuredModel = agentConfig?.Model,
+                fallbackMode = agentConfig?.FallbackMode,
+                isEnabled = agentConfig?.IsEnabled ?? true
             }, JsonOptions),
             OutputJson = JsonSerializer.Serialize(new
             {
+                mode = agentConfig?.FallbackMode ?? "Numeric latitude/longitude radius check.",
+                diagnostics,
+                candidateCount = candidates.Count,
                 duplicateCount = matches.Count,
                 nearestIssueId = nearest?.Issue.Id,
                 nearestTitle = nearest?.Issue.Title,
@@ -231,7 +349,14 @@ public sealed class DuplicateDetectionService(
                 nearestDistanceMeters = nearest is null
                     ? null
                     : (int?)Math.Round(nearest.DistanceMeters),
-                matchingIssueIds = matches.Select(match => match.Issue.Id).ToArray()
+                nearestCandidateIssueId = diagnostics.NearestCandidate?.IssueId,
+                nearestCandidateTitle = diagnostics.NearestCandidate?.Title,
+                nearestCandidateDistanceMeters = diagnostics.NearestCandidate?.DistanceMeters,
+                matchingIssueIds = matches.Select(match => match.Issue.Id).ToArray(),
+                matchingImageHashIssueIds = matches
+                    .Where(match => match.HasMatchingImageHash)
+                    .Select(match => match.Issue.Id)
+                    .ToArray()
             }, JsonOptions),
             Message = nearest is null
                 ? "A verificat rapoartele din apropiere: nu a gasit duplicat."
@@ -277,5 +402,9 @@ public sealed class DuplicateDetectionService(
         };
     }
 
-    private sealed record DuplicateCandidate(IssueEntity Issue, double DistanceMeters);
+    private sealed record DuplicateCandidate(
+        IssueEntity Issue,
+        double DistanceMeters,
+        bool HasMatchingImageHash
+    );
 }

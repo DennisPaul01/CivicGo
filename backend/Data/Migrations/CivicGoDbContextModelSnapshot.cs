@@ -22,6 +22,69 @@ namespace CivicGo.Api.Data.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("CivicGo.Api.Data.Entities.AgentConfigEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(700)
+                        .HasColumnType("character varying(700)");
+
+                    b.Property<string>("FallbackMode")
+                        .IsRequired()
+                        .HasMaxLength(240)
+                        .HasColumnType("character varying(240)");
+
+                    b.Property<string>("Instructions")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<string>("Model")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Key")
+                        .IsUnique();
+
+                    b.HasIndex("SortOrder");
+
+                    b.ToTable("AgentConfigs", (string)null);
+                });
+
             modelBuilder.Entity("CivicGo.Api.Data.Entities.AgentRunEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -292,6 +355,48 @@ namespace CivicGo.Api.Data.Migrations
                     b.HasIndex("ZoneId");
 
                     b.ToTable("Issues", (string)null);
+                });
+
+            modelBuilder.Entity("CivicGo.Api.Data.Entities.IssueImageEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContentHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("ContentType")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FileName")
+                        .HasMaxLength(260)
+                        .HasColumnType("character varying(260)");
+
+                    b.Property<Guid>("IssueId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ContentHash");
+
+                    b.HasIndex("IssueId", "SortOrder");
+
+                    b.ToTable("IssueImages", (string)null);
                 });
 
             modelBuilder.Entity("CivicGo.Api.Data.Entities.MissionEntity", b =>
@@ -880,6 +985,17 @@ namespace CivicGo.Api.Data.Migrations
                     b.Navigation("Issue");
                 });
 
+            modelBuilder.Entity("CivicGo.Api.Data.Entities.IssueImageEntity", b =>
+                {
+                    b.HasOne("CivicGo.Api.Data.Entities.IssueEntity", "Issue")
+                        .WithMany("Images")
+                        .HasForeignKey("IssueId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Issue");
+                });
+
             modelBuilder.Entity("CivicGo.Api.Data.Entities.IssueEntity", b =>
                 {
                     b.HasOne("CivicGo.Api.Data.Entities.UserEntity", "CreatedByUser")
@@ -1068,6 +1184,8 @@ namespace CivicGo.Api.Data.Migrations
                     b.Navigation("AgentRuns");
 
                     b.Navigation("AiAnalyses");
+
+                    b.Navigation("Images");
 
                     b.Navigation("MissionIssues");
                 });

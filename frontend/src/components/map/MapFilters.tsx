@@ -8,7 +8,7 @@ import {
   SlidersHorizontal,
   TriangleAlert,
   type LucideIcon,
-} from 'lucide-react'
+} from '@/components/icons/hugeicons'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import type { MapFilterKind } from '@/components/map/MapMarker'
@@ -103,7 +103,7 @@ export function MapFilters({
     timeFilters.find((filter) => filter.value === activeTimeFilter)?.label ?? '24h'
 
   return (
-    <div className="w-[min(14.5rem,calc(100vw-1.5rem))] rounded-lg border border-emerald-200/80 bg-white/92 p-1.5 shadow-sm backdrop-blur-md sm:p-2">
+    <div className="flex w-full flex-col-reverse rounded-lg border border-emerald-200/80 bg-white/94 p-1.5 shadow-lg shadow-slate-900/12 backdrop-blur-md sm:block sm:w-[min(14.5rem,calc(100vw-1.5rem))] sm:p-2 sm:shadow-sm">
       <Button
         type="button"
         variant="ghost"
@@ -143,7 +143,7 @@ export function MapFilters({
         id="mobile-map-filters"
         className={cn(
           'min-w-0 flex-col gap-2 sm:flex',
-          isMobileExpanded ? 'mt-2 flex' : 'hidden',
+          isMobileExpanded ? 'mb-2 flex sm:mb-0 sm:mt-0' : 'hidden',
         )}
       >
         <div className="flex min-w-0 items-center justify-between gap-2">

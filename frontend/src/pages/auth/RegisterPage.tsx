@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { UserPlus } from 'lucide-react'
+import { UserPlus } from '@/components/icons/hugeicons'
 import { AuthLayout } from '@/components/auth/AuthLayout'
 import { Button } from '@/components/ui/button'
 import { isSupabaseConfigured, supabase } from '@/lib/supabase'
@@ -25,12 +25,14 @@ export function RegisterPage() {
     }
 
     setIsSubmitting(true)
+    const trimmedFullName = fullName.trim()
     const { error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
-          full_name: fullName,
+          full_name: trimmedFullName,
+          name: trimmedFullName,
         },
       },
     })

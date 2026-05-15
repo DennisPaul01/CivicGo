@@ -168,11 +168,12 @@ const issueStatusLabels: Record<string, string> = {
   in_progress: 'In lucru',
   mission_created: 'Problema activa',
   resolved: 'Rezolvat',
+  issue_resolved: 'Rezolvat',
   rejected: 'Respins',
 }
 
 function getIssueKind(issue: IssueResponse): MapMarkerKind {
-  if (issue.status === 'resolved') {
+  if (issue.status === 'resolved' || issue.status === 'issue_resolved') {
     return 'resolved'
   }
 
@@ -289,6 +290,10 @@ function createIssueTitle(issue: IssueResponse) {
 }
 
 function getIssueImpact(issue: IssueResponse, pointsEarned?: number) {
+  if (issue.duplicateCount > 0) {
+    return `${issue.duplicateCount} confirmari legate de acelasi semnal`
+  }
+
   if (issue.relatedMission) {
     return 'Task comunitar conectat pe harta'
   }
@@ -308,9 +313,12 @@ function getIssueImpact(issue: IssueResponse, pointsEarned?: number) {
 
 export function mapIssueResponseToCivicMapItem(
   issue: IssueResponse,
+  duplicateOverrideCount?: number,
 ): CivicMapItem {
   const kind = getIssueKind(issue)
-  const statusLabel = getAgentRoutingLabel(issue)
+  const duplicateCount = duplicateOverrideCount ?? issue.duplicateCount
+  const statusLabel =
+    duplicateCount > 0 ? issueStatusLabels.duplicate_detected : getAgentRoutingLabel(issue)
   const pointsEarned = getIssuePointsPreview(issue)
   const relatedMission = issue.relatedMission
   const title = createIssueTitle(issue)
@@ -323,7 +331,10 @@ export function mapIssueResponseToCivicMapItem(
     id: issue.id,
     kind,
     source: 'api',
-    label: `${statusLabel}: ${title}`,
+    label:
+      duplicateCount > 0
+        ? `${statusLabel}: ${title} cu ${duplicateCount} confirmari`
+        : `${statusLabel}: ${title}`,
     createdAt: issue.createdAt,
     title,
     description,
@@ -332,7 +343,7 @@ export function mapIssueResponseToCivicMapItem(
     coordinates: [issue.longitude, issue.latitude],
     imageUrl: issue.imageUrl,
     meta: getIssueMeta(issue),
-    impact: getIssueImpact(issue, pointsEarned),
+    impact: getIssueImpact({ ...issue, duplicateCount }, pointsEarned),
     pointsEarned,
     aiSummary: issue.aiSummary ?? undefined,
     missionId: relatedMission?.id,
@@ -347,7 +358,7 @@ export function mapIssueResponseToCivicMapItem(
     reward: issue.relatedReward
       ? formatRewardLabel(issue.relatedReward.title, issue.relatedReward.partnerName)
       : undefined,
-    duplicateCount: issue.duplicateCount,
+    duplicateCount,
     nearestDuplicateTitle: issue.nearestDuplicate?.title,
     nearestDuplicateDistanceMeters: issue.nearestDuplicate?.distanceMeters,
     beforeAfter:
@@ -360,6 +371,39 @@ export function mapIssueResponseToCivicMapItem(
           }
         : undefined,
   }
+}
+
+function getClusteredIssueItems(apiIssues: IssueResponse[]) {
+  const mapVisibleIssues = apiIssues.filter((issue) => issue.status !== 'rejected')
+  const issuesById = new Map(mapVisibleIssues.map((issue) => [issue.id, issue]))
+  const duplicateIdsToHide = new Set<string>()
+  const hiddenDuplicateCountsByCanonicalId = new Map<string, number>()
+
+  mapVisibleIssues.forEach((issue) => {
+    const canonicalId = issue.nearestDuplicate?.issueId
+
+    if (!canonicalId || !issuesById.has(canonicalId)) {
+      return
+    }
+
+    duplicateIdsToHide.add(issue.id)
+    hiddenDuplicateCountsByCanonicalId.set(
+      canonicalId,
+      (hiddenDuplicateCountsByCanonicalId.get(canonicalId) ?? 0) + 1,
+    )
+  })
+
+  return mapVisibleIssues
+    .filter((issue) => !duplicateIdsToHide.has(issue.id))
+    .map((issue) =>
+      mapIssueResponseToCivicMapItem(
+        issue,
+        Math.max(
+          issue.duplicateCount,
+          hiddenDuplicateCountsByCanonicalId.get(issue.id) ?? 0,
+        ),
+      ),
+    )
 }
 
 function formatRewardLabel(title: string, partnerName: string | null) {
@@ -415,7 +459,7 @@ export function getCivicMapItems(
   apiIssues: IssueResponse[] = [],
   apiMissions: MissionResponse[] = [],
 ) {
-  const apiItems = apiIssues.map(mapIssueResponseToCivicMapItem)
+  const apiItems = getClusteredIssueItems(apiIssues)
   const apiMissionItems = apiMissions.map(mapMissionResponseToCivicMapItem)
   const apiItemIds = new Set(
     [...apiItems, ...apiMissionItems].map((item) => item.id),

@@ -5,9 +5,12 @@ import {
   Check,
   Circle,
   CircleDashed,
+  GitBranch,
   LoaderCircle,
   RotateCcw,
-} from 'lucide-react'
+  Target,
+  Wrench,
+} from '@/components/icons/hugeicons'
 import { motion } from 'motion/react'
 import { cn } from '@/lib/utils'
 import type { AgentStepResponse, AgentStepStatus } from '@/lib/api'
@@ -15,6 +18,14 @@ import { roAgentMessage, roAgentName } from '@/lib/locale'
 
 type AgentStepCardProps = {
   step: AgentStepResponse
+}
+
+type RichAgentOutput = {
+  observation?: string
+  toolUsed?: string
+  decision?: string
+  nextAction?: string
+  confidence?: number | null
 }
 
 const statusStyles: Record<
@@ -56,6 +67,12 @@ const statusStyles: Record<
     iconWrap: 'bg-teal-100 text-teal-700',
     icon: RotateCcw,
   },
+  skipped: {
+    label: 'Oprit din admin',
+    card: 'border-slate-200 bg-white',
+    iconWrap: 'bg-slate-100 text-slate-600',
+    icon: CircleDashed,
+  },
 }
 
 function normalizeStatus(status: string): AgentStepStatus {
@@ -74,6 +91,32 @@ function formatAgentJson(value: string) {
   }
 }
 
+function parseRichOutput(value: string): RichAgentOutput | null {
+  if (!value) {
+    return null
+  }
+
+  try {
+    const parsed = JSON.parse(value) as RichAgentOutput
+    const hasRichFields =
+      typeof parsed.observation === 'string' ||
+      typeof parsed.toolUsed === 'string' ||
+      typeof parsed.decision === 'string' ||
+      typeof parsed.nextAction === 'string' ||
+      typeof parsed.confidence === 'number'
+
+    return hasRichFields ? parsed : null
+  } catch {
+    return null
+  }
+}
+
+function formatToolName(value: string) {
+  return value
+    .replaceAll('_', ' ')
+    .replace(/\b\w/g, (letter) => letter.toUpperCase())
+}
+
 export function AgentStepCard({ step }: AgentStepCardProps) {
   const status = normalizeStatus(step.status)
   const styles = statusStyles[status]
@@ -82,6 +125,7 @@ export function AgentStepCard({ step }: AgentStepCardProps) {
   const isCompleted = status === 'completed'
   const input = formatAgentJson(step.inputJson)
   const output = formatAgentJson(step.outputJson)
+  const richOutput = parseRichOutput(step.outputJson)
 
   return (
     <motion.li
@@ -121,6 +165,65 @@ export function AgentStepCard({ step }: AgentStepCardProps) {
         <span className="mt-1 block text-sm leading-5 text-slate-700">
           {roAgentMessage(step.message)}
         </span>
+
+        {richOutput && status !== 'pending' && (
+          <div className="mt-3 grid gap-2 text-xs leading-5 text-slate-700 sm:grid-cols-2">
+            {richOutput.toolUsed && (
+              <span className="min-w-0 rounded-lg border border-white/80 bg-white/70 px-3 py-2">
+                <span className="mb-0.5 flex items-center gap-1.5 font-semibold text-slate-500">
+                  <Wrench className="size-3.5 shrink-0" aria-hidden="true" />
+                  Tool
+                </span>
+                <span className="block break-words font-medium text-emerald-950">
+                  {formatToolName(richOutput.toolUsed)}
+                </span>
+              </span>
+            )}
+            {richOutput.confidence !== null &&
+              richOutput.confidence !== undefined && (
+                <span className="min-w-0 rounded-lg border border-white/80 bg-white/70 px-3 py-2">
+                  <span className="mb-0.5 flex items-center gap-1.5 font-semibold text-slate-500">
+                    <Target className="size-3.5 shrink-0" aria-hidden="true" />
+                    Incredere
+                  </span>
+                  <span className="block font-medium text-emerald-950">
+                    {Math.round(richOutput.confidence * 100)}%
+                  </span>
+                </span>
+              )}
+            {richOutput.observation && (
+              <span className="min-w-0 rounded-lg border border-white/80 bg-white/70 px-3 py-2 sm:col-span-2">
+                <span className="mb-0.5 block font-semibold text-slate-500">
+                  Observatie
+                </span>
+                <span className="block break-words text-slate-800">
+                  {richOutput.observation}
+                </span>
+              </span>
+            )}
+            {richOutput.decision && (
+              <span className="min-w-0 rounded-lg border border-white/80 bg-white/70 px-3 py-2 sm:col-span-2">
+                <span className="mb-0.5 flex items-center gap-1.5 font-semibold text-slate-500">
+                  <GitBranch className="size-3.5 shrink-0" aria-hidden="true" />
+                  Decizie
+                </span>
+                <span className="block break-words text-slate-800">
+                  {richOutput.decision}
+                </span>
+              </span>
+            )}
+            {richOutput.nextAction && (
+              <span className="min-w-0 rounded-lg border border-white/80 bg-white/70 px-3 py-2 sm:col-span-2">
+                <span className="mb-0.5 block font-semibold text-slate-500">
+                  Preda catre
+                </span>
+                <span className="block break-words text-slate-800">
+                  {richOutput.nextAction}
+                </span>
+              </span>
+            )}
+          </div>
+        )}
 
         {(input || output) && status !== 'pending' && (
           <details className="mt-3 rounded-lg border border-white/80 bg-white/70">
