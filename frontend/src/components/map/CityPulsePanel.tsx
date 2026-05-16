@@ -51,7 +51,7 @@ export function CityPulsePanel({ items = civicMapItems }: CityPulsePanelProps) {
             Pulsul orasului
           </p>
           <h2 className="mt-1 text-base font-semibold text-emerald-950">
-            Snapshot Timisoara
+            Instantaneu Timișoara
           </h2>
         </div>
         <div className="flex items-center gap-1 rounded-md bg-orange-50 px-2 py-1 text-xs font-semibold text-emerald-700">

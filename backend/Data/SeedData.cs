@@ -25,6 +25,7 @@ public static class SeedData
         await EnsurePartnersAsync(dbContext);
         await EnsureRewardsAsync(dbContext);
         await EnsureDemoMissionsAsync(dbContext);
+        await EnsureDemoPublicActivityAsync(dbContext);
     }
 
     private static async Task EnsureAgentConfigsAsync(CivicGoDbContext dbContext)
@@ -376,16 +377,50 @@ public static class SeedData
             await dbContext.SaveChangesAsync();
         }
 
+        var legacyDemoIssueTitles = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Overflowing bins near Complex tram stop"] = "Cosuri pline langa statia de tramvai din Complex",
+            ["Broken streetlight in Fabric courtyard"] = "Bec stradal defect intr-o curte din Fabric",
+            ["Duplicate sidewalk reports in Girocului"] = "Sesizari duplicate pentru trotuar denivelat in Girocului",
+            ["Loose paving stones under review"] = "Dale desprinse in verificare in Soarelui",
+            ["Blocked sidewalk in progress"] = "Trotuar blocat in lucru in Soarelui",
+            ["Mehala cleanup mission ready"] = "Misiune de curatenie pregatita in Mehala",
+            ["Graffiti cleanup resolved in Complex"] = "Graffiti curatat in Complex",
+            ["Fabric green path restored"] = "Alee verde refacuta in Fabric"
+        };
+
+        var legacyDemoTitles = legacyDemoIssueTitles.Keys.ToArray();
+        var legacyDemoIssues = await dbContext.Issues
+            .Where(issue => legacyDemoTitles.Contains(issue.Title))
+            .ToListAsync();
+        foreach (var issue in legacyDemoIssues)
+        {
+            issue.Title = legacyDemoIssueTitles[issue.Title];
+            issue.UpdatedAt = now;
+        }
+
+        if (legacyDemoIssues.Count > 0)
+        {
+            await dbContext.SaveChangesAsync();
+        }
+
+        const string WasteIssueImageUrl = "https://commons.wikimedia.org/wiki/Special:FilePath/Overflowing_Hamburg_street_garbage_bin.jpg?width=1200";
+        const string BrokenSidewalkImageUrl = "https://commons.wikimedia.org/wiki/Special:FilePath/2008-06-28_Broken_sidewalk.jpg?width=1200";
+        const string BlockedSidewalkImageUrl = "https://commons.wikimedia.org/wiki/Special:FilePath/Blocking_the_sidewalk._(24231003963).jpg?width=1200";
+        const string PoorLightingImageUrl = "https://commons.wikimedia.org/wiki/Special:FilePath/Darkly_Lit_Path_at_Night.jpg?width=1200";
+        const string GraffitiImageUrl = "https://commons.wikimedia.org/wiki/Special:FilePath/Graffiti_blue.jpg?width=1200";
+        const string CleanupVolunteersImageUrl = "https://commons.wikimedia.org/wiki/Special:FilePath/Volunteers_cleaning_up_the_grounds_of_the_park._(9878f75d-1dd8-b71b-0b02-711f0d856e60).JPG?width=1200";
+
         var demoIssues = new[]
         {
             new DemoIssueSeed(
-                "Overflowing bins near Complex tram stop",
-                "Overflowing public bins are blocking the tram stop edge and need a quick pickup.",
+                "Cosuri pline langa statia de tramvai din Complex",
+                "Cosurile publice sunt pline, iar sacii ocupa marginea statiei si incurca trecerea pietonilor.",
                 IssueCategories.SanitationPestSnow,
                 "medium",
                 "new",
                 "unknown",
-                "https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?auto=format&fit=crop&w=1200&q=80",
+                WasteIssueImageUrl,
                 null,
                 45.7531,
                 21.2325,
@@ -394,20 +429,20 @@ public static class SeedData
                 0,
                 now.AddHours(-2),
                 null,
-                "Fresh report waiting for AI analysis and city triage.",
-                "Run AI triage and decide whether this should become a cleanup mission.",
+                "Sesizare noua despre salubrizare, potrivita pentru triere rapida si ridicare operativa.",
+                "Ruleaza trierea AI si decide daca semnalul trebuie conectat la o misiune scurta de curatenie.",
                 0.72,
                 false,
                 true
             ),
             new DemoIssueSeed(
-                "Broken streetlight in Fabric courtyard",
-                "A broken streetlight leaves the entrance to a shared courtyard dark after sunset.",
+                "Bec stradal defect intr-o curte din Fabric",
+                "Intrarea intr-o curte comuna ramane slab luminata dupa apus si creeaza disconfort pentru locatari.",
                 IssueCategories.PublicLighting,
                 "high",
                 "ai_analyzed",
                 "city_hall",
-                "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80",
+                PoorLightingImageUrl,
                 null,
                 45.7603,
                 21.2422,
@@ -416,20 +451,20 @@ public static class SeedData
                 0,
                 now.AddHours(-8),
                 null,
-                "The report points to a high-priority lighting issue near a residential courtyard.",
-                "Ask city maintenance to inspect the fixture and assign a repair window.",
+                "Raportul indica o problema prioritara de iluminat public langa o zona rezidentiala.",
+                "Trimite echipa de mentenanta pentru inspectie si stabileste o fereastra de reparatie.",
                 0.91,
                 true,
                 false
             ),
             new DemoIssueSeed(
-                "Duplicate sidewalk reports in Girocului",
-                "Several citizens reported the same uneven sidewalk segment near the market crossing.",
+                "Sesizari duplicate pentru trotuar denivelat in Girocului",
+                "Mai multi cetateni au semnalat acelasi segment de trotuar ridicat langa trecerea de la piata.",
                 IssueCategories.StreetsSidewalks,
                 "medium",
                 "duplicate_detected",
                 "city_hall",
-                "https://images.unsplash.com/photo-1523731407965-2430cd12f5e4?auto=format&fit=crop&w=1200&q=80",
+                BrokenSidewalkImageUrl,
                 null,
                 45.7339,
                 21.2114,
@@ -438,20 +473,20 @@ public static class SeedData
                 3,
                 now.AddHours(-14),
                 null,
-                "Nearby reports likely describe the same sidewalk hazard in Girocului.",
-                "Merge duplicate reports before assigning the repair follow-up.",
+                "Sesizarile apropiate descriu probabil acelasi risc de impiedicare pe trotuarul din Girocului.",
+                "Grupeaza duplicatele inainte de alocarea interventiei de reparatie.",
                 0.87,
                 false,
                 false
             ),
             new DemoIssueSeed(
-                "Loose paving stones under review",
-                "Loose paving stones on a pedestrian route are being checked by the civic team.",
+                "Dale desprinse in verificare in Soarelui",
+                "Dalele desprinse de pe un traseu pietonal sunt verificate de echipa civica.",
                 IssueCategories.StreetsSidewalks,
                 "medium",
                 "in_review",
                 "city_hall",
-                "https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=1200&q=80",
+                BrokenSidewalkImageUrl,
                 null,
                 45.7366,
                 21.2468,
@@ -460,20 +495,20 @@ public static class SeedData
                 0,
                 now.AddDays(-1).AddHours(-2),
                 null,
-                "The issue is valid and needs a short field review before repair assignment.",
-                "Confirm the exact pavement segment and move it into in-progress work.",
+                "Problema este valida si are nevoie de o verificare scurta in teren inainte de reparatie.",
+                "Confirma segmentul exact de pavaj si muta sesizarea in lucru.",
                 0.84,
                 false,
                 false
             ),
             new DemoIssueSeed(
-                "Blocked sidewalk in progress",
-                "A blocked sidewalk near the school route has been accepted and is being handled.",
+                "Trotuar blocat in lucru in Soarelui",
+                "Un trotuar de pe traseul spre scoala este blocat si a fost preluat pentru remediere.",
                 IssueCategories.StreetsSidewalks,
                 "high",
                 "in_progress",
                 "community_and_city_hall",
-                "https://images.unsplash.com/photo-1518005020951-eccb494ad742?auto=format&fit=crop&w=1200&q=80",
+                BlockedSidewalkImageUrl,
                 null,
                 45.7368,
                 21.2481,
@@ -482,20 +517,20 @@ public static class SeedData
                 0,
                 now.AddDays(-1).AddHours(-8),
                 null,
-                "The sidewalk blockage affects a school walking route and is already in progress.",
-                "Keep the route visible on the map until the blockage is removed.",
+                "Blocajul afecteaza un traseu folosit de elevi si este deja in lucru.",
+                "Pastreaza traseul vizibil pe harta pana cand obstacolul este indepartat.",
                 0.93,
                 true,
                 true
             ),
             new DemoIssueSeed(
-                "Mehala cleanup mission ready",
-                "A small park edge in Mehala needs a community cleanup and volunteer coordination.",
+                "Misiune de curatenie pregatita in Mehala",
+                "Marginea unui parc din Mehala are nevoie de curatenie comunitara si coordonare de voluntari.",
                 IssueCategories.SanitationPestSnow,
                 "medium",
                 "mission_created",
                 "community_and_city_hall",
-                "https://images.unsplash.com/photo-1530587191325-3db32d826c18?auto=format&fit=crop&w=1200&q=80",
+                WasteIssueImageUrl,
                 null,
                 45.7672,
                 21.1947,
@@ -504,21 +539,21 @@ public static class SeedData
                 0,
                 now.AddDays(-2),
                 null,
-                "The issue is eligible for a visible community cleanup mission in Mehala.",
-                "Attach an active mission and keep the reward match visible for volunteers.",
+                "Sesizarea este eligibila pentru o misiune vizibila de curatenie comunitara in Mehala.",
+                "Leaga o misiune activa si pastreaza recompensa vizibila pentru voluntari.",
                 0.89,
                 false,
                 true
             ),
             new DemoIssueSeed(
-                "Graffiti cleanup resolved in Complex",
-                "Graffiti near the underpass was reported, reviewed and marked as resolved.",
+                "Graffiti curatat in Complex",
+                "Graffiti-ul de langa pasaj a fost raportat, verificat si marcat ca rezolvat.",
                 IssueCategories.PublicOrder,
                 "low",
                 "resolved",
                 "community_and_city_hall",
-                "https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&w=1200&q=80",
-                "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=1200&q=80",
+                GraffitiImageUrl,
+                CleanupVolunteersImageUrl,
                 45.7526,
                 21.2318,
                 "Complex",
@@ -526,21 +561,21 @@ public static class SeedData
                 0,
                 now.AddDays(-5),
                 now.AddDays(-1),
-                "The graffiti report has been resolved and is ready for before-after proof.",
-                "Add the after photo in the next data pass.",
+                "Sesizarea de graffiti este rezolvata si poate fi folosita ca dovada before/after in demo.",
+                "Afiseaza fotografia de dupa impreuna cu cresterea de impact pe zona.",
                 0.88,
                 false,
                 false
             ),
             new DemoIssueSeed(
-                "Fabric green path restored",
-                "A damaged green-space path in Fabric was fixed after community reporting.",
+                "Alee verde refacuta in Fabric",
+                "O alee deteriorata dintr-un spatiu verde din Fabric a fost remediata dupa raportarea comunitatii.",
                 IssueCategories.EnvironmentPlaygroundsGreenSpaces,
                 "medium",
                 "resolved",
                 "community_and_city_hall",
-                "https://images.unsplash.com/photo-1466692476868-aef1dfb1e735?auto=format&fit=crop&w=1200&q=80",
-                "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=1200&q=80",
+                BrokenSidewalkImageUrl,
+                CleanupVolunteersImageUrl,
                 45.7599,
                 21.243,
                 "Fabric",
@@ -548,8 +583,8 @@ public static class SeedData
                 0,
                 now.AddDays(-6),
                 now.AddHours(-18),
-                "The green-space path is resolved and can anchor the Friday impact story.",
-                "Add an after photo and show it together with zone score progress.",
+                "Aleea din spatiul verde este rezolvata si sustine povestea de impact pentru demo.",
+                "Arata fotografia de dupa impreuna cu progresul scorului pe zona.",
                 0.86,
                 false,
                 false
@@ -560,10 +595,13 @@ public static class SeedData
             .Where(issue => demoTitles.Contains(issue.Title))
             .ToListAsync();
         var changedExistingIssues = false;
-        var existingIssuesByTitle = existingIssues.ToDictionary(
-            issue => issue.Title,
-            StringComparer.OrdinalIgnoreCase
-        );
+        var existingIssuesByTitle = existingIssues
+            .GroupBy(issue => issue.Title, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                group => group.Key,
+                group => group.First(),
+                StringComparer.OrdinalIgnoreCase
+            );
 
         foreach (var demoIssue in demoIssues)
         {
@@ -588,6 +626,12 @@ public static class SeedData
                 issueChanged = true;
             }
 
+            if (existingIssue.Description != demoIssue.Description)
+            {
+                existingIssue.Description = demoIssue.Description;
+                issueChanged = true;
+            }
+
             if (existingIssue.Severity != demoIssue.Severity)
             {
                 existingIssue.Severity = demoIssue.Severity;
@@ -600,9 +644,34 @@ public static class SeedData
                 issueChanged = true;
             }
 
+            if (existingIssue.ImageUrl != demoIssue.ImageUrl)
+            {
+                existingIssue.ImageUrl = demoIssue.ImageUrl;
+                issueChanged = true;
+            }
+
             if (existingIssue.AfterImageUrl != demoIssue.AfterImageUrl)
             {
                 existingIssue.AfterImageUrl = demoIssue.AfterImageUrl;
+                issueChanged = true;
+            }
+
+            if (Math.Abs(existingIssue.Latitude - demoIssue.Latitude) > 0.000001)
+            {
+                existingIssue.Latitude = demoIssue.Latitude;
+                issueChanged = true;
+            }
+
+            if (Math.Abs(existingIssue.Longitude - demoIssue.Longitude) > 0.000001)
+            {
+                existingIssue.Longitude = demoIssue.Longitude;
+                issueChanged = true;
+            }
+
+            var locationPoint = $"POINT({demoIssue.Longitude} {demoIssue.Latitude})";
+            if (existingIssue.LocationPoint != locationPoint)
+            {
+                existingIssue.LocationPoint = locationPoint;
                 issueChanged = true;
             }
 
@@ -658,10 +727,103 @@ public static class SeedData
 
         var seededIssues = existingIssues
             .Concat(newIssues)
-            .ToDictionary(issue => issue.Title, StringComparer.OrdinalIgnoreCase);
+            .GroupBy(issue => issue.Title, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                group => group.Key,
+                group => group.First(),
+                StringComparer.OrdinalIgnoreCase
+            );
         var seededIssueIds = seededIssues.Values
             .Select(issue => issue.Id)
             .ToArray();
+
+        var seedByIssueId = demoIssues
+            .Where(issue => seededIssues.ContainsKey(issue.Title))
+            .ToDictionary(issue => seededIssues[issue.Title].Id);
+        var existingAnalyses = await dbContext.IssueAiAnalyses
+            .Where(analysis => seededIssueIds.Contains(analysis.IssueId))
+            .ToListAsync();
+        var changedExistingAnalyses = false;
+
+        foreach (var analysis in existingAnalyses)
+        {
+            if (!seedByIssueId.TryGetValue(analysis.IssueId, out var seed))
+            {
+                continue;
+            }
+
+            var analysisChanged = false;
+
+            if (analysis.Category != seed.Category)
+            {
+                analysis.Category = seed.Category;
+                analysisChanged = true;
+            }
+
+            if (analysis.Severity != seed.Severity)
+            {
+                analysis.Severity = seed.Severity;
+                analysisChanged = true;
+            }
+
+            if (analysis.Summary != seed.AiSummary)
+            {
+                analysis.Summary = seed.AiSummary;
+                analysisChanged = true;
+            }
+
+            if (analysis.ResponsibleActor != seed.ResponsibleActor)
+            {
+                analysis.ResponsibleActor = seed.ResponsibleActor;
+                analysisChanged = true;
+            }
+
+            if (analysis.SuggestedAction != seed.SuggestedAction)
+            {
+                analysis.SuggestedAction = seed.SuggestedAction;
+                analysisChanged = true;
+            }
+
+            if (Math.Abs(analysis.Confidence - seed.Confidence) > 0.000001)
+            {
+                analysis.Confidence = seed.Confidence;
+                analysisChanged = true;
+            }
+
+            if (analysis.IsUrgent != seed.IsUrgent)
+            {
+                analysis.IsUrgent = seed.IsUrgent;
+                analysisChanged = true;
+            }
+
+            if (analysis.RewardEligible != seed.RewardEligible)
+            {
+                analysis.RewardEligible = seed.RewardEligible;
+                analysisChanged = true;
+            }
+
+            if (analysisChanged)
+            {
+                analysis.RawResponseJson = JsonSerializer.Serialize(new
+                {
+                    source = "demo_seed",
+                    category = seed.Category,
+                    severity = seed.Severity,
+                    summary = seed.AiSummary,
+                    suggestedAction = seed.SuggestedAction,
+                    confidence = seed.Confidence,
+                    isUrgent = seed.IsUrgent,
+                    rewardEligible = seed.RewardEligible
+                });
+                changedExistingAnalyses = true;
+            }
+        }
+
+        if (changedExistingAnalyses)
+        {
+            await dbContext.SaveChangesAsync();
+        }
+
         var analyzedIssueIds = (await dbContext.IssueAiAnalyses
             .Where(analysis => seededIssueIds.Contains(analysis.IssueId))
             .Select(analysis => analysis.IssueId)
@@ -1269,13 +1431,35 @@ public static class SeedData
             zone => zone.Name,
             StringComparer.OrdinalIgnoreCase
         );
+
+        var legacyDemoMissionTitles = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Clean-up Mehala park edge"] = "Curatenie la marginea parcului din Mehala",
+            ["Safe route Soarelui sidewalk sprint"] = "Traseu sigur spre scoala in Soarelui",
+            ["Fabric lighting safety walk"] = "Tur de siguranta pentru iluminat in Fabric"
+        };
+        var legacyMissionTitles = legacyDemoMissionTitles.Keys.ToArray();
+        var legacyMissions = await dbContext.Missions
+            .Where(mission => legacyMissionTitles.Contains(mission.Title))
+            .ToListAsync();
+        foreach (var mission in legacyMissions)
+        {
+            mission.Title = legacyDemoMissionTitles[mission.Title];
+            mission.UpdatedAt = now;
+        }
+
+        if (legacyMissions.Count > 0)
+        {
+            await dbContext.SaveChangesAsync();
+        }
+
         var demoMissions = new[]
         {
             new DemoMissionSeed(
-                "Clean-up Mehala park edge",
-                "Community clean-up for the Mehala park edge reported in the live map.",
+                "Curatenie la marginea parcului din Mehala",
+                "Curatenie comunitara pentru marginea parcului din Mehala, semnalata pe harta live.",
                 "Mehala",
-                "Mehala cleanup mission ready",
+                "Misiune de curatenie pregatita in Mehala",
                 "Team cleanup coffee tray",
                 8,
                 140,
@@ -1283,10 +1467,10 @@ public static class SeedData
                 now.AddDays(1).AddHours(12)
             ),
             new DemoMissionSeed(
-                "Safe route Soarelui sidewalk sprint",
-                "Volunteers and the city team clear the blocked sidewalk on a school route.",
+                "Traseu sigur spre scoala in Soarelui",
+                "Voluntarii si echipa orasului elibereaza trotuarul blocat de pe traseul spre scoala.",
                 "Soarelui",
-                "Blocked sidewalk in progress",
+                "Trotuar blocat in lucru in Soarelui",
                 "Free day pass",
                 10,
                 160,
@@ -1294,10 +1478,10 @@ public static class SeedData
                 now.AddDays(2).AddHours(11)
             ),
             new DemoMissionSeed(
-                "Fabric lighting safety walk",
-                "Evening safety walk to document broken lighting and confirm repair spots.",
+                "Tur de siguranta pentru iluminat in Fabric",
+                "Tur de seara pentru documentarea iluminatului defect si confirmarea punctelor de reparatie.",
                 "Fabric",
-                "Broken streetlight in Fabric courtyard",
+                "Bec stradal defect intr-o curte din Fabric",
                 "Free dessert",
                 6,
                 110,
@@ -1319,10 +1503,13 @@ public static class SeedData
             .Include(mission => mission.Participants)
             .Where(mission => missionTitles.Contains(mission.Title))
             .ToListAsync();
-        var existingMissionsByTitle = existingMissions.ToDictionary(
-            mission => mission.Title,
-            StringComparer.OrdinalIgnoreCase
-        );
+        var existingMissionsByTitle = existingMissions
+            .GroupBy(mission => mission.Title, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                group => group.Key,
+                group => group.First(),
+                StringComparer.OrdinalIgnoreCase
+            );
         var changedExistingMissions = false;
 
         foreach (var seed in demoMissions)
@@ -1344,6 +1531,12 @@ public static class SeedData
                 if (mission.CreatedByAi == false)
                 {
                     mission.CreatedByAi = true;
+                    missionChanged = true;
+                }
+
+                if (mission.Description != seed.Description)
+                {
+                    mission.Description = seed.Description;
                     missionChanged = true;
                 }
 
@@ -1481,6 +1674,117 @@ public static class SeedData
 
         if (changedExistingMissions || !demoMissions.All(seed => existingMissionsByTitle.ContainsKey(seed.Title)))
         {
+            await dbContext.SaveChangesAsync();
+        }
+    }
+
+    private static async Task EnsureDemoPublicActivityAsync(CivicGoDbContext dbContext)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var issueTitles = new[]
+        {
+            "Graffiti curatat in Complex",
+            "Bec stradal defect intr-o curte din Fabric",
+            "Cosuri pline langa statia de tramvai din Complex",
+            "Trotuar blocat in lucru in Soarelui",
+            "Misiune de curatenie pregatita in Mehala"
+        };
+        var missionTitles = new[]
+        {
+            "Curatenie la marginea parcului din Mehala",
+            "Traseu sigur spre scoala in Soarelui"
+        };
+        var rewardTitles = new[]
+        {
+            "Team cleanup coffee tray",
+            "Free day pass"
+        };
+
+        var issues = await dbContext.Issues
+            .Where(issue => issueTitles.Contains(issue.Title))
+            .ToDictionaryAsync(issue => issue.Title, StringComparer.OrdinalIgnoreCase);
+        var missions = await dbContext.Missions
+            .Where(mission => missionTitles.Contains(mission.Title))
+            .ToDictionaryAsync(mission => mission.Title, StringComparer.OrdinalIgnoreCase);
+        var rewards = await dbContext.Rewards
+            .Where(reward => rewardTitles.Contains(reward.Title))
+            .ToDictionaryAsync(reward => reward.Title, StringComparer.OrdinalIgnoreCase);
+        var activitySeeds = new[]
+        {
+            new DemoPublicActivitySeed(
+                "issue_resolved",
+                "Rezolvat acum 12 min",
+                "Graffiti-ul din Complex a fost curatat si documentat before/after.",
+                "Graffiti curatat in Complex",
+                null,
+                null,
+                12
+            ),
+            new DemoPublicActivitySeed(
+                "mission_created",
+                "Misiune activa",
+                "Curatenie la marginea parcului din Mehala este deschisa pentru voluntari.",
+                "Misiune de curatenie pregatita in Mehala",
+                "Curatenie la marginea parcului din Mehala",
+                "Team cleanup coffee tray",
+                28
+            ),
+            new DemoPublicActivitySeed(
+                "issue_in_progress",
+                "In progres",
+                "Becul stradal defect din Fabric a fost trimis catre echipa de iluminat public.",
+                "Bec stradal defect intr-o curte din Fabric",
+                null,
+                null,
+                52
+            ),
+            new DemoPublicActivitySeed(
+                "reward_matched",
+                "Recompensa potrivita",
+                "Local Gym a potrivit o recompensa pentru traseul sigur din Soarelui.",
+                "Trotuar blocat in lucru in Soarelui",
+                "Traseu sigur spre scoala in Soarelui",
+                "Free day pass",
+                86
+            ),
+            new DemoPublicActivitySeed(
+                "issue_created",
+                "Sesizare noua",
+                "Cosuri pline langa statia de tramvai din Complex au aparut pe harta publica.",
+                "Cosuri pline langa statia de tramvai din Complex",
+                null,
+                null,
+                115
+            )
+        };
+        var existingKeys = (await dbContext.PublicActivityFeedItems
+                .Select(item => item.Type + "|" + item.Title + "|" + item.Message)
+                .ToListAsync())
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var newItems = activitySeeds
+            .Where(seed => !existingKeys.Contains(seed.Key))
+            .Select(seed => new PublicActivityFeedItemEntity
+            {
+                Id = Guid.NewGuid(),
+                Type = seed.Type,
+                Title = seed.Title,
+                Message = seed.Message,
+                RelatedIssueId = seed.IssueTitle is null
+                    ? null
+                    : issues.GetValueOrDefault(seed.IssueTitle)?.Id,
+                RelatedMissionId = seed.MissionTitle is null
+                    ? null
+                    : missions.GetValueOrDefault(seed.MissionTitle)?.Id,
+                RelatedRewardId = seed.RewardTitle is null
+                    ? null
+                    : rewards.GetValueOrDefault(seed.RewardTitle)?.Id,
+                CreatedAt = now.AddMinutes(-seed.MinutesAgo)
+            })
+            .ToArray();
+
+        if (newItems.Length > 0)
+        {
+            dbContext.PublicActivityFeedItems.AddRange(newItems);
             await dbContext.SaveChangesAsync();
         }
     }
@@ -1726,6 +2030,19 @@ public static class SeedData
         DateTimeOffset StartsAt,
         DateTimeOffset EndsAt
     );
+
+    private sealed record DemoPublicActivitySeed(
+        string Type,
+        string Title,
+        string Message,
+        string? IssueTitle,
+        string? MissionTitle,
+        string? RewardTitle,
+        int MinutesAgo
+    )
+    {
+        public string Key => Type + "|" + Title + "|" + Message;
+    }
 
     private sealed record DemoLeaderboardUserSeed(
         string SupabaseUserId,

@@ -29,8 +29,12 @@ public static class MissionEndpoints
                 .OrderByDescending(mission => mission.CreatedAt)
                 .Take(100)
                 .ToListAsync(cancellationToken);
+            var visibleMissions = missions
+                .GroupBy(mission => mission.CreatedFromIssueId ?? mission.Id)
+                .Select(group => group.First())
+                .ToList();
 
-            return Results.Ok(missions.Select(mission => MissionMapper.ToResponse(mission, currentUserId)));
+            return Results.Ok(visibleMissions.Select(mission => MissionMapper.ToResponse(mission, currentUserId)));
         })
         .WithName("GetMissions");
 

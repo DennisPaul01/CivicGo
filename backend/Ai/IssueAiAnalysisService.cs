@@ -116,10 +116,10 @@ public sealed class IssueAiAnalysisService(
         {
             Id = Guid.NewGuid(),
             Type = result.IsValidIssue ? "issue_analyzed" : "issue_rejected",
-            Title = result.IsValidIssue ? "AI checked" : "AI rejected",
+            Title = result.IsValidIssue ? "AI a verificat" : "AI a respins",
             Message = result.IsValidIssue
-                ? $"AI checked a {analysis.Category.Replace('_', ' ')} issue in {issue.Zone?.Name ?? "Timisoara"}."
-                : $"AI could not confirm a civic issue in {issue.Zone?.Name ?? "Timisoara"}.",
+                ? $"AI a verificat o sesizare de tip {analysis.Category.Replace('_', ' ')} in {issue.Zone?.Name ?? "Timisoara"}."
+                : $"AI nu a putut confirma o problema civica in {issue.Zone?.Name ?? "Timisoara"}.",
             RelatedIssueId = issue.Id,
             RelatedZoneId = issue.ZoneId,
             CreatedAt = now

@@ -251,8 +251,8 @@ public static class IssueEndpoints
             {
                 Id = Guid.NewGuid(),
                 Type = "issue_created",
-                Title = "New issue reported",
-                Message = $"{profile.FullName} reported a new issue in {zone.Name}.",
+                Title = "Sesizare noua",
+                Message = $"{profile.FullName} a raportat o sesizare noua in {zone.Name}.",
                 RelatedIssueId = issue.Id,
                 RelatedZoneId = zone.Id,
                 CreatedAt = now
@@ -379,10 +379,10 @@ public static class IssueEndpoints
             {
                 Id = Guid.NewGuid(),
                 Type = "issue_resolved",
-                Title = "Issue resolved",
+                Title = "Sesizare rezolvata",
                 Message = string.IsNullOrWhiteSpace(normalizedResolutionNote)
-                    ? $"{profile.FullName} marked \"{issue.Title}\" as resolved."
-                    : $"{profile.FullName} marked \"{issue.Title}\" as resolved: {normalizedResolutionNote}",
+                    ? $"{profile.FullName} a marcat \"{issue.Title}\" ca rezolvata."
+                    : $"{profile.FullName} a marcat \"{issue.Title}\" ca rezolvata: {normalizedResolutionNote}",
                 RelatedIssueId = issue.Id,
                 RelatedZoneId = issue.ZoneId,
                 CreatedAt = now
@@ -527,8 +527,8 @@ public static class IssueEndpoints
             {
                 Id = Guid.NewGuid(),
                 Type = "issue_admin_updated",
-                Title = "Issue updated by admin",
-                Message = $"{profile.FullName} updated \"{issue.Title}\" in admin.",
+                Title = "Sesizare actualizata de admin",
+                Message = $"{profile.FullName} a actualizat \"{issue.Title}\" in admin.",
                 RelatedIssueId = issue.Id,
                 RelatedZoneId = issue.ZoneId,
                 CreatedAt = now
@@ -589,8 +589,8 @@ public static class IssueEndpoints
             {
                 Id = Guid.NewGuid(),
                 Type = "issue_resolved",
-                Title = "Issue closed by admin",
-                Message = $"{profile.FullName} closed \"{issue.Title}\" from admin.",
+                Title = "Sesizare inchisa de admin",
+                Message = $"{profile.FullName} a inchis \"{issue.Title}\" din admin.",
                 RelatedIssueId = issue.Id,
                 RelatedZoneId = issue.ZoneId,
                 CreatedAt = now
@@ -644,8 +644,8 @@ public static class IssueEndpoints
             {
                 Id = Guid.NewGuid(),
                 Type = "issue_reopened",
-                Title = "Issue reopened by admin",
-                Message = $"{profile.FullName} reopened \"{issue.Title}\" from admin.",
+                Title = "Sesizare redeschisa de admin",
+                Message = $"{profile.FullName} a redeschis \"{issue.Title}\" din admin.",
                 RelatedIssueId = issue.Id,
                 RelatedZoneId = issue.ZoneId,
                 CreatedAt = now
@@ -744,7 +744,7 @@ public static class IssueEndpoints
                 AgentRunId = agentRun.Id,
                 AgentName = draft.AgentName,
                 Status = "completed",
-                Message = $"Drafted authority email for {draft.RecipientName}.",
+                Message = $"Email catre autoritate pregatit pentru {draft.RecipientName}.",
                 InputJson = JsonSerializer.Serialize(new
                 {
                     issue.Id,
@@ -768,8 +768,8 @@ public static class IssueEndpoints
             {
                 Id = Guid.NewGuid(),
                 Type = "authority_email_drafted",
-                Title = "Authority email drafted",
-                Message = $"{profile.FullName} generated an authority email for \"{issue.Title}\".",
+                Title = "Email catre autoritate pregatit",
+                Message = $"{profile.FullName} a generat un email catre autoritate pentru \"{issue.Title}\".",
                 RelatedIssueId = issue.Id,
                 RelatedZoneId = issue.ZoneId,
                 CreatedAt = now

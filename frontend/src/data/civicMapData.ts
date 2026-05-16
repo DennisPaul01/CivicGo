@@ -1,4 +1,10 @@
 import type { MapMarkerKind } from '@/components/map/MapMarker'
+import blockedSidewalkImage from '@/assets/demo-issues/trotuar-blocat.jpg'
+import brokenSidewalkImage from '@/assets/demo-issues/trotuar-spart.jpg'
+import cleanupVolunteersImage from '@/assets/demo-issues/curatenie-voluntari.jpg'
+import graffitiWallImage from '@/assets/demo-issues/graffiti-perete.jpg'
+import overflowingBinImage from '@/assets/demo-issues/deseuri-cos-plin.jpg'
+import poorLightingImage from '@/assets/demo-issues/iluminat-slab.jpg'
 import type { IssueResponse, MissionResponse } from '@/lib/api'
 import { roActor, roCategory, roReward, roStatus } from '@/lib/locale'
 
@@ -61,6 +67,7 @@ export const civicMapItems: CivicMapItem[] = [
     statusLabel: 'Nou',
     zone: 'Complex',
     coordinates: [21.2325, 45.7531],
+    imageUrl: blockedSidewalkImage,
     meta: '2 cetateni au raportat un context similar',
     impact: 'Rutare civica pregatita',
     pointsEarned: 20,
@@ -78,6 +85,7 @@ export const civicMapItems: CivicMapItem[] = [
     statusLabel: 'Problema activa',
     zone: 'Fabric',
     coordinates: [21.2422, 45.7603],
+    imageUrl: poorLightingImage,
     meta: 'Iluminat public',
     impact: 'Trimis catre primarie pentru inspectie',
     responsibleActor: 'Primarie',
@@ -94,6 +102,7 @@ export const civicMapItems: CivicMapItem[] = [
     statusLabel: 'In lucru',
     zone: 'Girocului',
     coordinates: [21.2114, 45.7339],
+    imageUrl: brokenSidewalkImage,
     meta: 'Alocat primariei - 2 duplicate in apropiere',
     impact: 'Rutare civica pregatita pentru primarie',
     responsibleActor: 'Primarie',
@@ -110,6 +119,7 @@ export const civicMapItems: CivicMapItem[] = [
     statusLabel: 'Rezolvat',
     zone: 'Parcul Central',
     coordinates: [21.2201, 45.7578],
+    imageUrl: overflowingBinImage,
     meta: 'Raportat de 4 cetateni - rezolvat acum 12 min',
     impact: 'Rezolvat prin actiune comunitara',
     pointsEarned: 120,
@@ -119,6 +129,8 @@ export const civicMapItems: CivicMapItem[] = [
     beforeAfter: {
       before: 'Inainte: deseuri vizibile langa zona verde',
       after: 'Dupa: alee curatata si spatiu public redat comunitatii',
+      beforeImage: overflowingBinImage,
+      afterImage: cleanupVolunteersImage,
     },
   },
   {
@@ -133,6 +145,7 @@ export const civicMapItems: CivicMapItem[] = [
     statusLabel: 'Eveniment activ',
     zone: 'Soarelui',
     coordinates: [21.2468, 45.7366],
+    imageUrl: overflowingBinImage,
     meta: '5 inscrisi - sunt necesari 8 participanti',
     impact: '+95 puncte de impact pentru eveniment',
     reward: 'Abonament de o zi Local Gym disponibil',
@@ -149,6 +162,7 @@ export const civicMapItems: CivicMapItem[] = [
     statusLabel: 'Recompensa disponibila',
     zone: 'Unirii',
     coordinates: [21.2289, 45.757],
+    imageUrl: graffitiWallImage,
     meta: 'Necesita eveniment finalizat si 300 puncte civice',
     impact: 'Recompensa de partener disponibila',
     reward: 'Cappuccino gratuit',

@@ -84,7 +84,7 @@ const demoLiveActivityTemplates = [
   },
   {
     type: 'reward_matched',
-    title: 'Reward gasit',
+    title: 'Recompensa gasita',
     message: 'CoffeeLab a potrivit o recompensa pentru voluntarii din Complex.',
   },
   {
@@ -105,7 +105,7 @@ const demoLiveActivityTemplates = [
   {
     type: 'reward_matched',
     title: 'Badge deblocat',
-    message: 'Un reporter a deblocat First Reporter dupa prima sesizare valida.',
+    message: 'Un reporter a deblocat Primul raportor dupa prima sesizare valida.',
   },
   {
     type: 'issue_resolved',
@@ -125,12 +125,12 @@ const demoLiveActivityTemplates = [
   {
     type: 'reward_matched',
     title: 'Partener activ',
-    message: 'Bookstore a potrivit un discount pentru un eveniment din centru.',
+    message: 'Libraria partenera a potrivit un discount pentru un eveniment din centru.',
   },
   {
     type: 'issue_resolved',
     title: 'Impact pe zona',
-    message: 'Score-ul zonei Fabric a crescut dupa o rezolvare confirmata.',
+    message: 'Scorul zonei Fabric a crescut dupa o rezolvare confirmata.',
   },
 ] satisfies Array<Pick<PublicActivityResponse, 'type' | 'title' | 'message'>>
 
@@ -222,9 +222,10 @@ export function LiveActivityFeed() {
     queryKey: publicActivityQueryKey(48, 4),
     queryFn: () => fetchPublicActivity(48, 4),
   })
+  const shouldUseFallbackActivity = !isApiConfigured || activityQuery.isError
   const baseActivityItems = useMemo(
-    () => (!isApiConfigured || activityQuery.isError ? fallbackActivityItems : activityQuery.data ?? []),
-    [activityQuery.data, activityQuery.isError],
+    () => (shouldUseFallbackActivity ? fallbackActivityItems : activityQuery.data ?? []),
+    [activityQuery.data, shouldUseFallbackActivity],
   )
   const activityItems = useMemo(
     () => [...demoPushItems, ...baseActivityItems].slice(0, 4),
@@ -232,6 +233,12 @@ export function LiveActivityFeed() {
   )
 
   useEffect(() => {
+    if (!shouldUseFallbackActivity) {
+      setDemoPushItems([])
+      setIsPushing(false)
+      return
+    }
+
     let templateIndex = 0
     let pushResetTimer: number | undefined
     let pushTimer: number | undefined
@@ -278,7 +285,7 @@ export function LiveActivityFeed() {
         window.clearTimeout(pushResetTimer)
       }
     }
-  }, [])
+  }, [shouldUseFallbackActivity])
 
   return (
     <motion.aside

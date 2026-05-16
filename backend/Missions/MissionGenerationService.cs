@@ -108,6 +108,35 @@ public sealed class MissionGenerationService(
             return MissionMapper.ToResponse(existingMission);
         }
 
+        existingMission = await dbContext.Missions
+            .Include(mission => mission.Zone)
+            .Include(mission => mission.Reward)
+                .ThenInclude(reward => reward!.Partner)
+            .Include(mission => mission.Participants)
+            .Include(mission => mission.MissionIssues)
+            .Where(mission => mission.CreatedFromIssueId == issue.Id)
+            .OrderByDescending(mission => mission.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (existingMission is not null)
+        {
+            if (existingMission.MissionIssues.All(link => link.IssueId != issue.Id))
+            {
+                var linkCreatedAt = DateTimeOffset.UtcNow;
+                dbContext.MissionIssues.Add(new MissionIssueEntity
+                {
+                    Id = Guid.NewGuid(),
+                    MissionId = existingMission.Id,
+                    IssueId = issue.Id,
+                    CreatedAt = linkCreatedAt
+                });
+                existingMission.UpdatedAt = linkCreatedAt;
+                await dbContext.SaveChangesAsync(cancellationToken);
+            }
+
+            return MissionMapper.ToResponse(existingMission);
+        }
+
         if (!IsMissionEligible(issue))
         {
             logger.LogInformation(

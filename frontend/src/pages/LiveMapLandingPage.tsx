@@ -158,7 +158,7 @@ const supplementalLandingRewards: CivicMapItem[] = [
     statusLabel: 'Recompensa disponibila',
     zone: 'Cetate',
     coordinates: [21.2264, 45.7563],
-    meta: 'Oferta pentru badge First Reporter',
+    meta: 'Oferta pentru badge Primul raportor',
     impact: 'Voucher local pentru implicare constanta',
     pointsEarned: 220,
     reward: 'Cofetaria Naomi: Voucher dulce',
@@ -797,7 +797,7 @@ export function LiveMapLandingPage() {
               recompense locale.
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
-              {['AI verifică sesizări', 'Misiuni pe hartă', 'Rewards locale'].map(
+              {['AI verifică sesizări', 'Misiuni pe hartă', 'Recompense locale'].map(
                 (label) => (
                   <span
                     key={label}
