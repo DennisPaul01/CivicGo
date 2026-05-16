@@ -40,14 +40,14 @@ export function ImageUploader({
 
       <label
         htmlFor="issue-photo"
-        className="mt-3 flex min-h-40 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg border border-dashed border-emerald-300 bg-emerald-50/70 p-3 text-center transition hover:border-emerald-500 hover:bg-emerald-50 focus-within:ring-3 focus-within:ring-emerald-500/20 sm:min-h-64"
+        className="mt-3 flex min-h-56 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg border border-dashed border-emerald-300 bg-emerald-50/70 p-3 text-center transition hover:border-emerald-500 hover:bg-emerald-50 focus-within:ring-3 focus-within:ring-emerald-500/20 sm:min-h-80"
       >
         {primaryPreviewUrl ? (
-          <span className="relative block h-full w-full">
+          <span className="relative flex min-h-52 w-full items-center justify-center rounded-lg bg-slate-100 sm:min-h-72">
             <img
               src={primaryPreviewUrl}
               alt="Preview pentru problema selectata"
-              className="h-40 w-full rounded-lg object-cover sm:h-64"
+              className="max-h-[18rem] w-full rounded-lg object-contain sm:max-h-[28rem]"
             />
             <span className="absolute left-3 top-3 rounded-lg bg-white/95 px-3 py-1.5 text-xs font-semibold text-emerald-900 shadow-sm">
               Fotografia principala

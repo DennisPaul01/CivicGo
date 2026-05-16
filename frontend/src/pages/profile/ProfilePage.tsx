@@ -201,7 +201,7 @@ export function ProfilePage() {
                   </h2>
                 </div>
                 <span className="w-fit rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 ring-1 ring-emerald-200">
-                  Demo flow
+                  Actiuni rapide
                 </span>
               </div>
 

@@ -4,7 +4,6 @@ import {
   FileWarning,
   Gift,
   HeartHandshake,
-  MapPinned,
   Plus,
   RotateCcw,
   Sparkles,
@@ -27,7 +26,6 @@ type ReportSuccessCardProps = {
   streamState: ReportStreamState
   isSaving?: boolean
   onStartNewReport: () => void
-  onViewOnMap: () => void
 }
 
 export function ReportSuccessCard({
@@ -38,7 +36,6 @@ export function ReportSuccessCard({
   streamState,
   isSaving = false,
   onStartNewReport,
-  onViewOnMap,
 }: ReportSuccessCardProps) {
   const isRejected = issue.status === 'rejected' || issue.isValidIssue === false
   const invalidReason =
@@ -51,6 +48,11 @@ export function ReportSuccessCard({
     !issue.nearestDuplicate &&
     Boolean(issue.relatedMission) &&
     ['community', 'community_and_city_hall'].includes(issue.responsibleActor)
+  const verificationLabel = isSaving
+    ? 'In analiza'
+    : isRejected
+      ? 'Necesita poza noua'
+      : 'Finalizata'
 
   return (
     <motion.section
@@ -88,7 +90,7 @@ export function ReportSuccessCard({
             <div className="mt-3 hidden gap-2 text-sm sm:grid sm:grid-cols-3">
               <span className="rounded-lg border border-white/14 bg-white/10 px-3 py-2 backdrop-blur">
                 <span className="block text-[0.68rem] font-semibold uppercase text-emerald-100">
-                  Status
+                  Verificare
                 </span>
                 <span className="mt-0.5 flex items-center gap-1.5 font-semibold">
                   {isSaving ? (
@@ -98,7 +100,7 @@ export function ReportSuccessCard({
                   ) : (
                     <CheckCircle2 className="size-3.5" aria-hidden="true" />
                   )}
-                  {isSaving ? 'ruleaza acum' : isRejected ? 'respins' : 'gata'}
+                  {verificationLabel}
                 </span>
               </span>
               <span className="rounded-lg border border-white/14 bg-white/10 px-3 py-2 backdrop-blur">
@@ -175,20 +177,24 @@ export function ReportSuccessCard({
       )}
 
       {!isSaving && !isRejected && (
-        <div className="mt-5 hidden gap-2 sm:grid sm:grid-cols-2 lg:grid-cols-4">
-          <Button asChild className="bg-emerald-600 text-white hover:bg-emerald-700">
+        <div className="mt-5 hidden border-t border-emerald-100 px-5 pb-5 pt-4 sm:flex sm:flex-wrap sm:items-center sm:justify-end sm:gap-2">
+          <Button
+            asChild
+            className="min-w-48 bg-emerald-600 text-white hover:bg-emerald-700"
+          >
             <Link to={`/issues/${issue.id}`}>Vezi detaliile problemei</Link>
           </Button>
-          <Button type="button" variant="outline" onClick={onViewOnMap}>
-            <MapPinned data-icon="inline-start" aria-hidden="true" />
-            Vezi pe harta
-          </Button>
           {issue.relatedMission && (
-            <Button asChild variant="outline">
+            <Button asChild variant="outline" className="min-w-44 bg-white">
               <Link to={`/missions/${issue.relatedMission.id}`}>Vezi evenimentul</Link>
             </Button>
           )}
-          <Button type="button" variant="outline" onClick={onStartNewReport}>
+          <Button
+            type="button"
+            variant="outline"
+            className="min-w-44 bg-white"
+            onClick={onStartNewReport}
+          >
             <RotateCcw data-icon="inline-start" aria-hidden="true" />
             Trimite alt semnal
           </Button>

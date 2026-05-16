@@ -125,7 +125,7 @@ export function TopNavigation() {
                   }
                 >
                   <Link to={item.href} aria-label={item.label}>
-                    <Icon className="size-4" data-icon="inline-start" aria-hidden="true" />
+                    <Icon className="size-4" aria-hidden="true" data-icon="inline-start" type={isActive ? 'filled' : 'outlined'} />
                     <span className="truncate">{item.label}</span>
                   </Link>
                 </Button>
@@ -196,7 +196,7 @@ export function TopNavigation() {
                         }
                       >
                         <Link to={item.href}>
-                          <Icon data-icon="inline-start" aria-hidden="true" />
+                          <Icon data-icon="inline-start" aria-hidden="true" type={isActive ? 'filled' : 'outlined'} />
                           {item.label}
                         </Link>
                       </Button>
@@ -225,7 +225,7 @@ export function TopNavigation() {
                 item.match === '/'
                   ? location.pathname === '/'
                   : location.pathname.startsWith(item.match)
-              const isPrimary = 'isPrimary' in item && item.isPrimary
+              const isPrimary = 'isPrimary' in item && item.isPrimary && isActive
 
               return (
                 <Button
@@ -245,6 +245,7 @@ export function TopNavigation() {
                     <Icon
                       className={isPrimary ? 'size-5' : 'size-4'}
                       aria-hidden="true"
+                      type={isActive ? 'filled' : 'outlined'}
                     />
                     <span className="max-w-full truncate">{item.label}</span>
                   </Link>

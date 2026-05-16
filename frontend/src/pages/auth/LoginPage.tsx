@@ -56,7 +56,7 @@ export function LoginPage() {
   return (
     <AuthLayout
       title="Bine ai revenit"
-      subtitle={`Autentifica-te ca sa continui catre ${returnToLabel} fara sa pierzi contextul demo-ului.`}
+      subtitle={`Autentifica-te ca sa continui catre ${returnToLabel} fara sa pierzi contextul curent.`}
       intent={`Continua catre ${returnToLabel}`}
     >
       <div className="mb-5 grid min-w-0 gap-2 sm:grid-cols-2">

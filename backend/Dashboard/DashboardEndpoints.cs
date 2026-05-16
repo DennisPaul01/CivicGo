@@ -183,7 +183,7 @@ public static class DashboardEndpoints
         {
             return new DashboardAiSummaryResponse(
                 "AI city read: Complex and Fabric need the next civic push.",
-                "Mock fallback highlights waste, lighting and blocked sidewalk reports as the clearest demo pattern. Active missions and reward claims keep the impact story visible while live issue data is empty.",
+                "Local fallback highlights waste, lighting and blocked sidewalk reports as the clearest civic pattern. Active missions and reward claims keep the impact story visible while live issue data is empty.",
                 "Complex and Fabric cleanup plus lighting checks",
                 "Seed a visible weekend mission and keep a partner reward attached for volunteers.",
                 "Mock fallback summary",
@@ -230,8 +230,8 @@ public static class DashboardEndpoints
         {
             return new DashboardAiSummaryResponse(
                 "AI city read: resolved work is leading the city story.",
-                $"{resolvedIssues.Length} fixed issue{Plural(resolvedIssues.Length)} outweigh {openIssues.Length} open issue{Plural(openIssues.Length)}. {topZone} is the clearest place to show before-after impact and keep the Friday demo concrete.",
-                $"{resolvedIssues.Length} resolved issue{Plural(resolvedIssues.Length)} ready for demo",
+                $"{resolvedIssues.Length} fixed issue{Plural(resolvedIssues.Length)} outweigh {openIssues.Length} open issue{Plural(openIssues.Length)}. {topZone} is the clearest place to show before-after impact and keep the city story concrete.",
+                $"{resolvedIssues.Length} resolved issue{Plural(resolvedIssues.Length)} ready for review",
                 "Surface the strongest resolved issue on the map and pair it with the zone leaderboard.",
                 "Deterministic city insights",
                 false,
@@ -245,7 +245,7 @@ public static class DashboardEndpoints
             $"{topCategory} reports around {topZone}",
             activeMissions > 0
                 ? "Boost the active missions already attached to reported issues."
-                : "Create a mission from the most visible open issue and attach a demo reward.",
+                : "Create a mission from the most visible open issue and attach a relevant reward.",
             "Deterministic city insights",
             false,
             generatedAt

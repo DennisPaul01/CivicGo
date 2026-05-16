@@ -531,23 +531,37 @@ function PhotoSceneFrame({
   )
 }
 
-function SceneStatusPill({ isWaiting }: { isWaiting: boolean }) {
+function SceneStatusPill({
+  isWaiting,
+  waitingLabel = 'Analizam fotografia',
+  doneLabel = 'Raspuns primit',
+}: {
+  isWaiting: boolean
+  waitingLabel?: string
+  doneLabel?: string
+}) {
   return (
-    <div
+    <motion.div
       className={cn(
         'absolute left-3 top-3 inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold shadow-lg backdrop-blur',
         isWaiting
-          ? 'border-teal-100/70 bg-white/92 text-teal-900 shadow-teal-950/15'
+          ? 'border-teal-200 bg-white text-teal-950 shadow-teal-950/25'
           : 'border-emerald-100/70 bg-white/92 text-emerald-900 shadow-emerald-950/15',
       )}
+      animate={isWaiting ? { y: [0, -2, 0], scale: [1, 1.015, 1] } : { y: 0, scale: 1 }}
+      transition={
+        isWaiting
+          ? { duration: 1.4, repeat: Infinity, ease: 'easeInOut' }
+          : { duration: 0.2 }
+      }
     >
       {isWaiting ? (
         <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
       ) : (
         <Check className="size-4" aria-hidden="true" />
       )}
-      {isWaiting ? 'Analizam fotografia' : 'Raspuns primit'}
-    </div>
+      {isWaiting ? waitingLabel : doneLabel}
+    </motion.div>
   )
 }
 
@@ -570,6 +584,20 @@ function MobileAnalysisLightScene({
   const isVision = currentStep.agentName === 'Vision Agent'
   const isTriage = currentStep.agentName === 'Triage Agent'
   const isDuplicate = currentStep.agentName === 'Duplicate Agent'
+  const waitingLabel = isVision
+    ? 'Analizam fotografia'
+    : isTriage
+      ? 'Alegem ruta'
+      : isDuplicate
+        ? 'Cautam duplicate'
+        : 'Analiza in curs'
+  const doneLabel = isVision
+    ? 'Verificare finalizata'
+    : isTriage
+      ? 'Ruta aleasa'
+      : isDuplicate
+        ? 'Duplicate verificate'
+        : 'Rezultat primit'
   const routeOptions = [
     { id: 'community', label: 'Comunitate', icon: Users },
     { id: 'city_hall', label: 'Primarie', icon: Building2 },
@@ -618,20 +646,43 @@ function MobileAnalysisLightScene({
                 issue.responsibleActor === option.id ||
                 (option.id === 'community_and_city_hall' &&
                   issue.responsibleActor === 'unknown')
+              const isRouting = isWaiting || isActive
 
               return (
                 <motion.span
                   key={option.id}
                   className={cn(
-                    'min-w-0 rounded-lg border px-2 py-2 text-center text-[0.68rem] font-semibold backdrop-blur',
-                    isActive
+                    'relative min-w-0 overflow-hidden rounded-lg border px-2 py-2 text-center text-[0.68rem] font-semibold backdrop-blur',
+                    isRouting
                       ? 'border-teal-200 bg-teal-300 text-teal-950 shadow-lg shadow-teal-950/20'
                       : 'border-white/20 bg-slate-950/62 text-white',
                   )}
                   initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: isActive ? -4 : 0 }}
-                  transition={{ delay: index * 0.12, duration: 0.38, ease: 'easeOut' }}
+                  animate={{
+                    opacity: isWaiting ? [0.8, 1, 0.8] : 1,
+                    y: isActive ? -4 : 0,
+                    scale: isWaiting ? [1, 1.035, 1] : 1,
+                  }}
+                  transition={{
+                    delay: index * 0.12,
+                    duration: isWaiting ? 1.25 : 0.38,
+                    repeat: isWaiting ? Infinity : 0,
+                    ease: 'easeInOut',
+                  }}
                 >
+                  {isWaiting && (
+                    <motion.span
+                      className="absolute inset-y-0 -left-8 w-7 bg-gradient-to-r from-transparent via-white/55 to-transparent"
+                      animate={{ x: ['0%', '520%'] }}
+                      transition={{
+                        delay: index * 0.18,
+                        duration: 1.6,
+                        repeat: Infinity,
+                        ease: 'easeInOut',
+                      }}
+                      aria-hidden="true"
+                    />
+                  )}
                   <Icon className="mx-auto mb-1 size-4" aria-hidden="true" />
                   <span className="block truncate">{option.label}</span>
                 </motion.span>
@@ -670,7 +721,7 @@ function MobileAnalysisLightScene({
               <Check className="size-4 text-emerald-700" aria-hidden="true" />
             )}
             <span className="truncate">
-              {isWaiting ? 'Analizam fotografia' : 'Verificare finalizata'}
+              {isWaiting ? waitingLabel : doneLabel}
             </span>
           </span>
           <span className="rounded-full bg-slate-950/58 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur">
@@ -736,12 +787,17 @@ function VisionPhotoScene({
     <PhotoSceneFrame imagePreviewUrl={imagePreviewUrl}>
       <div className="absolute inset-0 bg-gradient-to-b from-white/12 via-transparent to-slate-950/42" />
       <motion.div
-        className="absolute left-1/2 top-1/2 size-24 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/70 bg-teal-100/18 shadow-[0_0_38px_rgba(153,246,228,.34)]"
+        className="absolute left-1/2 top-1/2 size-28 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/80 bg-teal-100/22 shadow-[0_0_54px_rgba(45,212,191,.5)]"
         animate={{
-          scale: isWaiting ? [0.9, 1.08, 0.94] : 1,
-          opacity: isWaiting ? [0.55, 0.95, 0.68] : 0.82,
+          scale: isWaiting ? [0.86, 1.16, 0.92] : 1,
+          opacity: isWaiting ? [0.5, 1, 0.62] : 0.86,
         }}
-        transition={{ duration: 2.2, repeat: isWaiting ? Infinity : 0, ease: 'easeInOut' }}
+        transition={{ duration: 1.85, repeat: isWaiting ? Infinity : 0, ease: 'easeInOut' }}
+      />
+      <motion.div
+        className="absolute inset-x-6 top-1/2 h-1 rounded-full bg-gradient-to-r from-transparent via-teal-200 to-transparent shadow-[0_0_26px_rgba(45,212,191,.72)]"
+        animate={{ y: isWaiting ? ['-5rem', '5rem', '-5rem'] : 0, opacity: isWaiting ? [0.35, 1, 0.35] : 0 }}
+        transition={{ duration: 2.4, repeat: isWaiting ? Infinity : 0, ease: 'easeInOut' }}
       />
       <motion.span
         className="absolute left-1/2 top-1/2 flex size-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-xl bg-white/92 text-teal-700 shadow-xl shadow-slate-950/20"
@@ -757,10 +813,10 @@ function VisionPhotoScene({
         transition={{ duration: 0.38, ease: 'easeOut' }}
       >
         <motion.div
-          className="h-full rounded-full bg-teal-200"
+          className="h-full rounded-full bg-teal-300 shadow-[0_0_16px_rgba(45,212,191,.65)]"
           initial={{ x: '-55%' }}
-          animate={{ x: isWaiting ? ['-55%', '115%'] : '0%', width: isWaiting ? '45%' : '100%' }}
-          transition={{ duration: 1.7, repeat: isWaiting ? Infinity : 0, ease: 'easeInOut' }}
+          animate={{ x: isWaiting ? ['-55%', '115%'] : '0%', width: isWaiting ? '55%' : '100%' }}
+          transition={{ duration: 1.25, repeat: isWaiting ? Infinity : 0, ease: 'easeInOut' }}
         />
       </motion.div>
       <motion.div
@@ -808,7 +864,7 @@ function VisionPhotoScene({
       >
         AI vizual activ
       </motion.div>
-      <SceneStatusPill isWaiting={isWaiting} />
+      <SceneStatusPill isWaiting={isWaiting} waitingLabel="Scanez fotografia" doneLabel="Foto verificata" />
     </PhotoSceneFrame>
   )
 }
@@ -828,49 +884,102 @@ function TriagePhotoScene({
     { id: 'city_hall', label: 'Primarie', icon: Building2 },
     { id: 'community_and_city_hall', label: 'Ambele', icon: GitBranch },
   ]
+  const selectedLabel =
+    routeOptions.find(
+      (option) =>
+        actor === option.id ||
+        (option.id === 'community_and_city_hall' && actor === 'unknown'),
+    )?.label ?? roActor(actor)
 
   return (
     <PhotoSceneFrame imagePreviewUrl={imagePreviewUrl}>
-      <div className="absolute inset-0 bg-slate-950/20" />
+      <div className="absolute inset-0 bg-slate-950/28" />
       <motion.div
-        className="absolute left-1/2 top-[22%] h-28 w-px origin-top bg-teal-200/80"
+        className="absolute left-1/2 top-[20%] flex size-16 -translate-x-1/2 items-center justify-center rounded-2xl border border-white/35 bg-white/92 text-teal-700 shadow-xl shadow-teal-950/20"
+        initial={{ opacity: 0, y: -10, scale: 0.9 }}
+        animate={{
+          opacity: 1,
+          y: 0,
+          scale: isWaiting ? [1, 1.06, 1] : 1,
+        }}
+        transition={{
+          duration: isWaiting ? 1.45 : 0.45,
+          repeat: isWaiting ? Infinity : 0,
+          ease: 'easeInOut',
+        }}
+      >
+        <GitBranch className="size-7" aria-hidden="true" />
+      </motion.div>
+      <motion.div
+        className="absolute left-1/2 top-[33%] h-24 w-px origin-top bg-teal-200/90 shadow-[0_0_18px_rgba(45,212,191,.5)]"
         initial={{ scaleY: 0, opacity: 0 }}
-        animate={{ scaleY: 1, opacity: 1 }}
-        transition={{ duration: 0.75, ease: 'easeOut' }}
+        animate={{ scaleY: isWaiting ? [0.25, 1, 0.55] : 1, opacity: 1 }}
+        transition={{ duration: isWaiting ? 1.6 : 0.75, repeat: isWaiting ? Infinity : 0, ease: 'easeInOut' }}
       />
       <motion.div
-        className="absolute left-[22%] right-[22%] top-[42%] h-px bg-teal-200/80"
+        className="absolute left-[18%] right-[18%] top-[54%] h-px bg-teal-200/90 shadow-[0_0_18px_rgba(45,212,191,.5)]"
         initial={{ scaleX: 0, opacity: 0 }}
-        animate={{ scaleX: 1, opacity: 1 }}
-        transition={{ delay: 0.18, duration: 0.75, ease: 'easeOut' }}
+        animate={{ scaleX: isWaiting ? [0.35, 1, 0.5] : 1, opacity: 1 }}
+        transition={{ delay: 0.18, duration: isWaiting ? 1.6 : 0.75, repeat: isWaiting ? Infinity : 0, ease: 'easeInOut' }}
       />
-      <div className="absolute bottom-4 left-3 right-3 grid min-w-0 grid-cols-3 gap-2">
+      <div className="absolute bottom-14 left-3 right-3 grid min-w-0 grid-cols-3 gap-2">
         {routeOptions.map((option, index) => {
           const Icon = option.icon
           const isActive =
             actor === option.id ||
             (option.id === 'community_and_city_hall' && actor === 'unknown')
+          const isRouting = isWaiting || isActive
 
           return (
             <motion.div
               key={option.id}
               className={cn(
-                'rounded-lg border px-2 py-2 text-center text-[0.68rem] font-semibold backdrop-blur',
-                isActive
+                'relative overflow-hidden rounded-lg border px-2 py-2 text-center text-[0.68rem] font-semibold backdrop-blur',
+                isRouting
                   ? 'border-teal-200 bg-teal-300 text-teal-950 shadow-lg shadow-teal-950/20'
                   : 'border-white/20 bg-slate-950/62 text-white',
               )}
               initial={{ opacity: 0, y: 14 }}
-              animate={{ opacity: 1, y: isActive ? -4 : 0 }}
-              transition={{ delay: 0.16 * index, duration: 0.45, ease: 'easeOut' }}
+              animate={{
+                opacity: isWaiting ? [0.76, 1, 0.76] : 1,
+                y: isActive ? -5 : 0,
+                scale: isWaiting ? [1, 1.04, 1] : 1,
+              }}
+              transition={{
+                delay: 0.16 * index,
+                duration: isWaiting ? 1.25 : 0.45,
+                repeat: isWaiting ? Infinity : 0,
+                ease: 'easeInOut',
+              }}
             >
+              {isWaiting && (
+                <motion.span
+                  className="absolute inset-y-0 -left-8 w-7 bg-gradient-to-r from-transparent via-white/50 to-transparent"
+                  animate={{ x: ['0%', '520%'] }}
+                  transition={{
+                    delay: 0.16 * index,
+                    duration: 1.55,
+                    repeat: Infinity,
+                    ease: 'easeInOut',
+                  }}
+                  aria-hidden="true"
+                />
+              )}
               <Icon className="mx-auto mb-1 size-4" aria-hidden="true" />
               <span className="block truncate">{option.label}</span>
             </motion.div>
           )
         })}
       </div>
-      <SceneStatusPill isWaiting={isWaiting} />
+      <motion.div
+        className="absolute bottom-3 left-3 right-3 rounded-lg border border-white/24 bg-white/92 px-3 py-2 text-xs font-semibold text-emerald-950 shadow-lg backdrop-blur"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.25, duration: 0.35, ease: 'easeOut' }}
+      >
+        {isWaiting ? 'Aleg ruta civica potrivita' : `Ruta aleasa: ${selectedLabel}`}
+      </motion.div>
+      <SceneStatusPill isWaiting={isWaiting} waitingLabel="Rutare in curs" doneLabel="Ruta aleasa" />
     </PhotoSceneFrame>
   )
 }
@@ -886,32 +995,58 @@ function DuplicatePhotoScene({
 }) {
   return (
     <PhotoSceneFrame imagePreviewUrl={imagePreviewUrl}>
-      <div className="absolute inset-0 bg-slate-950/24" />
-      <div className="absolute left-1/2 top-1/2 size-36 -translate-x-1/2 -translate-y-1/2">
+      <div className="absolute inset-0 bg-slate-950/30" />
+      <div className="absolute left-1/2 top-1/2 size-40 -translate-x-1/2 -translate-y-1/2">
         {[0, 1, 2].map((index) => (
           <motion.span
             key={index}
-            className="absolute inset-0 rounded-full border border-teal-200/70"
-            initial={{ scale: 0.25, opacity: 0.75 }}
-            animate={{ scale: 1.45, opacity: 0 }}
+            className="absolute inset-0 rounded-full border-2 border-teal-200/75"
+            initial={{ scale: 0.2, opacity: 0.82 }}
+            animate={{ scale: isWaiting ? 1.48 : 1.1, opacity: isWaiting ? 0 : 0.35 }}
             transition={{
               delay: index * 0.55,
-              duration: 2.2,
-              repeat: Infinity,
+              duration: 1.9,
+              repeat: isWaiting ? Infinity : 0,
               ease: 'easeOut',
             }}
           />
         ))}
-        <span className="absolute left-1/2 top-1/2 flex size-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-teal-300 text-teal-950 shadow-lg shadow-teal-950/30">
+        <motion.span
+          className="absolute left-1/2 top-1/2 flex size-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-teal-300 text-teal-950 shadow-lg shadow-teal-950/30"
+          animate={{ scale: isWaiting ? [1, 1.1, 1] : 1, rotate: isWaiting ? [0, 4, -4, 0] : 0 }}
+          transition={{ duration: 1.25, repeat: isWaiting ? Infinity : 0, ease: 'easeInOut' }}
+        >
           <Radar className="size-5" aria-hidden="true" />
-        </span>
+        </motion.span>
+        {[0, 1, 2, 3].map((dot) => (
+          <motion.span
+            key={dot}
+            className="absolute flex size-5 items-center justify-center rounded-full border border-white/50 bg-white/90 text-[0.6rem] font-bold text-teal-700 shadow-lg"
+            style={{
+              left: `${18 + (dot % 2) * 58}%`,
+              top: `${20 + Math.floor(dot / 2) * 52}%`,
+            }}
+            initial={{ opacity: 0, scale: 0.65 }}
+            animate={{ opacity: isWaiting ? [0.35, 1, 0.35] : 0.82, scale: isWaiting ? [0.75, 1, 0.75] : 1 }}
+            transition={{
+              delay: dot * 0.16,
+              duration: 1.35,
+              repeat: isWaiting ? Infinity : 0,
+              ease: 'easeInOut',
+            }}
+          >
+            {dot + 1}
+          </motion.span>
+        ))}
       </div>
       <div className="absolute bottom-3 left-3 right-3 rounded-lg border border-white/16 bg-slate-950/74 p-3 text-sm font-semibold text-white backdrop-blur">
-        {issue.duplicateCount > 0
-          ? `${issue.duplicateCount} rapoarte similare gasite`
-          : 'Nu exista duplicate apropiate'}
+        {isWaiting
+          ? 'Caut rapoarte apropiate in zona'
+          : issue.duplicateCount > 0
+            ? `${issue.duplicateCount} rapoarte similare gasite`
+            : 'Nu exista duplicate apropiate'}
       </div>
-      <SceneStatusPill isWaiting={isWaiting} />
+      <SceneStatusPill isWaiting={isWaiting} waitingLabel="Caut duplicate" doneLabel="Duplicate verificate" />
     </PhotoSceneFrame>
   )
 }
@@ -925,6 +1060,15 @@ function MissionCreationScene({
 }) {
   const mission = issue.relatedMission
   const hasMission = Boolean(mission)
+  const statusLabel = hasMission
+    ? 'Eveniment comunitar generat'
+    : isWaiting
+      ? 'Decizie in curs'
+      : 'Fara eveniment separat'
+  const title = mission?.title ??
+    (isWaiting
+      ? 'Verific daca raportul cere o actiune de grup'
+      : 'Problema ramane activa pe harta')
   const checks = hasMission
     ? [
         'Locatia intra in zona de actiune',
@@ -954,49 +1098,53 @@ function MissionCreationScene({
         }}
       />
       <motion.div
-        className="absolute left-8 right-8 top-8 h-px origin-left bg-teal-400/60"
-        initial={{ scaleX: 0 }}
-        animate={{ scaleX: 1 }}
-        transition={{ duration: 0.75, ease: 'easeOut' }}
-      />
-      <motion.div
-        className="absolute bottom-9 left-8 top-8 w-px origin-top bg-teal-400/60"
-        initial={{ scaleY: 0 }}
-        animate={{ scaleY: 1 }}
-        transition={{ delay: 0.16, duration: 0.75, ease: 'easeOut' }}
-      />
-      <motion.div
-        className="absolute right-5 top-7 flex size-14 items-center justify-center rounded-full border border-emerald-200 bg-white text-emerald-700 shadow-lg shadow-emerald-900/10"
+        className="absolute left-7 top-7 flex size-14 items-center justify-center rounded-2xl border border-emerald-200 bg-white text-emerald-700 shadow-lg shadow-emerald-900/10"
         initial={{ scale: 0.76, opacity: 0, rotate: -8 }}
-        animate={{ scale: 1, opacity: 1, rotate: 0 }}
-        transition={{ delay: 0.18, duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+        animate={{
+          scale: isWaiting ? [1, 1.08, 1] : 1,
+          opacity: 1,
+          rotate: isWaiting ? [-3, 3, -3] : 0,
+        }}
+        transition={{
+          delay: 0.08,
+          duration: isWaiting ? 1.55 : 0.55,
+          repeat: isWaiting ? Infinity : 0,
+          ease: 'easeInOut',
+        }}
       >
         {hasMission ? (
           <Flag className="size-6" aria-hidden="true" />
+        ) : isWaiting ? (
+          <LoaderCircle className="size-6 animate-spin" aria-hidden="true" />
         ) : (
           <Check className="size-6" aria-hidden="true" />
         )}
       </motion.div>
       <motion.div
-        className="relative mx-auto mt-12 max-w-sm rounded-xl border border-emerald-200 bg-white/94 p-4 shadow-xl shadow-emerald-900/10 backdrop-blur"
+        className="relative ml-auto max-w-[calc(100%-4.75rem)] rounded-xl border border-emerald-200 bg-white/94 p-4 shadow-xl shadow-emerald-900/10 backdrop-blur sm:max-w-sm"
         initial={{ opacity: 0, y: 24, scale: 0.96 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ delay: 0.28, duration: 0.62, ease: [0.16, 1, 0.3, 1] }}
       >
         <motion.div
-          className="absolute -left-2 top-5 h-14 w-1 rounded-full bg-emerald-500"
+          className={cn(
+            'absolute -left-2 top-5 h-14 w-1 rounded-full',
+            isWaiting ? 'bg-teal-400' : hasMission ? 'bg-emerald-500' : 'bg-slate-300',
+          )}
           initial={{ scaleY: 0 }}
-          animate={{ scaleY: 1 }}
-          transition={{ delay: 0.55, duration: 0.45, ease: 'easeOut' }}
+          animate={{ scaleY: isWaiting ? [0.35, 1, 0.55] : 1 }}
+          transition={{
+            delay: 0.55,
+            duration: isWaiting ? 1.3 : 0.45,
+            repeat: isWaiting ? Infinity : 0,
+            ease: 'easeInOut',
+          }}
         />
         <p className="text-xs font-semibold uppercase text-emerald-700">
-          {hasMission ? 'Eveniment comunitar generat' : isWaiting ? 'Decizie in curs' : 'Fara eveniment separat'}
+          {statusLabel}
         </p>
         <h3 className="mt-1 text-lg font-semibold leading-tight text-emerald-950">
-          {mission?.title ??
-            (isWaiting
-              ? 'Se verifica daca e nevoie de comunitate'
-              : 'Problema ramane activa pe harta')}
+          {title}
         </h3>
         {hasMission && (
           <div className="mt-4 grid grid-cols-2 gap-2 text-xs font-semibold text-slate-700">
@@ -1012,23 +1160,63 @@ function MissionCreationScene({
           {checks.map((check, index) => (
             <motion.div
               key={check}
-              className="flex items-center gap-2 rounded-lg border border-emerald-100 bg-emerald-50/70 px-3 py-2 text-xs font-semibold text-emerald-900"
+              className={cn(
+                'flex min-w-0 items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold',
+                isWaiting
+                  ? 'border-teal-100 bg-teal-50/75 text-teal-950'
+                  : 'border-emerald-100 bg-emerald-50/70 text-emerald-900',
+              )}
               initial={{ opacity: 0, x: -12 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.62 + index * 0.16, duration: 0.38, ease: 'easeOut' }}
+              animate={{
+                opacity: isWaiting ? [0.7, 1, 0.7] : 1,
+                x: 0,
+              }}
+              transition={{
+                delay: 0.62 + index * 0.16,
+                duration: isWaiting ? 1.35 : 0.38,
+                repeat: isWaiting ? Infinity : 0,
+                ease: 'easeInOut',
+              }}
             >
-              <Check className="size-3.5 text-emerald-600" aria-hidden="true" />
-              {check}
+              {isWaiting ? (
+                <LoaderCircle className="size-3.5 shrink-0 animate-spin text-teal-600" aria-hidden="true" />
+              ) : (
+                <Check className="size-3.5 shrink-0 text-emerald-600" aria-hidden="true" />
+              )}
+              <span className="min-w-0 break-words">{check}</span>
             </motion.div>
           ))}
         </div>
       </motion.div>
       <motion.div
-        className="absolute bottom-5 left-8 right-12 h-px origin-left bg-gradient-to-r from-teal-500/80 via-emerald-400/60 to-transparent"
+        className="absolute bottom-5 left-8 right-12 h-1 origin-left overflow-hidden rounded-full bg-emerald-100"
         initial={{ scaleX: 0 }}
         animate={{ scaleX: 1 }}
         transition={{ delay: 0.75, duration: 0.85, ease: 'easeOut' }}
-      />
+      >
+        <motion.span
+          className="block h-full rounded-full bg-gradient-to-r from-teal-500 via-emerald-400 to-lime-400"
+          animate={{ x: isWaiting ? ['-65%', '110%'] : '0%', width: isWaiting ? '55%' : '100%' }}
+          transition={{ duration: 1.45, repeat: isWaiting ? Infinity : 0, ease: 'easeInOut' }}
+        />
+      </motion.div>
+      <motion.div
+        className="absolute bottom-3 left-7 right-7 grid grid-cols-3 gap-1"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.45, duration: 0.35 }}
+        aria-hidden="true"
+      >
+        {[0, 1, 2].map((step) => (
+          <span
+            key={step}
+            className={cn(
+              'h-1 rounded-full',
+              step === 0 || hasMission || !isWaiting ? 'bg-emerald-300' : 'bg-emerald-100',
+            )}
+          />
+        ))}
+      </motion.div>
     </div>
   )
 }
@@ -1046,6 +1234,11 @@ function RewardGenerationScene({
     issue.gamification?.unlockedBadges.map((badge) => badge.name) ??
     streamState.badges
   const hasPoints = pointsAwarded !== null
+  const rewardTitle = issue.relatedReward
+    ? roReward(issue.relatedReward.title)
+    : streamState.rewardMatched
+      ? 'Reward local potrivit'
+      : 'Reward in verificare'
 
   return (
     <div className="relative min-h-[17rem] overflow-hidden bg-gradient-to-br from-white via-emerald-50 to-lime-50 p-4 text-emerald-950">
@@ -1075,15 +1268,7 @@ function RewardGenerationScene({
         </motion.span>
       ))}
       <motion.div
-        className="relative mx-auto mt-4 flex size-20 items-center justify-center rounded-2xl border border-emerald-200 bg-white shadow-xl shadow-emerald-900/10"
-        initial={{ scale: 0.72, opacity: 0 }}
-        animate={{ scale: [0.72, 1.08, 1], opacity: 1, rotate: [-4, 2, 0] }}
-        transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-      >
-        <Gift className="size-9 text-emerald-600" aria-hidden="true" />
-      </motion.div>
-      <motion.div
-        className="relative mx-auto mt-4 max-w-sm overflow-hidden rounded-xl border border-emerald-200 bg-white p-4 text-center shadow-xl shadow-emerald-900/10"
+        className="relative mx-auto max-w-sm overflow-hidden rounded-xl border border-emerald-200 bg-white p-4 shadow-xl shadow-emerald-900/10"
         initial={{ opacity: 0, y: 18 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.18, duration: 0.48, ease: 'easeOut' }}
@@ -1091,22 +1276,65 @@ function RewardGenerationScene({
         <motion.div
           className="absolute inset-y-0 -left-24 w-20 bg-gradient-to-r from-transparent via-amber-200/55 to-transparent"
           animate={{ x: ['0%', '560%'] }}
-          transition={{ delay: 0.35, duration: 1.8, ease: 'easeInOut' }}
+          transition={{ delay: 0.35, duration: 1.8, repeat: hasPoints ? 0 : Infinity, ease: 'easeInOut' }}
         />
-        <p className="relative text-xs font-semibold uppercase text-emerald-700">
-          Puncte civice
-        </p>
-        <motion.h3
-          className="relative mt-1 text-4xl font-semibold"
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.18, duration: 0.45 }}
-        >
-          {hasPoints ? `+${pointsAwarded}` : 'Se calculeaza'}
-        </motion.h3>
-        <p className="relative mt-2 text-sm font-semibold text-slate-600">
-          {rankName ? roRank(rankName) || rankName : 'Rank-ul se sincronizeaza'}
-        </p>
+        <div className="relative flex items-center gap-3">
+          <motion.span
+            className="flex size-14 shrink-0 items-center justify-center rounded-2xl border border-emerald-200 bg-emerald-50 text-emerald-700 shadow-sm"
+            initial={{ scale: 0.72, opacity: 0 }}
+            animate={{
+              scale: hasPoints ? [0.72, 1.08, 1] : [1, 1.06, 1],
+              opacity: 1,
+              rotate: hasPoints ? [-4, 2, 0] : [-2, 2, -2],
+            }}
+            transition={{
+              duration: hasPoints ? 0.7 : 1.4,
+              repeat: hasPoints ? 0 : Infinity,
+              ease: 'easeInOut',
+            }}
+          >
+            <Gift className="size-7" aria-hidden="true" />
+          </motion.span>
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase text-emerald-700">
+              Puncte si recompense
+            </p>
+            <motion.h3
+              className="mt-0.5 text-3xl font-semibold leading-tight sm:text-4xl"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.18, duration: 0.45 }}
+            >
+              {hasPoints ? `+${pointsAwarded}` : 'Se calculeaza'}
+            </motion.h3>
+          </div>
+        </div>
+
+        <div className="relative mt-4 grid gap-2 text-sm">
+          <motion.div
+            className="flex min-w-0 items-center justify-between gap-3 rounded-lg border border-emerald-100 bg-emerald-50/70 px-3 py-2"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.26, duration: 0.35 }}
+          >
+            <span className="font-semibold text-slate-600">Rank</span>
+            <span className="min-w-0 truncate font-semibold text-emerald-950">
+              {rankName ? roRank(rankName) || rankName : 'Se sincronizeaza'}
+            </span>
+          </motion.div>
+          <motion.div
+            className="flex min-w-0 items-center justify-between gap-3 rounded-lg border border-lime-100 bg-lime-50/80 px-3 py-2"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.34, duration: 0.35 }}
+          >
+            <span className="font-semibold text-slate-600">Reward</span>
+            <span className="min-w-0 truncate font-semibold text-emerald-950">
+              {rewardTitle}
+            </span>
+          </motion.div>
+        </div>
+
         <div className="relative mt-4 h-2 overflow-hidden rounded-full bg-emerald-100">
           <motion.div
             className="h-full rounded-full bg-emerald-500"
@@ -1120,7 +1348,7 @@ function RewardGenerationScene({
             }}
           />
         </div>
-        <div className="relative mt-4 flex flex-wrap justify-center gap-2">
+        <div className="relative mt-4 flex flex-wrap gap-2">
           {(badges.length > 0 ? badges : ['Badge-uri in curs']).slice(0, 3).map((badge) => (
             <motion.span
               key={badge}
@@ -1636,47 +1864,65 @@ function AgentTrackPanel({
           const stepAvatar = agentAvatarByName[step.agentName]
           const isDone = showMap || index < displayStepIndex
           const isActive = !showMap && index === displayStepIndex
+          const stepTone = isDone
+            ? 'border-emerald-200 bg-emerald-50 text-emerald-950'
+            : isActive
+              ? 'border-teal-300 bg-teal-50 text-teal-950'
+              : 'border-slate-200 bg-slate-50 text-slate-500'
 
           return (
             <motion.div
               key={step.id}
               className={cn(
-                'flex min-w-0 items-center gap-2 rounded-lg border px-2.5 py-2 transition lg:px-3',
-                isActive
-                  ? 'border-teal-300 bg-teal-50 text-teal-950 shadow-sm'
-                  : isDone
-                    ? 'border-emerald-200 bg-emerald-50 text-emerald-950'
-                    : 'border-slate-200 bg-slate-50 text-slate-500',
+                'relative flex min-w-0 items-center gap-2 overflow-hidden rounded-xl border px-2.5 py-2 transition lg:px-3',
+                stepTone,
+                isActive && 'shadow-md shadow-teal-900/10 ring-2 ring-teal-200/70',
               )}
-              animate={isActive ? { y: [0, -2, 0] } : { y: 0 }}
+              animate={isActive ? { y: [0, -2, 0], scale: [1, 1.01, 1] } : { y: 0, scale: 1 }}
               transition={
                 isActive
-                  ? { duration: 1.35, repeat: Infinity, ease: 'easeInOut' }
+                  ? { duration: 1.25, repeat: Infinity, ease: 'easeInOut' }
                   : { duration: 0.2 }
               }
             >
+              {isActive && (
+                <motion.span
+                  className="absolute inset-y-0 -left-12 w-10 bg-gradient-to-r from-transparent via-white/70 to-transparent"
+                  animate={{ x: ['0%', '620%'] }}
+                  transition={{ duration: 1.55, repeat: Infinity, ease: 'easeInOut' }}
+                  aria-hidden="true"
+                />
+              )}
               <span
                 className={cn(
-                  'flex size-8 shrink-0 items-center justify-center rounded-md',
-                  isActive
-                    ? 'bg-teal-500 text-white'
-                    : isDone
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-white text-slate-400',
+                  'relative flex size-8 shrink-0 items-center justify-center rounded-lg',
+                  isDone ? 'bg-emerald-500 text-white' : isActive ? 'bg-teal-500 text-white' : 'bg-white text-slate-400',
                 )}
               >
-                {isDone ? (
-                  <Check className="size-4" aria-hidden="true" />
-                ) : isActive ? (
-                  <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
-                ) : stepAvatar ? (
-                  <img
-                    src={stepAvatar}
-                    alt=""
-                    className="size-4 rounded-sm object-cover"
+                {isActive && (
+                  <motion.span
+                    className="absolute -inset-1 rounded-xl border border-teal-300"
+                    animate={{ scale: [0.9, 1.28], opacity: [0.8, 0] }}
+                    transition={{ duration: 1.1, repeat: Infinity, ease: 'easeOut' }}
+                    aria-hidden="true"
                   />
-                ) : (
-                  <StepIcon className="size-4" aria-hidden="true" />
+                )}
+                <span className="grid size-full place-items-center rounded-[0.45rem] bg-white/20 p-1">
+                  {isDone ? (
+                    <Check className="size-4" aria-hidden="true" />
+                  ) : isActive ? (
+                    <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
+                  ) : stepAvatar ? (
+                    <img src={stepAvatar} alt="" className="size-5 rounded-sm object-cover" />
+                  ) : (
+                    <StepIcon className="size-4" aria-hidden="true" />
+                  )}
+                </span>
+                {!isDone && !isActive && !stepAvatar && (
+                  <span
+                    className="absolute -right-0.5 -bottom-0.5 inline-flex size-3 rounded-full border border-white bg-slate-300"
+                    aria-hidden="true"
+                  />
                 )}
               </span>
               <span className="min-w-0">
@@ -1769,7 +2015,7 @@ export function ReportAgentFlow({
             </h2>
             <p className="mt-1 text-sm leading-5 text-slate-600">
               {showMap
-                ? 'Rezultatul este gata pentru inspectare si demo pe harta.'
+                ? 'Rezultatul este gata pentru inspectare si publicare pe harta.'
                 : `${roAgentName(currentStep.agentName)} ruleaza acum si pregateste pasul urmator.`}
             </p>
           </div>

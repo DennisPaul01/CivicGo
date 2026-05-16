@@ -6,7 +6,7 @@ import {
   useState,
   type FormEvent,
 } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import {
   ArrowLeft,
   Camera,
@@ -160,7 +160,6 @@ function createOptimisticIssue(
 }
 
 export function ReportIssuePage() {
-  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const session = useAuthStore((state) => state.session)
   const profile = useAuthStore((state) => state.profile)
@@ -518,12 +517,6 @@ export function ReportIssuePage() {
     setPrefetchedIssueId('')
   }
 
-  function viewIssueOnMap(issueId: string) {
-    setActiveFilter('all')
-    setSelectedItemId(issueId)
-    navigate(`/?issue=${issueId}`)
-  }
-
   useEffect(() => {
     if (!profile || streamState.totalPoints === null) {
       return
@@ -843,7 +836,6 @@ export function ReportIssuePage() {
               streamState={streamState}
               isSaving={submitState === 'submitting'}
               onStartNewReport={resetReportForm}
-              onViewOnMap={() => viewIssueOnMap(visibleIssue.id)}
             />
           ) : (
             <motion.form

@@ -553,7 +553,7 @@ export function AdminIssuesPage() {
             {activeView === 'resolved' && (
               <IssueList
                 title="Probleme rezolvate"
-                description="Cazuri inchise, utile pentru demo-ul de impact si before/after."
+                description="Cazuri inchise, utile pentru impact si before/after."
                 issues={resolvedIssues}
                 emptyLabel="Nu exista inca probleme rezolvate."
                 icon={CheckCircle2}
@@ -828,12 +828,12 @@ function IssueRow({ issue }: { issue: IssueResponse }) {
   return (
     <article className="overflow-hidden rounded-lg border border-emerald-200 bg-white shadow-sm transition hover:border-emerald-300 hover:shadow-md">
       <div className="grid gap-4 p-4 lg:grid-cols-[8.5rem_minmax(0,1fr)_10rem]">
-        <div className="relative min-h-36 overflow-hidden rounded-lg border border-emerald-100 bg-emerald-50 lg:min-h-0">
+        <div className="relative h-36 overflow-hidden rounded-lg border border-emerald-100 bg-emerald-50 lg:h-40 lg:self-start">
           {issue.imageUrl ? (
             <img
               src={issue.imageUrl}
               alt=""
-              className="h-full min-h-36 w-full object-cover lg:absolute lg:inset-0"
+              className="h-full w-full object-cover"
             />
           ) : (
             <div className="flex h-full min-h-36 items-center justify-center text-emerald-700">
@@ -1090,13 +1090,12 @@ function IssueRow({ issue }: { issue: IssueResponse }) {
             onSubmit={handleSubmit}
           >
             <label className="grid gap-1.5 text-sm font-semibold text-emerald-950">
-              Mesaj interventie
+              Mesaj interventie optional
               <textarea
                 value={resolutionNote}
                 onChange={(event) => setResolutionNote(event.target.value)}
-                required
                 rows={3}
-                placeholder="Am rezolvat problema si am incarcat poza dupa interventie."
+                placeholder="Am rezolvat problema si am incarcat poza dupa interventie. Poate ramane gol daca poza este clara."
                 className={textareaClassName}
               />
             </label>
@@ -1138,9 +1137,7 @@ function IssueRow({ issue }: { issue: IssueResponse }) {
               type="submit"
               size="sm"
               className="w-full bg-emerald-600 text-white hover:bg-emerald-700 sm:w-fit"
-              disabled={
-                resolveMutation.isPending || !afterImage || !resolutionNote.trim()
-              }
+              disabled={resolveMutation.isPending || !afterImage}
             >
               {resolveMutation.isPending ? (
                 <Loader2 data-icon="inline-start" className="animate-spin" aria-hidden="true" />
@@ -1411,7 +1408,7 @@ function CommunityEventsView({
       <SectionHeader
         icon={CalendarDays}
         title="Evenimente de comunitate"
-        description="Misiuni generate si activitate publica recenta care poate fi folosita in demo."
+        description="Misiuni generate si activitate publica recenta care poate fi folosita in operarea orasului."
         count={missions.length + activityItems.length}
       />
 

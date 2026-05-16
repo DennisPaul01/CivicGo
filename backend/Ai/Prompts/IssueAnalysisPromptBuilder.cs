@@ -69,7 +69,7 @@ public static class IssueAnalysisPromptBuilder
           "routeReason": "motivul rutei alese, scurt",
           "responsibleActorLabel": "eticheta scurta pentru UI",
           "suggestedAction": "urmatoarea actiune practica, in romana, sub 160 de caractere",
-          "demoExplanation": "explicatie demo in romana, maximum 2 propozitii",
+          "publicExplanation": "explicatie publica in romana, maximum 2 propozitii",
           "rewardEligible": true
         }
 

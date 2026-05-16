@@ -78,7 +78,7 @@ function createDemoUser(
     badges: Array.from({ length: Math.min(3, badgeCount) }, (_, index) => ({
       id: `${id}-badge-${index}`,
       name: ['First Reporter', 'AI Scout', 'Clean-up Hero'][index] ?? 'Civic Badge',
-      description: 'Demo civic badge',
+      description: 'Badge civic public',
       icon: 'trophy',
       unlockedAt: now,
     })),

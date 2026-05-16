@@ -62,7 +62,7 @@ export function AgentTimeline({ run }: AgentTimelineProps) {
 
       {usedFallback && (
         <p className="mt-3 rounded-lg border border-teal-100 bg-white/75 px-3 py-2 text-xs leading-5 text-teal-800">
-          Verificarea a folosit modul demo, ca fluxul sa ramana disponibil.
+          Verificarea a folosit modul de rezerva, ca fluxul sa ramana disponibil.
         </p>
       )}
     </motion.section>

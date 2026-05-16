@@ -10,7 +10,8 @@ public sealed class UserProfileService(CivicGoDbContext dbContext)
 {
     private static readonly string[] DemoAdminEmails =
     [
-        "admin@civicgo.demo"
+        "admin@civicgo.demo",
+        "admin2@civicgo.demo"
     ];
 
     private static readonly string[] DemoPartnerEmails =

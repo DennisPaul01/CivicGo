@@ -290,7 +290,7 @@ public static class IssueEndpoints
         group.MapPost("/{id:guid}/resolve", async (
             Guid id,
             [FromForm] IFormFile afterImage,
-            [FromForm] string resolutionNote,
+            [FromForm] string? resolutionNote,
             ClaimsPrincipal principal,
             HttpContext httpContext,
             CivicGoDbContext dbContext,
@@ -306,11 +306,6 @@ public static class IssueEndpoints
             if (afterImage.Length == 0)
             {
                 return Results.BadRequest(new { message = "After photo is required." });
-            }
-
-            if (string.IsNullOrWhiteSpace(resolutionNote))
-            {
-                return Results.BadRequest(new { message = "Resolution note is required." });
             }
 
             var accessToken = GetBearerToken(httpContext);
@@ -348,6 +343,7 @@ public static class IssueEndpoints
             }
 
             var now = DateTimeOffset.UtcNow;
+            var normalizedResolutionNote = resolutionNote?.Trim() ?? string.Empty;
             var afterImageUrl = await storageService.UploadIssueImageAsync(
                 afterImage,
                 accessToken,
@@ -356,7 +352,7 @@ public static class IssueEndpoints
             var verification = await resolutionVerificationService.VerifyAsync(
                 issue,
                 afterImageUrl,
-                resolutionNote.Trim(),
+                normalizedResolutionNote,
                 cancellationToken
             );
 
@@ -384,7 +380,9 @@ public static class IssueEndpoints
                 Id = Guid.NewGuid(),
                 Type = "issue_resolved",
                 Title = "Issue resolved",
-                Message = $"{profile.FullName} marked \"{issue.Title}\" as resolved: {resolutionNote.Trim()}",
+                Message = string.IsNullOrWhiteSpace(normalizedResolutionNote)
+                    ? $"{profile.FullName} marked \"{issue.Title}\" as resolved."
+                    : $"{profile.FullName} marked \"{issue.Title}\" as resolved: {normalizedResolutionNote}",
                 RelatedIssueId = issue.Id,
                 RelatedZoneId = issue.ZoneId,
                 CreatedAt = now

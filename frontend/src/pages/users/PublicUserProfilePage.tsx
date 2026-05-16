@@ -78,7 +78,7 @@ export function PublicUserProfilePage() {
 
             {query.isError && (
               <p className="mt-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-900">
-                Profilul real nu a putut fi incarcat. Afisez fallback demo.
+                Profilul real nu a putut fi incarcat. Afisez date locale temporare.
               </p>
             )}
           </div>
@@ -164,7 +164,7 @@ export function PublicUserProfilePage() {
               <Gift className="size-5" aria-hidden="true" />
             </span>
             <h2 className="mt-4 text-xl font-bold text-slate-950">
-              Continua flow-ul demo
+              Continua parcursul civic
             </h2>
             <p className="mt-2 text-sm leading-6 text-slate-600">
               Profilul public trimite mai departe spre misiuni si recompense, fara

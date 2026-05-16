@@ -80,7 +80,7 @@ function createExactLocation(
   source: 'address' | 'current',
 ): ReportLocation {
   const nearestArea = getNearestArea(place.latitude, place.longitude)
-  const cleanAddress = cleanTimisoaraAddress(place.address, source === 'current')
+  const cleanAddress = cleanTimisoaraAddress(place.address, true)
 
   return {
     id: `exact-${source}`,
@@ -222,7 +222,7 @@ export function LocationPicker({
     onLocationChange(exactLocation)
     if (source === 'address') {
       shouldSkipNextSuggestionsRef.current = true
-      setAddressQuery(cleanTimisoaraAddress(place.address))
+      setAddressQuery(cleanTimisoaraAddress(place.address, true))
       addressInputRef.current?.blur()
     }
     setAddressSuggestions([])
@@ -432,7 +432,7 @@ export function LocationPicker({
                       setAreSuggestionsOpen(false)
                     }
                   }}
-                  placeholder="ex. Calea Torontalului"
+                  placeholder="ex. Calea Torontalului 30"
                   aria-autocomplete="list"
                   aria-controls={suggestionsListId}
                   aria-expanded={areSuggestionsOpen}
@@ -491,7 +491,7 @@ export function LocationPicker({
                             {place.name}
                           </span>
                           <span className="mt-0.5 block line-clamp-2 text-xs leading-4 text-slate-600">
-                            {cleanTimisoaraAddress(place.address)}
+                            {cleanTimisoaraAddress(place.address, true)}
                           </span>
                         </span>
                       </button>

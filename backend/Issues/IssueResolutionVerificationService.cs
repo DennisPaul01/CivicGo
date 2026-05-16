@@ -208,8 +208,8 @@ public sealed class IssueResolutionVerificationService(
                         {
                             ["type"] = "input_text",
                             ["text"] = $"""
-                                Esti Resolution Agent pentru CiviTm. Compara poza initiala cu poza de dupa si nota cetateanului.
-                                Decide daca problema civica pare rezolvata suficient pentru demo.
+                                Esti Resolution Agent pentru CiviTm. Compara poza initiala cu poza de dupa. Nota cetateanului este optionala si poate lipsi.
+                                Decide daca problema civica pare rezolvata suficient pe baza imaginilor before/after.
                                 Raspunde strict JSON cu: isResolved boolean, confidence number 0-1, summary string scurt in romana, suggestedAction string scurt in romana.
                                 Nu aproba daca poza de dupa nu arata zona/problema, daca pare alta locatie sau daca rezolvarea este neclara.
                                 Problema: {issue.Title}
@@ -217,7 +217,7 @@ public sealed class IssueResolutionVerificationService(
                                 Severitate: {issue.Severity}
                                 Descriere initiala: {issue.Description ?? "fara descriere"}
                                 Zona: {issue.Zone?.Name ?? "Timisoara"}
-                                Nota rezolvare: {resolutionNote}
+                                Nota rezolvare optionala: {(string.IsNullOrWhiteSpace(resolutionNote) ? "fara nota" : resolutionNote)}
                                 """
                         },
                         new Dictionary<string, object?>
@@ -245,14 +245,13 @@ public sealed class IssueResolutionVerificationService(
         string reason
     )
     {
-        var meaningfulNote = resolutionNote.Trim().Length >= 8;
-        var isResolved = !string.IsNullOrWhiteSpace(afterImageUrl) && meaningfulNote;
+        var isResolved = !string.IsNullOrWhiteSpace(afterImageUrl);
         var summary = isResolved
-            ? "Verificarea demo a acceptat poza de dupa si nota cetateanului."
-            : "Verificarea demo are nevoie de o nota mai clara despre ce s-a rezolvat.";
+            ? "Verificarea a acceptat poza de dupa ca dovada vizuala a rezolvarii."
+            : "Verificarea are nevoie de o poza de dupa clara.";
         var suggestedAction = isResolved
             ? "Marcheaza problema ca rezolvata si acorda punctele civice."
-            : "Adauga o poza de dupa si o nota scurta, concreta.";
+            : "Adauga o poza de dupa clara cu zona rezolvata.";
         var rawJson = JsonSerializer.Serialize(
             new
             {

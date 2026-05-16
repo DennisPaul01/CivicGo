@@ -20,7 +20,7 @@ public static class AgentDefaultInstructions
 
     public const string DuplicateRole = "Verificator duplicate apropiate";
     public const string DuplicateDescription =
-        "Compara sesizari active apropiate si pastreaza clusterele vizibile pentru demo.";
+        "Compara sesizari active apropiate si pastreaza clusterele vizibile pentru operare.";
     public const string DuplicateInstructions =
         "Verifica daca noua sesizare este probabil duplicat. Compara distanta, categoria, subcategoria, severitatea, statusul, data, textul/imaginea cand exista si aceeasi strada/zona/reper. Marcheaza duplicat doar cand potrivirea este clara; daca e medie, recomanda admin review, nu bloca. Pastreaza clusterele vizibile pentru storytelling si nu ascunde sesizari valide.";
     public const string DuplicateFallback =

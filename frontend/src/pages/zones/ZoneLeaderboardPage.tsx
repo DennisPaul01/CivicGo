@@ -1027,8 +1027,8 @@ export function ZoneLeaderboardPage() {
             icon={TriangleAlert}
             tone="amber"
             eyebrow="Fallback temporar"
-            title="Folosim leaderboard-ul demo pe zone"
-            description="Endpointul live pentru zone nu a putut fi accesat, asa ca pagina foloseste scoruri demo."
+            title="Folosim scorurile locale pe zone"
+            description="Endpointul live pentru zone nu a putut fi accesat, asa ca pagina foloseste scoruri locale temporare."
           />
         )}
 

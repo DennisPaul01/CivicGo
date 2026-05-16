@@ -15,6 +15,8 @@
     "dev:mobile:android": "npm --prefix civi-mobile run android",
     "dev:mobile:ios": "npm --prefix civi-mobile run ios",
     "dev:mobile:web": "npm --prefix civi-mobile run web",
+    "dev:full-mobile": "node scripts/start-mobile-stack.js",
+    "dev:all": "concurrently -n desktop,full-mobile -c blue,magenta \"npm run dev:desktop\" \"CIVICGO_MOBILE_FRONTEND_PORT=5174 CIVICGO_MOBILE_API_PORT=5052 node scripts/start-mobile-stack.js\"",
     "build": "npm run build:desktop",
     "build:desktop": "npm run build:backend && npm run build:frontend",
     "build:frontend": "npm --prefix frontend run build",

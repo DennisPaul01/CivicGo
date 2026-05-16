@@ -84,7 +84,7 @@ const demoMetrics: DashboardMetric[] = [
     id: 'total-issues',
     label: 'Total probleme',
     value: 28,
-    detail: 'Pe harta live si in datele demo ale orasului.',
+    detail: 'Pe harta live si in datele orasului.',
     icon: MapPinned,
     tone: 'emerald',
   },
@@ -197,7 +197,7 @@ const demoAiCitySummary: AiCitySummary = {
   actionLabel: 'Actiune sugerata',
   actionValue:
     'Transforma cele mai noi rapoarte deschise intr-o misiune vizibila de weekend si pastreaza recompensele atasate pentru voluntari.',
-  confidenceLabel: 'Rezumat fallback demo',
+  confidenceLabel: 'Rezumat fallback',
   tone: 'emerald',
 }
 
@@ -762,7 +762,7 @@ function DashboardCharts({
           </h2>
         </div>
         <p className="text-sm leading-6 text-slate-600">
-          Statusuri si categorii din datele live sau fallback demo.
+          Statusuri si categorii din datele live sau fallback local.
         </p>
       </div>
 

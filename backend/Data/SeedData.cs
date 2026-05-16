@@ -192,9 +192,9 @@ public static class SeedData
         return agent.Instructions switch
         {
             "Classify the civic report using the Timisoara taxonomy. Prefer specific categories, keep summaries short and flag urgent safety risks." => true,
-            "Use the category, severity and location context to pick the most practical responsible actor for demo follow-up." => true,
+            "Use the category, severity and location context to pick the most practical responsible actor for operational follow-up." => true,
             "Compare distance, category and unresolved status. Only mark a duplicate when the match is clear enough for an admin to review." => true,
-            "Generate compact, local, actionable missions that fit a Friday HackTM demo and avoid production-heavy workflows." => true,
+            "Generate compact, local, actionable missions that fit a civic operations flow and avoid production-heavy workflows." => true,
             "Prefer relevant partner rewards, keep required points realistic and fall back to system rewards when no partner fits." => true,
             "Summarize the strongest active city signal and suggest the next visible action for the admin dashboard." => true,
             "Write concise Romanian authority emails. Include the issue context, severity rationale, exact location, report date, photo URL and requested next action." => true,
@@ -360,10 +360,26 @@ public static class SeedData
             zone => zone.Name,
             StringComparer.OrdinalIgnoreCase
         );
+
+        const string legacyDemoTitlePrefix = "Demo issue: ";
+        var legacyTitledIssues = await dbContext.Issues
+            .Where(issue => issue.Title.StartsWith(legacyDemoTitlePrefix))
+            .ToListAsync();
+        foreach (var issue in legacyTitledIssues)
+        {
+            issue.Title = issue.Title[legacyDemoTitlePrefix.Length..];
+            issue.UpdatedAt = now;
+        }
+
+        if (legacyTitledIssues.Count > 0)
+        {
+            await dbContext.SaveChangesAsync();
+        }
+
         var demoIssues = new[]
         {
             new DemoIssueSeed(
-                "Demo issue: overflowing bins near Complex tram stop",
+                "Overflowing bins near Complex tram stop",
                 "Overflowing public bins are blocking the tram stop edge and need a quick pickup.",
                 IssueCategories.SanitationPestSnow,
                 "medium",
@@ -385,7 +401,7 @@ public static class SeedData
                 true
             ),
             new DemoIssueSeed(
-                "Demo issue: broken streetlight in Fabric courtyard",
+                "Broken streetlight in Fabric courtyard",
                 "A broken streetlight leaves the entrance to a shared courtyard dark after sunset.",
                 IssueCategories.PublicLighting,
                 "high",
@@ -407,7 +423,7 @@ public static class SeedData
                 false
             ),
             new DemoIssueSeed(
-                "Demo issue: duplicate sidewalk reports in Girocului",
+                "Duplicate sidewalk reports in Girocului",
                 "Several citizens reported the same uneven sidewalk segment near the market crossing.",
                 IssueCategories.StreetsSidewalks,
                 "medium",
@@ -429,7 +445,7 @@ public static class SeedData
                 false
             ),
             new DemoIssueSeed(
-                "Demo issue: loose paving stones under review",
+                "Loose paving stones under review",
                 "Loose paving stones on a pedestrian route are being checked by the civic team.",
                 IssueCategories.StreetsSidewalks,
                 "medium",
@@ -451,7 +467,7 @@ public static class SeedData
                 false
             ),
             new DemoIssueSeed(
-                "Demo issue: blocked sidewalk in progress",
+                "Blocked sidewalk in progress",
                 "A blocked sidewalk near the school route has been accepted and is being handled.",
                 IssueCategories.StreetsSidewalks,
                 "high",
@@ -473,7 +489,7 @@ public static class SeedData
                 true
             ),
             new DemoIssueSeed(
-                "Demo issue: Mehala cleanup mission ready",
+                "Mehala cleanup mission ready",
                 "A small park edge in Mehala needs a community cleanup and volunteer coordination.",
                 IssueCategories.SanitationPestSnow,
                 "medium",
@@ -495,7 +511,7 @@ public static class SeedData
                 true
             ),
             new DemoIssueSeed(
-                "Demo issue: graffiti cleanup resolved in Complex",
+                "Graffiti cleanup resolved in Complex",
                 "Graffiti near the underpass was reported, reviewed and marked as resolved.",
                 IssueCategories.PublicOrder,
                 "low",
@@ -511,13 +527,13 @@ public static class SeedData
                 now.AddDays(-5),
                 now.AddDays(-1),
                 "The graffiti report has been resolved and is ready for before-after proof.",
-                "Add the after photo in the next demo data pass.",
+                "Add the after photo in the next data pass.",
                 0.88,
                 false,
                 false
             ),
             new DemoIssueSeed(
-                "Demo issue: Fabric green path restored",
+                "Fabric green path restored",
                 "A damaged green-space path in Fabric was fixed after community reporting.",
                 IssueCategories.EnvironmentPlaygroundsGreenSpaces,
                 "medium",
@@ -1117,7 +1133,7 @@ public static class SeedData
                 "system",
                 null,
                 "Zone Champion title preview",
-                "A demo system reward for citizens leading activity in one Timisoara zone.",
+                "A system reward for citizens leading activity in one Timisoara zone.",
                 300,
                 100,
                 null,
@@ -1128,7 +1144,7 @@ public static class SeedData
                 "partner",
                 partners.GetValueOrDefault("CoffeeLab")?.Id,
                 "Free cappuccino",
-                "CoffeeLab reward matched to clean-up and waste missions for Friday demo.",
+                "CoffeeLab reward matched to clean-up and waste missions.",
                 30,
                 40,
                 now.AddMonths(1),
@@ -1183,7 +1199,7 @@ public static class SeedData
                 "system",
                 null,
                 "Mission Hero weekend boost",
-                "A demo boost for citizens who join active weekend missions.",
+                "A weekend boost for citizens who join active missions.",
                 0,
                 250,
                 now.AddMonths(2),
@@ -1259,7 +1275,7 @@ public static class SeedData
                 "Clean-up Mehala park edge",
                 "Community clean-up for the Mehala park edge reported in the live map.",
                 "Mehala",
-                "Demo issue: Mehala cleanup mission ready",
+                "Mehala cleanup mission ready",
                 "Team cleanup coffee tray",
                 8,
                 140,
@@ -1270,7 +1286,7 @@ public static class SeedData
                 "Safe route Soarelui sidewalk sprint",
                 "Volunteers and the city team clear the blocked sidewalk on a school route.",
                 "Soarelui",
-                "Demo issue: blocked sidewalk in progress",
+                "Blocked sidewalk in progress",
                 "Free day pass",
                 10,
                 160,
@@ -1281,7 +1297,7 @@ public static class SeedData
                 "Fabric lighting safety walk",
                 "Evening safety walk to document broken lighting and confirm repair spots.",
                 "Fabric",
-                "Demo issue: broken streetlight in Fabric courtyard",
+                "Broken streetlight in Fabric courtyard",
                 "Free dessert",
                 6,
                 110,

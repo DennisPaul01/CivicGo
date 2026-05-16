@@ -1,4 +1,5 @@
 import type { LucideIcon } from '@/components/icons/hugeicons'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   CheckCircle2,
@@ -6,6 +7,7 @@ import {
   Flag,
   Gift,
   MessageSquareText,
+  Search,
   Sparkles,
   Target,
   TriangleAlert,
@@ -14,7 +16,7 @@ import {
 } from '@/components/icons/hugeicons'
 import { AnimatePresence, motion } from 'motion/react'
 import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
+import { cn, isSameDisplayText } from '@/lib/utils'
 import type { CivicMapItem } from '@/data/civicMapData'
 
 type SelectedIssuePanelProps = {
@@ -58,19 +60,19 @@ const itemStyles: Record<
   },
 }
 
-function normalizePanelText(value: string) {
-  return value
-    .trim()
-    .toLocaleLowerCase('ro-RO')
-    .replace(/\s+/g, ' ')
-    .replace(/[.,;:!?]+$/g, '')
-}
-
 export function SelectedIssuePanel({
   item,
   className,
   onClose,
 }: SelectedIssuePanelProps) {
+  const [preview, setPreview] = useState<null | {
+    title: string
+    images: Array<{
+      label: string
+      imageUrl: string
+      tone: 'emerald' | 'rose'
+    }>
+  }>(null)
   const style = itemStyles[item.kind]
   const Icon = style.icon
   const detailsHref =
@@ -79,9 +81,10 @@ export function SelectedIssuePanel({
       : item.source === 'api' && item.kind !== 'reward'
         ? `/issues/${item.id}`
         : null
+  const primaryImageUrl = item.imageUrl
   const shouldShowAiSummary =
     Boolean(item.aiSummary) &&
-    normalizePanelText(item.aiSummary ?? '') !== normalizePanelText(item.description)
+    !isSameDisplayText(item.aiSummary, item.description)
 
   return (
     <AnimatePresence mode="wait">
@@ -148,15 +151,36 @@ export function SelectedIssuePanel({
           )}
         </div>
 
-        {item.imageUrl && (
-          <div className="mt-2 overflow-hidden rounded-md border border-emerald-100 bg-emerald-50">
-            <img
-              src={item.imageUrl}
-              alt=""
-              className="h-24 w-full object-cover"
-              loading="lazy"
-            />
-          </div>
+        {primaryImageUrl && (
+          <button
+            type="button"
+            className="group mt-2 block w-full overflow-hidden rounded-md border border-emerald-100 bg-emerald-50 text-left outline-none transition hover:border-emerald-300 focus-visible:ring-3 focus-visible:ring-emerald-300/60"
+            aria-label="Mareste fotografia semnalului"
+            onClick={() =>
+              setPreview({
+                title: item.title,
+                images: [
+                  {
+                    label: 'Fotografie',
+                    imageUrl: primaryImageUrl,
+                    tone: 'emerald',
+                  },
+                ],
+              })
+            }
+          >
+            <span className="relative flex aspect-[16/7] w-full items-center justify-center bg-slate-100">
+              <img
+                src={primaryImageUrl}
+                alt=""
+                className="h-full w-full object-contain"
+                loading="lazy"
+              />
+              <span className="absolute right-2 top-2 flex size-8 items-center justify-center rounded-lg bg-white/90 text-emerald-700 opacity-0 shadow-sm transition group-hover:opacity-100 group-focus-visible:opacity-100">
+                <Search className="size-4" aria-hidden="true" />
+              </span>
+            </span>
+          </button>
         )}
 
         <div className="mt-3 grid gap-2 text-sm leading-snug">
@@ -252,45 +276,208 @@ export function SelectedIssuePanel({
 
         {item.beforeAfter && (
           <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <div className="overflow-hidden rounded-md border border-rose-100 bg-rose-50">
-              {item.beforeAfter.beforeImage && (
-                <img
-                  src={item.beforeAfter.beforeImage}
-                  alt=""
-                  className="h-20 w-full object-cover"
-                  loading="lazy"
-                />
-              )}
-              <div className="p-2">
-                <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-rose-700">
-                  Inainte
-                </p>
-                <p className="mt-1 text-xs leading-snug text-slate-700">
-                  {item.beforeAfter.before}
-                </p>
-              </div>
-            </div>
-            <div className="overflow-hidden rounded-md border border-emerald-100 bg-emerald-50">
-              {item.beforeAfter.afterImage && (
-                <img
-                  src={item.beforeAfter.afterImage}
-                  alt=""
-                  className="h-20 w-full object-cover"
-                  loading="lazy"
-                />
-              )}
-              <div className="p-2">
-                <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-emerald-700">
-                  Dupa
-                </p>
-                <p className="mt-1 text-xs leading-snug text-slate-700">
-                  {item.beforeAfter.after}
-                </p>
-              </div>
-            </div>
+            <BeforeAfterCard
+              label="Inainte"
+              description={item.beforeAfter.before}
+              imageUrl={item.beforeAfter.beforeImage}
+              tone="rose"
+              onOpen={() =>
+                setPreview({
+                  title: 'Compara inainte si dupa',
+                  images: [
+                    ...(item.beforeAfter?.beforeImage
+                      ? [
+                          {
+                            label: 'Inainte',
+                            imageUrl: item.beforeAfter.beforeImage,
+                            tone: 'rose' as const,
+                          },
+                        ]
+                      : []),
+                    ...(item.beforeAfter?.afterImage
+                      ? [
+                          {
+                            label: 'Dupa',
+                            imageUrl: item.beforeAfter.afterImage,
+                            tone: 'emerald' as const,
+                          },
+                        ]
+                      : []),
+                  ],
+                })
+              }
+            />
+            <BeforeAfterCard
+              label="Dupa"
+              description={item.beforeAfter.after}
+              imageUrl={item.beforeAfter.afterImage}
+              tone="emerald"
+              onOpen={() =>
+                setPreview({
+                  title: 'Compara inainte si dupa',
+                  images: [
+                    ...(item.beforeAfter?.beforeImage
+                      ? [
+                          {
+                            label: 'Inainte',
+                            imageUrl: item.beforeAfter.beforeImage,
+                            tone: 'rose' as const,
+                          },
+                        ]
+                      : []),
+                    ...(item.beforeAfter?.afterImage
+                      ? [
+                          {
+                            label: 'Dupa',
+                            imageUrl: item.beforeAfter.afterImage,
+                            tone: 'emerald' as const,
+                          },
+                        ]
+                      : []),
+                  ],
+                })
+              }
+            />
           </div>
         )}
+
+        <ImagePreviewDialog preview={preview} onClose={() => setPreview(null)} />
       </motion.aside>
+    </AnimatePresence>
+  )
+}
+
+function BeforeAfterCard({
+  label,
+  description,
+  imageUrl,
+  tone,
+  onOpen,
+}: {
+  label: string
+  description: string
+  imageUrl?: string
+  tone: 'emerald' | 'rose'
+  onOpen: () => void
+}) {
+  const toneClass =
+    tone === 'emerald'
+      ? 'border-emerald-100 bg-emerald-50 text-emerald-700'
+      : 'border-rose-100 bg-rose-50 text-rose-700'
+
+  return (
+    <button
+      type="button"
+      className={cn(
+        'group overflow-hidden rounded-md border text-left outline-none transition hover:border-emerald-300 focus-visible:ring-3 focus-visible:ring-emerald-300/60',
+        toneClass,
+      )}
+      aria-label={`Mareste comparatia ${label.toLowerCase()}`}
+      onClick={onOpen}
+    >
+      {imageUrl && (
+        <span className="relative flex aspect-[4/3] w-full items-center justify-center bg-white">
+          <img
+            src={imageUrl}
+            alt=""
+            className="h-full w-full object-contain"
+            loading="lazy"
+          />
+          <span className="absolute right-2 top-2 flex size-7 items-center justify-center rounded-lg bg-white/90 text-emerald-700 opacity-0 shadow-sm transition group-hover:opacity-100 group-focus-visible:opacity-100">
+            <Search className="size-3.5" aria-hidden="true" />
+          </span>
+        </span>
+      )}
+      <span className="block p-2">
+        <span className="block text-[0.65rem] font-semibold uppercase tracking-wide">
+          {label}
+        </span>
+        <span className="mt-1 block text-xs leading-snug text-slate-700">
+          {description}
+        </span>
+      </span>
+    </button>
+  )
+}
+
+function ImagePreviewDialog({
+  preview,
+  onClose,
+}: {
+  preview: null | {
+    title: string
+    images: Array<{
+      label: string
+      imageUrl: string
+      tone: 'emerald' | 'rose'
+    }>
+  }
+  onClose: () => void
+}) {
+  return (
+    <AnimatePresence>
+      {preview && (
+        <motion.div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-3 backdrop-blur-sm sm:p-6"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          role="dialog"
+          aria-modal="true"
+          aria-label={preview.title}
+          onClick={onClose}
+        >
+          <motion.div
+            className="max-h-[92vh] w-full max-w-5xl overflow-hidden rounded-xl border border-white/20 bg-white shadow-2xl"
+            initial={{ opacity: 0, y: 16, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 8, scale: 0.98 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-3 border-b border-emerald-100 px-3 py-2.5 sm:px-4">
+              <h2 className="min-w-0 truncate text-sm font-semibold text-emerald-950 sm:text-base">
+                {preview.title}
+              </h2>
+              <Button
+                type="button"
+                size="icon-sm"
+                variant="ghost"
+                aria-label="Inchide previzualizarea imaginii"
+                onClick={onClose}
+              >
+                <X className="size-4" aria-hidden="true" />
+              </Button>
+            </div>
+            <div className="grid max-h-[calc(92vh-3.25rem)] gap-3 overflow-auto bg-slate-50 p-3 sm:grid-cols-2 sm:p-4">
+              {preview.images.map((image) => (
+                <figure
+                  key={`${image.label}-${image.imageUrl}`}
+                  className="overflow-hidden rounded-lg border border-emerald-100 bg-white"
+                >
+                  <div className="flex max-h-[72vh] min-h-60 items-center justify-center bg-slate-100">
+                    <img
+                      src={image.imageUrl}
+                      alt=""
+                      className="max-h-[72vh] w-full object-contain"
+                    />
+                  </div>
+                  <figcaption
+                    className={cn(
+                      'px-3 py-2 text-xs font-semibold uppercase tracking-wide',
+                      image.tone === 'emerald'
+                        ? 'bg-emerald-50 text-emerald-700'
+                        : 'bg-rose-50 text-rose-700',
+                    )}
+                  >
+                    {image.label}
+                  </figcaption>
+                </figure>
+              ))}
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
     </AnimatePresence>
   )
 }

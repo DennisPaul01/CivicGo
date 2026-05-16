@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import visionAgentImage from '@/assets/ai-agents/01_vision_agent_square.png'
+import triageAgentImage from '@/assets/ai-agents/02_triage_agent_square.png'
+import duplicateAgentImage from '@/assets/ai-agents/03_duplicate_agent_square.png'
+import missionAgentImage from '@/assets/ai-agents/04_mission_agent_square.png'
+import rewardAgentImage from '@/assets/ai-agents/05_reward_agent_square.png'
+import cityAgentImage from '@/assets/ai-agents/06_city_agent_square.png'
+import authorityEmailAgentImage from '@/assets/ai-agents/07_authority_email_agent_square.png'
 import {
   ArrowLeft,
   Bot,
@@ -30,6 +37,16 @@ import { useAuthStore } from '@/stores/authStore'
 
 type AgentFormState = UpdateAdminAgentInput
 
+const agentAvatarByName: Record<string, string> = {
+  'Vision Agent': visionAgentImage,
+  'Triage Agent': triageAgentImage,
+  'Duplicate Agent': duplicateAgentImage,
+  'Mission Agent': missionAgentImage,
+  'Reward Agent': rewardAgentImage,
+  'City Agent': cityAgentImage,
+  'Authority Email Agent': authorityEmailAgentImage,
+}
+
 const emptyForm: AgentFormState = {
   name: '',
   role: '',
@@ -58,7 +75,7 @@ const agentDefaults = {
   },
   duplicate: {
     role: 'Verificator duplicate apropiate',
-    description: 'Compara sesizari active apropiate si pastreaza clusterele vizibile pentru demo.',
+    description: 'Compara sesizari active apropiate si pastreaza clusterele vizibile pentru operare.',
     instructions:
       'Verifica daca noua sesizare este probabil duplicat. Compara distanta, categoria, subcategoria, severitatea, statusul, data, textul/imaginea cand exista si aceeasi strada/zona/reper. Marcheaza duplicat doar cand potrivirea este clara; daca e medie, recomanda admin review, nu bloca. Pastreaza clusterele vizibile pentru storytelling si nu ascunde sesizari valide.',
     fallbackMode: 'Scan numeric lat/lng 300m plus hash imagine si categorie/status.',
@@ -347,7 +364,7 @@ export function AdminAgentsPage() {
                 Agent control
               </h1>
               <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">
-                Configureaza agentii demo si urmareste fallback-urile fara sa pierzi contextul operational.
+                Configureaza agentii operationali si urmareste fallback-urile fara sa pierzi contextul orasului.
               </p>
             </div>
           </div>
@@ -382,12 +399,12 @@ export function AdminAgentsPage() {
           <DemoState
             icon={TriangleAlert}
             tone="amber"
-            eyebrow="Demo fallback"
-            title="Agent configs are shown from the MVP fallback"
+            eyebrow="Mod de rezerva"
+            title="Configuratiile agentilor sunt afisate din fallback-ul local"
             description={
               !isApiConfigured
-                ? 'Set VITE_API_URL and sign in as an admin to edit live agent configuration.'
-                : 'The backend returned no agent configs, so this page keeps the seeded MVP agents visible in read-only mode.'
+                ? 'Seteaza VITE_API_URL si autentifica-te ca admin pentru a edita configuratia live a agentilor.'
+                : 'Backendul nu a returnat configuratii de agenti, asa ca pagina pastreaza agentii locali vizibili in mod read-only.'
             }
           />
         )}
@@ -439,9 +456,17 @@ export function AdminAgentsPage() {
                         {agent.role}
                       </p>
                     </div>
-                    <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-teal-700">
-                      <Sparkles className="size-4" aria-hidden="true" />
-                    </span>
+                    {agentAvatarByName[agent.name] ? (
+                      <img
+                        src={agentAvatarByName[agent.name]}
+                        alt=""
+                        className="size-20 shrink-0 rounded-xl object-cover"
+                      />
+                    ) : (
+                      <span className="flex size-20 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-700">
+                        <Sparkles className="size-5" aria-hidden="true" />
+                      </span>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-3 gap-2 text-xs">
@@ -460,16 +485,29 @@ export function AdminAgentsPage() {
               {selectedAgent ? (
                 <>
                   <div className="flex flex-col gap-3 border-b border-emerald-100 pb-4 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
-                        Edit agent
-                      </p>
-                      <h2 className="mt-1 text-xl font-semibold text-emerald-950">
-                        {selectedAgent.name}
-                      </h2>
-                      <p className="mt-1 text-sm leading-6 text-slate-600">
-                        Last update: {formatDate(selectedAgent.updatedAt)}
-                      </p>
+                    <div className="flex min-w-0 items-center gap-3">
+                      {agentAvatarByName[selectedAgent.name] ? (
+                        <img
+                          src={agentAvatarByName[selectedAgent.name]}
+                          alt=""
+                          className="size-20 shrink-0 rounded-xl object-cover"
+                        />
+                      ) : (
+                        <span className="flex size-20 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-700">
+                          <Sparkles className="size-6" aria-hidden="true" />
+                        </span>
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                          Edit agent
+                        </p>
+                        <h2 className="mt-1 text-xl font-semibold text-emerald-950">
+                          {selectedAgent.name}
+                        </h2>
+                        <p className="mt-1 text-sm leading-6 text-slate-600">
+                          Last update: {formatDate(selectedAgent.updatedAt)}
+                        </p>
+                      </div>
                     </div>
                     <label className="inline-flex items-center gap-2 rounded-lg border border-emerald-200 px-3 py-2 text-sm font-semibold text-emerald-800">
                       <input
@@ -552,7 +590,7 @@ export function AdminAgentsPage() {
 
                   {!canEditAgents && (
                     <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800">
-                      Read-only demo view. Live edits unlock after the admin API returns real agent configs.
+                      View read-only. Editarea live se activeaza dupa ce API-ul admin returneaza configuratii reale pentru agenti.
                     </p>
                   )}
 

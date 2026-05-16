@@ -263,7 +263,7 @@ function FallbackCivicMap({
       <div className="absolute left-[54%] top-[35%] h-20 w-28 rounded-[45%] border border-cyan-100 bg-cyan-50/85" />
 
       <div className="pointer-events-none absolute left-3 top-3 z-10 rounded-md border border-emerald-200 bg-white/92 px-3 py-2 text-xs font-semibold text-emerald-900 shadow-sm">
-        {hasMapError ? 'Mapbox unavailable. Demo map active.' : 'Mapbox token missing. Demo map active.'}
+        {hasMapError ? 'Mapbox unavailable. Harta locala activa.' : 'Mapbox token missing. Harta locala activa.'}
       </div>
 
       <div className="pointer-events-none absolute right-3 top-3 z-10 flex items-center gap-2 rounded-md border border-emerald-200 bg-white/92 px-3 py-2 text-xs font-bold text-slate-700 shadow-sm">

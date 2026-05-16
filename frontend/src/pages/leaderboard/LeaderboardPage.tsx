@@ -114,13 +114,13 @@ export function LeaderboardPage() {
 
         {!isApiConfigured && (
           <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">
-            API-ul nu este configurat, asa ca vezi date demo locale.
+            API-ul nu este configurat, asa ca vezi date locale temporare.
           </p>
         )}
 
         {query.isError && (
           <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-900">
-            Nu am putut incarca leaderboard-ul real. Afisez date demo pentru flow.
+            Nu am putut incarca leaderboard-ul real. Afisez date locale temporare.
           </p>
         )}
 
@@ -168,8 +168,8 @@ export function LeaderboardPage() {
               Zonele raman in joc
             </h2>
             <p className="mt-1.5 text-[0.8rem] leading-5 text-slate-600">
-              Clasamentul de useri completeaza leaderboard-ul pe zone. Pentru demo,
-              poti sari rapid la scorurile de cartier si impactul pe harta.
+              Clasamentul de useri completeaza leaderboard-ul pe zone. Poti sari
+              rapid la scorurile de cartier si impactul pe harta.
             </p>
             <Button
               asChild

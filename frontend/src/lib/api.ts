@@ -542,7 +542,7 @@ export async function resolveIssue(input: ResolveIssueInput) {
 
   const formData = new FormData()
   formData.append('afterImage', input.afterImage)
-  formData.append('resolutionNote', input.resolutionNote)
+  formData.append('resolutionNote', input.resolutionNote.trim())
 
   const response = await fetch(`${apiBaseUrl}/api/issues/${input.issueId}/resolve`, {
     method: 'POST',
